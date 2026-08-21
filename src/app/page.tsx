@@ -1,9 +1,11 @@
-import { generateWeek } from '@/lib/scheduler.ts';
+import { redirect } from 'next/navigation';
 
-export default function Page() {
-  const result = generateWeek({
-    weekStart: '2026-08-24',
-    members: [],
-  });
-  return <pre>{JSON.stringify(result.unfilled.length)}</pre>;
+import { getSession } from '../lib/session.ts';
+
+export const dynamic = 'force-dynamic';
+
+export default async function Home() {
+  const session = await getSession();
+  if (!session) redirect('/signin');
+  redirect(session.role === 'admin' ? '/admin' : '/my-shifts');
 }

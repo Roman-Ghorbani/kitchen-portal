@@ -52,8 +52,27 @@ export function weekPostedAtChapter(chapterDate: string): string {
   return addDays(chapterDate, 8);
 }
 
-/** The next Sunday strictly after the given date. */
+/**
+ * The next Sunday strictly after the given date.
+ *
+ * Note the day indices run Mon=0..Sun=6, so the distance to Sunday is
+ * (6 - idx), except from a Sunday itself where "strictly after" means +7.
+ */
 export function nextSunday(iso: string): string {
-  const idx = dayIndex(iso); // 6 === Sunday
-  return addDays(iso, 7 - idx);
+  const idx = dayIndex(iso);
+  return addDays(iso, idx === 6 ? 7 : 6 - idx);
+}
+
+/**
+ * The Sunday chapter at which a week locks: the one immediately before it
+ * starts. Weeks run Mon-Sun, so that is simply the day before the week begins.
+ *
+ * This holds for both the normal cadence and the bootstrap week. Under the
+ * normal cadence a week is posted at chapter and starts 8 days later, so it
+ * locks at the following chapter - exactly 7 days of open flagging. The
+ * bootstrap week is posted late and so gets a shorter window, but it still
+ * closes at the same point: before the week runs, never after.
+ */
+export function chapterLockFor(weekStart: string): string {
+  return addDays(weekStart, -1);
 }

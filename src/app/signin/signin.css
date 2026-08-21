@@ -1,0 +1,171 @@
+.signin-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px 48px;
+  gap: 22px;
+  background: var(--bg);
+}
+
+.signin-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.signin-title {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.signin-sub {
+  font-size: 12px;
+  color: var(--ink-400);
+  font-family: var(--font-mono);
+}
+
+.signin-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-top: 3px solid var(--gold-500);
+  border-radius: 14px;
+  box-shadow: var(--shadow-md);
+  padding: 26px 24px;
+  width: 100%;
+  max-width: 400px;
+}
+
+.signin-card h2 {
+  margin: 0 0 4px 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.signin-card .hint {
+  font-size: 12.5px;
+  color: var(--ink-400);
+  margin: 0 0 16px 0;
+  line-height: 1.5;
+}
+
+.field {
+  width: 100%;
+  padding: 11px 14px;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  font-size: 15px;
+  font-family: inherit;
+  background: var(--bg);
+  color: var(--ink-900);
+}
+
+.field:focus {
+  outline: none;
+  border-color: var(--gold-500);
+}
+
+/* Wide tracking so four dots read as four distinct slots. */
+.field.pin {
+  font-family: var(--font-mono);
+  font-size: 26px;
+  letter-spacing: 14px;
+  text-align: center;
+  padding: 14px;
+}
+
+.picker-list {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.picker-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 10px;
+  border-radius: 9px;
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  font-size: 14px;
+  color: var(--ink-900);
+}
+
+.picker-row:hover {
+  background: var(--navy-50);
+  border-color: var(--navy-100);
+}
+
+.picker-name {
+  font-weight: 600;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.picked {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.picked-name {
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.btn.wide {
+  width: 100%;
+  justify-content: center;
+  margin-top: 16px;
+  padding: 12px;
+  font-size: 14.5px;
+}
+
+.linkish {
+  display: block;
+  width: 100%;
+  margin-top: 14px;
+  background: none;
+  border: none;
+  color: var(--ink-400);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px;
+  text-align: center;
+}
+
+.linkish:hover {
+  color: var(--gold-600);
+}
+
+.error {
+  margin-top: 12px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--red-600);
+  background: var(--red-100);
+  border-radius: 8px;
+  padding: 9px 12px;
+}
+
+.hint.empty {
+  padding: 14px 4px;
+  margin: 0;
+}

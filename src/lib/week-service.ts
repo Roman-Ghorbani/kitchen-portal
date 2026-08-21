@@ -1,0 +1,338 @@
+/**
+ * Turns the roster in the database into a persisted week of assignments.
+ *
+ * Generation is server-side only and deliberately one-directional: a week is
+ * generated once, and once it is posted it is never regenerated in place. What
+ * the house was told is the record, so overwriting it would destroy the thing
+ * the app exists to provide.
+ */
+
+import { eq, and, inArray, asc } from 'drizzle-orm';
+
+import { db } from '../db/index.ts';
+import {
+  members as membersTable,
+  standingConflicts,
+  semesters,
+  weeks,
+  slots as slotsTable,
+  assignments as assignmentsTable,
+  events,
+} from '../db/schema.ts';
+import { generateWeek, type ScheduleResult } from './scheduler.ts';
+import {
+  type Member,
+  type Meal,
+  type MealDayConfig,
+  type DayIndex,
+} from './types.ts';
+import { weekDates, chapterLockFor, addDays } from './dates.ts';
+
+/* ------------------------------------------------------------------ */
+/* Reading the roster                                                  */
+/* ------------------------------------------------------------------ */
+
+export async function loadSchedulingRoster(semesterId: string): Promise<Member[]> {
+  const rows = await db
+    .select()
+    .from(membersTable)
+    .where(eq(membersTable.active, true))
+    .orderBy(asc(membersTable.name));
+
+  const conflicts = await db
+    .select()
+    .from(standingConflicts)
+    .where(eq(standingConflicts.semesterId, semesterId));
+
+  const byMember = new Map<string, DayIndex[]>();
+  const today = new Date().toISOString().slice(0, 10);
+
+  for (const c of conflicts) {
+    // A temporary block stops applying once it expires.
+    if (c.scope === 'temporary' && c.expiresOn && c.expiresOn < today) continue;
+    const list = byMember.get(c.memberId) ?? [];
+    list.push(c.dayIndex as DayIndex);
+    byMember.set(c.memberId, list);
+  }
+
+  return rows.map((r) => ({
+    id: r.id,
+    name: r.name,
+    classYear: r.classYear,
+    points: r.points,
+    exempt: r.exempt,
+    exemptReason: r.exemptReason ?? undefined,
+    exemptNotes: r.exemptNotes ?? undefined,
+    standingConflicts: byMember.get(r.id) ?? [],
+    lastServedDate: r.lastServedDate,
+    makeupDebt: r.makeupDebt,
+  }));
+}
+
+export async function getActiveSemester() {
+  const [row] = await db
+    .select()
+    .from(semesters)
+    .where(eq(semesters.active, true))
+    .limit(1);
+  if (!row) throw new Error('No active semester. Run the seed script first.');
+  return row;
+}
+
+/* ------------------------------------------------------------------ */
+/* Generating and persisting                                           */
+/* ------------------------------------------------------------------ */
+
+export interface GenerateOptions {
+  /** Post immediately rather than leaving it as a draft. */
+  post?: boolean;
+  /**
+   * True only for the first week of a semester, which cannot get the normal
+   * full 7-day flag window because the semester starts right after chapter.
+   */
+  isBootstrap?: boolean;
+  /** Overrides the lock deadline; defaults to the chapter before the week. */
+  locksAt?: Date;
+}
+
+export async function generateAndSaveWeek(
+  weekStart: string,
+  options: GenerateOptions = {},
+) {
+  const semester = await getActiveSemester();
+
+  const existing = await db
+    .select()
+    .from(weeks)
+    .where(and(eq(weeks.semesterId, semester.id), eq(weeks.weekStart, weekStart)))
+    .limit(1);
+
+  if (existing.length > 0) {
+    const week = existing[0];
+    if (week.status !== 'draft') {
+      throw new Error(
+        `Week of ${weekStart} is already ${week.status} and cannot be regenerated. ` +
+          'What the house was told is the record.',
+      );
+    }
+    // A draft nobody has seen is safe to discard and rebuild.
+    await db.delete(weeks).where(eq(weeks.id, week.id));
+  }
+
+  const roster = await loadSchedulingRoster(semester.id);
+  const result = generateWeek({
+    weekStart,
+    members: roster,
+    mealDays: semester.mealDays as MealDayConfig,
+    slotSizes: semester.slotSizes as Record<Meal, number>,
+  });
+
+  const locksAt =
+    options.locksAt ?? new Date(`${chapterLockFor(weekStart)}T23:59:59Z`);
+
+  const [week] = await db
+    .insert(weeks)
+    .values({
+      semesterId: semester.id,
+      weekStart,
+      status: options.post ? 'posted' : 'draft',
+      seed: weekStart,
+      postedAt: options.post ? new Date() : null,
+      locksAt: options.post ? locksAt : null,
+      isBootstrap: options.isBootstrap ?? false,
+    })
+    .returning();
+
+  // neon-http has no interactive transactions, so these writes are sequential.
+  // Safe here because generation is admin-triggered and a failed draft can be
+  // discarded and rebuilt; nothing downstream reads a half-written draft.
+  const slotRows = await db
+    .insert(slotsTable)
+    .values(
+      result.week.slots.map((s) => ({
+        weekId: week.id,
+        date: s.date,
+        meal: s.meal,
+        size: s.size,
+      })),
+    )
+    .returning();
+
+  const slotIdByKey = new Map(slotRows.map((s) => [`${s.date}|${s.meal}`, s.id]));
+  const rationaleByKey = new Map(
+    result.rationale.map((r) => [`${r.date}|${r.meal}|${r.memberId}`, r]),
+  );
+
+  const assignmentValues = result.week.slots.flatMap((s) =>
+    s.assignments.map((a) => ({
+      slotId: slotIdByKey.get(`${s.date}|${s.meal}`)!,
+      memberId: a.memberId,
+      status: a.status,
+      multiplier: a.multiplier,
+      isMakeup: a.isMakeup,
+      rationale: rationaleByKey.get(`${s.date}|${s.meal}|${a.memberId}`) ?? null,
+    })),
+  );
+
+  if (assignmentValues.length > 0) {
+    await db.insert(assignmentsTable).values(assignmentValues);
+  }
+
+  await db.insert(events).values({
+    action: options.post ? 'week.posted' : 'week.generated',
+    entityType: 'week',
+    entityId: week.id,
+    actorName: 'scheduler',
+    summary: options.post
+      ? `Posted week of ${weekStart} (${assignmentValues.length} assignments)`
+      : `Generated draft week of ${weekStart}`,
+    payload: {
+      weekStart,
+      assignments: assignmentValues.length,
+      unfilled: result.unfilled,
+      isBootstrap: options.isBootstrap ?? false,
+    },
+  });
+
+  return { week, result, assignmentCount: assignmentValues.length };
+}
+
+/* ------------------------------------------------------------------ */
+/* Reading a week back for display                                     */
+/* ------------------------------------------------------------------ */
+
+export interface DisplayAssignment {
+  id: string;
+  memberId: string;
+  memberName: string;
+  status: string;
+  multiplier: number;
+  isMakeup: boolean;
+  coveredByMemberId: string | null;
+  coveredByName: string | null;
+}
+
+export interface DisplaySlot {
+  id: string;
+  date: string;
+  meal: Meal;
+  size: number;
+  assignments: DisplayAssignment[];
+}
+
+export interface DisplayWeek {
+  id: string;
+  weekStart: string;
+  status: string;
+  postedAt: Date | null;
+  locksAt: Date | null;
+  isBootstrap: boolean;
+  days: { date: string; lunch: DisplaySlot | null; dinner: DisplaySlot | null }[];
+}
+
+export async function getWeek(weekStart: string): Promise<DisplayWeek | null> {
+  const semester = await getActiveSemester();
+
+  const [week] = await db
+    .select()
+    .from(weeks)
+    .where(and(eq(weeks.semesterId, semester.id), eq(weeks.weekStart, weekStart)))
+    .limit(1);
+
+  if (!week) return null;
+
+  const slotRows = await db
+    .select()
+    .from(slotsTable)
+    .where(eq(slotsTable.weekId, week.id))
+    .orderBy(asc(slotsTable.date));
+
+  const slotIds = slotRows.map((s) => s.id);
+  const assignmentRows = slotIds.length
+    ? await db
+        .select()
+        .from(assignmentsTable)
+        .where(inArray(assignmentsTable.slotId, slotIds))
+    : [];
+
+  const memberIds = [
+    ...new Set(
+      assignmentRows.flatMap((a) =>
+        [a.memberId, a.coveredByMemberId].filter(Boolean as never as (x: unknown) => x is string),
+      ),
+    ),
+  ];
+
+  const memberRows = memberIds.length
+    ? await db
+        .select({ id: membersTable.id, name: membersTable.name })
+        .from(membersTable)
+        .where(inArray(membersTable.id, memberIds))
+    : [];
+  const nameById = new Map(memberRows.map((m) => [m.id, m.name]));
+
+  const bySlot = new Map<string, DisplayAssignment[]>();
+  for (const a of assignmentRows) {
+    const list = bySlot.get(a.slotId) ?? [];
+    list.push({
+      id: a.id,
+      memberId: a.memberId,
+      memberName: nameById.get(a.memberId) ?? 'Unknown',
+      status: a.status,
+      multiplier: a.multiplier,
+      isMakeup: a.isMakeup,
+      coveredByMemberId: a.coveredByMemberId,
+      coveredByName: a.coveredByMemberId
+        ? (nameById.get(a.coveredByMemberId) ?? null)
+        : null,
+    });
+    bySlot.set(a.slotId, list);
+  }
+
+  const toDisplay = (s: (typeof slotRows)[number]): DisplaySlot => ({
+    id: s.id,
+    date: s.date,
+    meal: s.meal,
+    size: s.size,
+    assignments: (bySlot.get(s.id) ?? []).sort((a, b) =>
+      a.memberName.localeCompare(b.memberName),
+    ),
+  });
+
+  const days = weekDates(weekStart)
+    .map((date) => ({
+      date,
+      lunch: slotRows.find((s) => s.date === date && s.meal === 'lunch')
+        ? toDisplay(slotRows.find((s) => s.date === date && s.meal === 'lunch')!)
+        : null,
+      dinner: slotRows.find((s) => s.date === date && s.meal === 'dinner')
+        ? toDisplay(slotRows.find((s) => s.date === date && s.meal === 'dinner')!)
+        : null,
+    }))
+    // A day with no service at all (Saturday) is not shown.
+    .filter((d) => d.lunch || d.dinner);
+
+  return {
+    id: week.id,
+    weekStart: week.weekStart,
+    status: week.status,
+    postedAt: week.postedAt,
+    locksAt: week.locksAt,
+    isBootstrap: week.isBootstrap,
+    days,
+  };
+}
+
+/** The two weeks the house cares about: the one running, and the one posted. */
+export async function getLiveWeeks() {
+  const semester = await getActiveSemester();
+  const rows = await db
+    .select()
+    .from(weeks)
+    .where(eq(weeks.semesterId, semester.id))
+    .orderBy(asc(weeks.weekStart));
+
+  return rows;
+}
+
+export { addDays };
