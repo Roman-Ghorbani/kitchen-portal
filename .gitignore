@@ -5,3 +5,6 @@ node_modules/
 *.tsbuildinfo
 next-env.d.ts
 .vercel
+
+# Roster exports contain phone numbers and emails - never commit them
+*.csv
