@@ -60,9 +60,15 @@ export interface Member {
 /** Which day/meal combinations the house actually serves. Admin-configurable. */
 export type MealDayConfig = Record<Meal, boolean[]>;
 
+/**
+ * The house serves lunch and dinner six days a week - no meal service on
+ * Saturday. Index 0 = Monday, so index 5 (Saturday) is off for both meals.
+ * Stored per-semester in the database; this is the seed value.
+ */
 export const DEFAULT_MEAL_DAYS: MealDayConfig = {
-  lunch: [true, true, true, true, true, true, true],
-  dinner: [true, true, true, true, true, true, true],
+  //          Mon   Tue   Wed   Thu   Fri   Sat    Sun
+  lunch: [true, true, true, true, true, false, true],
+  dinner: [true, true, true, true, true, false, true],
 };
 
 export const DEFAULT_SLOT_SIZES: Record<Meal, number> = {
