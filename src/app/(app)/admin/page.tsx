@@ -9,6 +9,7 @@ import { getLiveWeeks, getActiveSemester } from '../../../lib/week-service.ts';
 import { mondayOf, addDays, parseISO } from '../../../lib/dates.ts';
 import { AppShell } from '../shell.tsx';
 import { PostWeekButton } from './post-week-button.tsx';
+import { ChapterButton } from './chapter-button.tsx';
 
 export const dynamic = 'force-dynamic';
 
@@ -140,6 +141,7 @@ export default async function AdminPage() {
               isBootstrap={isBootstrap}
               label={`Generate and post week of ${fmt(nextToPost)}`}
             />
+            <ChapterButton />
           </div>
         </>
       )}

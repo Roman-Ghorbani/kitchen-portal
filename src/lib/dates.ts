@@ -76,3 +76,20 @@ export function nextSunday(iso: string): string {
 export function chapterLockFor(weekStart: string): string {
   return addDays(weekStart, -1);
 }
+
+/** The most recent Sunday chapter on or before the given date. */
+export function lastChapterOnOrBefore(iso: string): string {
+  const idx = dayIndex(iso);
+  return idx === 6 ? iso : addDays(iso, -(idx + 1));
+}
+
+/**
+ * The week the cadence says should be posted as of the given date - i.e. the
+ * one that the most recent chapter would have posted.
+ *
+ * Driven by the calendar rather than by what already exists, so running the
+ * transition twice in one day cannot post weeks arbitrarily far ahead.
+ */
+export function weekDueForPosting(today: string): string {
+  return weekPostedAtChapter(lastChapterOnOrBefore(today));
+}

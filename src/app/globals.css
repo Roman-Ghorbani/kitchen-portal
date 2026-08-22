@@ -1008,3 +1008,294 @@ button {
     min-width: 0;
   }
 }
+
+/* ------------------------------------------------------------------ */
+/* Availability                                                        */
+/* ------------------------------------------------------------------ */
+
+.avail-day {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  margin-bottom: 8px;
+  background: var(--card);
+  flex-wrap: wrap;
+}
+
+.avail-day.off {
+  background: var(--red-100);
+  border-color: var(--red-600);
+}
+
+.avail-day.muted {
+  opacity: 0.45;
+}
+
+.avail-label {
+  font-size: 13.5px;
+  font-weight: 600;
+  flex: 1;
+  min-width: 120px;
+}
+
+.avail-sub {
+  font-size: 11.5px;
+  color: var(--ink-400);
+  font-weight: 500;
+  margin-left: 6px;
+  text-transform: capitalize;
+}
+
+.avail-note {
+  flex: 2;
+  min-width: 180px;
+  font-size: 13px;
+  padding: 7px 10px;
+}
+
+.note.warn {
+  background: var(--amber-100);
+  border-color: var(--amber-600);
+  color: var(--amber-600);
+  font-weight: 600;
+}
+
+/* ------------------------------------------------------------------ */
+/* Roster                                                              */
+/* ------------------------------------------------------------------ */
+
+.roster-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.filter-chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 13px;
+  border-radius: 20px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-600);
+  cursor: pointer;
+}
+
+.filter-chip.active {
+  background: var(--navy-800);
+  color: #fff;
+  border-color: var(--navy-800);
+}
+
+.chip-count {
+  font-size: 11px;
+  opacity: 0.75;
+}
+
+.roster-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.roster-row {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--card);
+  overflow: hidden;
+}
+
+.roster-row.is-exempt {
+  opacity: 0.72;
+}
+
+.roster-row.inactive {
+  opacity: 0.5;
+}
+
+.roster-main {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 11px 14px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  color: var(--ink-900);
+  flex-wrap: wrap;
+}
+
+.roster-main:hover {
+  background: var(--navy-50);
+}
+
+.roster-name {
+  font-weight: 600;
+  font-size: 14px;
+  flex: 1;
+  min-width: 140px;
+}
+
+.roster-pts {
+  font-weight: 800;
+  font-size: 14px;
+  min-width: 28px;
+  text-align: center;
+}
+
+.roster-detail {
+  border-top: 1px solid var(--line);
+  padding: 14px;
+  background: var(--navy-50);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.detail-group {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.detail-label {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--ink-400);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.detail-actions {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.detail-hint {
+  font-size: 11.5px;
+  color: var(--ink-400);
+  line-height: 1.5;
+}
+
+.btn.violet {
+  background: var(--violet-600);
+  color: #fff;
+  border-color: var(--violet-600);
+}
+
+.btn.violet:hover {
+  background: var(--violet-600);
+  border-color: var(--violet-600);
+  color: #fff;
+  filter: brightness(1.1);
+}
+
+/* ------------------------------------------------------------------ */
+/* Settings                                                            */
+/* ------------------------------------------------------------------ */
+
+.meal-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+  overflow-x: auto;
+}
+
+.meal-grid-head,
+.meal-grid-row {
+  display: grid;
+  grid-template-columns: 130px repeat(7, minmax(42px, 1fr));
+  gap: 6px;
+  align-items: center;
+  min-width: 460px;
+}
+
+.meal-day-label {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--ink-400);
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.meal-row-label {
+  font-size: 13.5px;
+  font-weight: 700;
+  display: flex;
+  flex-direction: column;
+}
+
+.meal-row-sub {
+  font-size: 11px;
+  color: var(--ink-400);
+  font-weight: 500;
+}
+
+.meal-cell {
+  height: 40px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink-400);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.meal-cell.on {
+  background: var(--gold-500);
+  border-color: var(--gold-500);
+  color: var(--navy-950);
+}
+
+.meal-cell:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+
+.rules {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 130px 1fr;
+  gap: 10px 16px;
+  font-size: 13px;
+}
+
+.rules dt {
+  font-weight: 700;
+  color: var(--ink-600);
+}
+
+.rules dd {
+  margin: 0;
+  color: var(--ink-400);
+  line-height: 1.55;
+}
+
+@media (max-width: 620px) {
+  .rules {
+    grid-template-columns: 1fr;
+    gap: 3px 0;
+  }
+  .rules dd {
+    margin-bottom: 10px;
+  }
+}

@@ -10,6 +10,8 @@ import {
   nextSunday,
   chapterLockFor,
   weekPostedAtChapter,
+  lastChapterOnOrBefore,
+  weekDueForPosting,
 } from '../dates.ts';
 
 describe('day indexing', () => {
@@ -75,6 +77,43 @@ describe('nextSunday', () => {
   test('from a Sunday, moves to the following Sunday', () => {
     assert.equal(nextSunday('2026-08-30'), '2026-09-06');
     assert.equal(dayIndex(nextSunday('2026-08-30')), 6);
+  });
+});
+
+describe('which week the cadence is due to post', () => {
+  test('finds the most recent chapter', () => {
+    assert.equal(lastChapterOnOrBefore('2026-08-23'), '2026-08-23'); // a Sunday
+    assert.equal(lastChapterOnOrBefore('2026-08-24'), '2026-08-23'); // Monday
+    assert.equal(lastChapterOnOrBefore('2026-08-21'), '2026-08-16'); // Friday
+  });
+
+  test('is driven by the calendar, not by what already exists', () => {
+    // Running the transition repeatedly on the same day must keep naming the
+    // same week, or the button would post weeks arbitrarily far ahead.
+    assert.equal(weekDueForPosting('2026-08-21'), '2026-08-24');
+    assert.equal(weekDueForPosting('2026-08-22'), '2026-08-24');
+    assert.equal(weekDueForPosting('2026-08-23'), '2026-08-31');
+    assert.equal(weekDueForPosting('2026-08-24'), '2026-08-31');
+    assert.equal(weekDueForPosting('2026-08-29'), '2026-08-31');
+    assert.equal(weekDueForPosting('2026-08-30'), '2026-09-07');
+  });
+
+  test('the due week is always a Monday', () => {
+    let d = '2026-08-17';
+    for (let i = 0; i < 40; i++) {
+      assert.equal(dayIndex(weekDueForPosting(d)), 0, `${d}`);
+      d = addDays(d, 1);
+    }
+  });
+
+  test('the due week always starts at least 8 days after its chapter', () => {
+    let d = '2026-08-17';
+    for (let i = 0; i < 40; i++) {
+      const chapter = lastChapterOnOrBefore(d);
+      const week = weekDueForPosting(d);
+      assert.equal(daysBetween(chapter, week), 8, `from ${d}`);
+      d = addDays(d, 1);
+    }
   });
 });
 
