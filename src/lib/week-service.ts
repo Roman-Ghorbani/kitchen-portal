@@ -336,3 +336,52 @@ export async function getLiveWeeks() {
 }
 
 export { addDays };
+
+/**
+ * How far into the future the schedule actually goes.
+ *
+ * Shown to brothers so "nothing scheduled" is never ambiguous between "you
+ * have no shifts" and "Roman has not posted that far yet" - which is exactly
+ * the confusion that leads to someone insisting they were never told.
+ */
+export interface ScheduleHorizon {
+  /** Last date with any assigned slot, or null if nothing is posted. */
+  lastDate: string | null;
+  /** Monday of the furthest posted week. */
+  lastWeekStart: string | null;
+  weeksPosted: number;
+}
+
+export async function getScheduleHorizon(): Promise<ScheduleHorizon> {
+  const semester = await getActiveSemester();
+
+  const weekRows = await db
+    .select()
+    .from(weeks)
+    .where(eq(weeks.semesterId, semester.id))
+    .orderBy(asc(weeks.weekStart));
+
+  if (weekRows.length === 0) {
+    return { lastDate: null, lastWeekStart: null, weeksPosted: 0 };
+  }
+
+  const slotRows = await db
+    .select({ date: slotsTable.date })
+    .from(slotsTable)
+    .where(
+      inArray(
+        slotsTable.weekId,
+        weekRows.map((w) => w.id),
+      ),
+    );
+
+  const lastDate = slotRows.length
+    ? slotRows.map((s) => s.date).sort().at(-1)!
+    : null;
+
+  return {
+    lastDate,
+    lastWeekStart: weekRows.at(-1)!.weekStart,
+    weeksPosted: weekRows.length,
+  };
+}

@@ -5,11 +5,16 @@ import { eq, desc } from 'drizzle-orm';
 import { db } from '../../../db/index.ts';
 import { members, events } from '../../../db/schema.ts';
 import { getSession } from '../../../lib/session.ts';
-import { getLiveWeeks, getActiveSemester } from '../../../lib/week-service.ts';
+import {
+  getLiveWeeks,
+  getActiveSemester,
+  getScheduleHorizon,
+} from '../../../lib/week-service.ts';
 import { mondayOf, addDays, parseISO } from '../../../lib/dates.ts';
 import { AppShell } from '../shell.tsx';
 import { PostWeekButton } from './post-week-button.tsx';
 import { ChapterButton } from './chapter-button.tsx';
+import { HorizonNote } from '../horizon-note.tsx';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,11 +31,12 @@ export default async function AdminPage() {
   if (!session) redirect('/signin');
   if (session.role !== 'admin') redirect('/my-shifts');
 
-  const [semester, roster, weekRows, recentEvents] = await Promise.all([
+  const [semester, roster, weekRows, recentEvents, horizon] = await Promise.all([
     getActiveSemester(),
     db.select().from(members).where(eq(members.active, true)),
     getLiveWeeks(),
     db.select().from(events).orderBy(desc(events.createdAt)).limit(8),
+    getScheduleHorizon(),
   ]);
 
   const juniors = roster.filter((m) => m.classYear === 'junior');
@@ -90,6 +96,8 @@ export default async function AdminPage() {
       </div>
 
       <h2 className="section-title">Weeks</h2>
+
+      <HorizonNote horizon={horizon} today={today} />
 
       {weekRows.length === 0 ? (
         <div className="card card-pad">

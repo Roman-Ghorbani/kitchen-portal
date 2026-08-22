@@ -2,8 +2,10 @@ import { redirect } from 'next/navigation';
 
 import { getSession } from '../../../lib/session.ts';
 import { getMyShifts, getMemberById } from '../../../lib/member-queries.ts';
+import { getScheduleHorizon } from '../../../lib/week-service.ts';
 import { parseISO } from '../../../lib/dates.ts';
 import { AppShell } from '../shell.tsx';
+import { HorizonNote } from '../horizon-note.tsx';
 import { FlagButton } from './flag-button.tsx';
 
 function pastDeadline(locksAt: Date | null): boolean {
@@ -26,9 +28,10 @@ export default async function MyShiftsPage() {
   if (!session) redirect('/signin');
   if (session.role === 'admin') redirect('/admin');
 
-  const [member, shifts] = await Promise.all([
+  const [member, shifts, horizon] = await Promise.all([
     getMemberById(session.sub),
     getMyShifts(session.sub),
+    getScheduleHorizon(),
   ]);
 
   const today = new Date().toISOString().slice(0, 10);
@@ -75,6 +78,8 @@ export default async function MyShiftsPage() {
         </div>
       </div>
 
+      <HorizonNote horizon={horizon} today={today} />
+
       <h2 className="section-title">Your upcoming duty</h2>
 
       {upcoming.length === 0 ? (
@@ -85,7 +90,11 @@ export default async function MyShiftsPage() {
           <div className="note" style={{ marginTop: 10 }}>
             {member?.exempt
               ? 'You are marked exempt, so you are not in the rotation. You can still pick up a shift any time.'
-              : 'You will show up here as soon as a week including you is posted.'}
+              : horizon.lastDate
+                ? 'You have no duty in the schedule posted so far. That only ' +
+                  'covers up to the date above — you may still be assigned in ' +
+                  'a week that has not been posted yet.'
+                : 'Nothing has been posted for this semester yet.'}
           </div>
         </div>
       ) : (
