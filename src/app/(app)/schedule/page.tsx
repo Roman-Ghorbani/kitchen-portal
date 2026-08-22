@@ -195,7 +195,11 @@ export default async function SchedulePage({
           <span className={`tag ${week.status === 'posted' ? 'ok' : 'locked'}`}>
             {week.status === 'posted' ? 'Open for conflicts' : 'Locked'}
           </span>
-          <CopyWeekButton text={weekAsText(week)} />
+          {/* Admin only: the group-chat post should come from Roman, not
+              from whoever happens to open the page. */}
+          {session?.role === 'admin' && (
+            <CopyWeekButton text={weekAsText(week)} />
+          )}
         </div>
       </div>
 

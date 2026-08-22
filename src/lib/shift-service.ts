@@ -467,3 +467,47 @@ export async function getOpenShifts() {
     .map((r) => ({ ...r, originalName: nameById.get(r.originalMemberId) ?? '—' }))
     .sort((a, b) => a.date.localeCompare(b.date));
 }
+
+/**
+ * Takes back everything an assignment ever awarded, leaving points and
+ * make-up debt exactly as if the shift had never been settled.
+ *
+ * Needed before an assignment is deleted or handed to somebody else - the
+ * points already credited belong to that specific assignment, and dropping
+ * the row without reversing them would silently leave the credit behind.
+ */
+export async function unsettleAssignment(assignmentId: string): Promise<void> {
+  const [a] = await db
+    .select()
+    .from(assignmentsTable)
+    .where(eq(assignmentsTable.id, assignmentId))
+    .limit(1);
+
+  if (!a) return;
+
+  if (a.settledRecipientId && a.pointsAwarded !== 0) {
+    await db
+      .update(members)
+      .set({ points: sql`GREATEST(0, ${members.points} - ${a.pointsAwarded})` })
+      .where(eq(members.id, a.settledRecipientId));
+  }
+
+  if (a.debtAwarded !== 0) {
+    await db
+      .update(members)
+      .set({
+        makeupDebt: sql`GREATEST(0, ${members.makeupDebt} - ${a.debtAwarded})`,
+      })
+      .where(eq(members.id, a.memberId));
+  }
+
+  await db
+    .update(assignmentsTable)
+    .set({
+      pointsAwarded: 0,
+      debtAwarded: 0,
+      settledRecipientId: null,
+      settledAt: null,
+    })
+    .where(eq(assignmentsTable.id, assignmentId));
+}

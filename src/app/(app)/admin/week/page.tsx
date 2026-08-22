@@ -1,0 +1,141 @@
+import Link from 'next/link';
+import { redirect } from 'next/navigation';
+import { asc, eq } from 'drizzle-orm';
+
+import { db } from '../../../../db/index.ts';
+import { members } from '../../../../db/schema.ts';
+import { getSession } from '../../../../lib/session.ts';
+import { getLiveWeeks } from '../../../../lib/week-service.ts';
+import { getWeekForManagement } from '../../../../lib/week-admin.ts';
+import { parseISO } from '../../../../lib/dates.ts';
+import { AppShell } from '../../shell.tsx';
+import { WeekControls } from './week-controls.tsx';
+import { ManageDays } from './manage-client.tsx';
+import type { Person, SlotView } from './week-controls.tsx';
+
+export const dynamic = 'force-dynamic';
+
+function shortDate(iso: string): string {
+  return parseISO(iso).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    timeZone: 'UTC',
+  });
+}
+
+function dayLabel(iso: string): string {
+  return parseISO(iso).toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'short',
+    day: 'numeric',
+    timeZone: 'UTC',
+  });
+}
+
+export default async function ManageWeekPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ week?: string }>;
+}) {
+  const session = await getSession();
+  if (!session) redirect('/signin');
+  if (session.role !== 'admin') redirect('/my-shifts');
+
+  const params = await searchParams;
+  const allWeeks = await getLiveWeeks();
+
+  if (allWeeks.length === 0) {
+    return (
+      <AppShell
+        session={session}
+        active="/admin/week"
+        title="Manage week"
+        subtitle="Nothing to manage yet"
+      >
+        <div className="alert warn">
+          <span className="alert-title">No weeks exist yet</span>
+          <span className="alert-body">
+            Post the first week from the dashboard.
+          </span>
+          <Link className="btn sm" href="/admin">
+            Go to dashboard
+          </Link>
+        </div>
+      </AppShell>
+    );
+  }
+
+  const selected = params.week ?? allWeeks.at(-1)!.weekStart;
+  const target = allWeeks.find((w) => w.weekStart === selected) ?? allWeeks.at(-1)!;
+
+  const managed = await getWeekForManagement(target.id);
+  if (!managed) redirect('/admin/week');
+
+  const rosterRows = await db
+    .select()
+    .from(members)
+    .where(eq(members.active, true))
+    .orderBy(asc(members.name));
+
+  const roster: Person[] = rosterRows.map((r) => ({
+    id: r.id,
+    name: r.name,
+    classYear: r.classYear,
+    points: r.points,
+    exempt: r.exempt,
+  }));
+
+  const today = new Date().toISOString().slice(0, 10);
+  const hasStarted = managed.week.weekStart <= today;
+
+  const dates = [...new Set(managed.slots.map((s) => s.date))].sort();
+  const days = dates.map((date) => ({
+    date,
+    label: dayLabel(date),
+    slots: managed.slots.filter((s) => s.date === date) as SlotView[],
+  }));
+
+  return (
+    <AppShell
+      session={session}
+      active="/admin/week"
+      title="Manage week"
+      subtitle={`Week of ${shortDate(managed.week.weekStart)}`}
+    >
+      <div className="week-toggle">
+        {allWeeks.map((w) => (
+          <Link
+            key={w.id}
+            href={`/admin/week?week=${w.weekStart}`}
+            className={w.weekStart === selected ? 'active' : ''}
+          >
+            {shortDate(w.weekStart)}
+            <span className={`tag ${w.status === 'posted' ? 'ok' : 'locked'}`}>
+              {w.status}
+            </span>
+          </Link>
+        ))}
+      </div>
+
+      <WeekControls
+        weekId={managed.week.id}
+        weekStart={managed.week.weekStart}
+        status={managed.week.status}
+        hasStarted={hasStarted}
+      />
+
+      <div className="alert info" style={{ marginTop: 16 }}>
+        <span className="alert-title">Every change here is logged</span>
+        <span className="alert-body">
+          Replacing, swapping, and removing all record who did it and what it
+          was before. That is deliberate — the point of the record is that it
+          survives you changing your mind.
+        </span>
+      </div>
+
+      <h2 className="section-title">Shifts</h2>
+
+      <ManageDays days={days} roster={roster} />
+    </AppShell>
+  );
+}

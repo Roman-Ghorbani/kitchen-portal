@@ -13,6 +13,7 @@ const ADMIN_NAV = [
   { href: '/admin', label: 'Dashboard' },
   { href: '/admin/roster', label: 'Roster' },
   { href: '/schedule', label: 'Schedule' },
+  { href: '/admin/week', label: 'Manage week' },
   { href: '/admin/attendance', label: 'Attendance' },
   { href: '/admin/settings', label: 'Settings' },
 ];
