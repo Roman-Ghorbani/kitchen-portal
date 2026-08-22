@@ -89,9 +89,11 @@ export default async function ManageWeekPage({
   const hasStarted = managed.week.weekStart <= today;
 
   const dates = [...new Set(managed.slots.map((s) => s.date))].sort();
+  // Attendance controls only appear once a day has actually happened.
   const days = dates.map((date) => ({
     date,
     label: dayLabel(date),
+    isPast: date <= today,
     slots: managed.slots.filter((s) => s.date === date) as SlotView[],
   }));
 
@@ -127,9 +129,9 @@ export default async function ManageWeekPage({
       <div className="alert info" style={{ marginTop: 16 }}>
         <span className="alert-title">Every change here is logged</span>
         <span className="alert-body">
-          Replacing, swapping, and removing all record who did it and what it
-          was before. That is deliberate — the point of the record is that it
-          survives you changing your mind.
+          Replacing, subbing, removing, and marking attendance all record who
+          did it and what it was before. That is deliberate — the point of the
+          record is that it survives you changing your mind.
         </span>
       </div>
 

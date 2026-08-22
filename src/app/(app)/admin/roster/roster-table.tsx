@@ -38,6 +38,7 @@ export function RosterTable({ rows }: { rows: RosterRow[] }) {
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [confirmReset, setConfirmReset] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -197,14 +198,68 @@ export function RosterTable({ rows }: { rows: RosterRow[] }) {
                 </div>
 
                 <div className="detail-group">
-                  <span className="detail-label">Account</span>
+                  <span className="detail-label">PIN</span>
+                  {!r.hasPin ? (
+                    <div className="detail-hint">
+                      {r.name} has not set a PIN yet. They choose one the first
+                      time they sign in.
+                    </div>
+                  ) : confirmReset === r.id ? (
+                    <>
+                      <div className="detail-warn">
+                        This wipes their PIN so they can choose a new one, exactly
+                        like their first sign-in. Until they do, anyone who picks
+                        their name could set it — so tell {r.name.split(' ')[0]} to
+                        sign in now.
+                      </div>
+                      <div className="detail-actions">
+                        <button
+                          className="btn sm danger-on"
+                          disabled={pending}
+                          onClick={() => {
+                            setConfirmReset(null);
+                            run(() =>
+                              resetMemberPin(r.id).then((x) => ({
+                                ok: x.ok,
+                                message: x.ok
+                                  ? `${r.name}'s PIN is cleared — they set a new one next sign-in.`
+                                  : (x.error ?? 'Failed'),
+                              })),
+                            );
+                          }}
+                        >
+                          Yes, reset it
+                        </button>
+                        <button
+                          className="btn sm"
+                          onClick={() => setConfirmReset(null)}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="detail-actions">
+                        <button
+                          className="btn sm"
+                          disabled={pending}
+                          onClick={() => setConfirmReset(r.id)}
+                        >
+                          Reset PIN
+                        </button>
+                      </div>
+                      <div className="detail-hint">
+                        Use this when somebody forgets theirs, or to undo a PIN
+                        that was set by mistake.
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                <div className="detail-group">
+                  <span className="detail-label">Roster</span>
                   <div className="detail-actions">
-                    <button className="btn sm" disabled={pending || !r.hasPin}
-                      onClick={() => run(() => resetMemberPin(r.id).then((x) => ({
-                        ok: x.ok, message: x.ok ? `${r.name} can set a new PIN.` : (x.error ?? 'Failed'),
-                      })))}>
-                      {r.hasPin ? 'Reset PIN' : 'No PIN set'}
-                    </button>
                     <button className="btn sm" disabled={pending}
                       onClick={() => run(() => setActive(r.id, !r.active))}>
                       {r.active ? 'Remove from roster' : 'Restore to roster'}

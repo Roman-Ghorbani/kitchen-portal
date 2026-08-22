@@ -9,10 +9,13 @@ import {
   adminDeleteWeek,
   adminRegenerateWeek,
   adminReassign,
-  adminSwap,
   adminRemove,
   adminAdd,
 } from '../../../actions/week-admin-actions.ts';
+import {
+  markAttendance,
+  placeSubstitute,
+} from '../../../actions/shift-actions.ts';
 
 export interface Person {
   id: string;
@@ -78,10 +81,6 @@ export function WeekControls({
 
   return (
     <div className="card card-pad">
-      <h2 className="section-title" style={{ marginTop: 0 }}>
-        This week
-      </h2>
-
       <div className="wk-status">
         <span className={`tag ${status === 'posted' ? 'ok' : 'locked'}`}>
           {status}
@@ -186,9 +185,7 @@ function PersonPicker({
   const matches = useMemo(() => {
     const s = q.trim().toLowerCase();
     if (!s) return [];
-    return roster
-      .filter((m) => m.name.toLowerCase().includes(s))
-      .slice(0, 6);
+    return roster.filter((m) => m.name.toLowerCase().includes(s)).slice(0, 6);
   }, [q, roster]);
 
   return (
@@ -226,27 +223,34 @@ function PersonPicker({
   );
 }
 
+/**
+ * One shift, with everything the manager might need to do to it.
+ *
+ * Attendance and roster edits live together deliberately: standing in the
+ * kitchen finding somebody missing, the decision is a single one - mark them
+ * absent, or put somebody else on right now - and splitting those across two
+ * screens made a fast job into a slow one.
+ */
 export function SlotEditor({
   slot,
   roster,
-  swapSource,
-  onSwapSource,
+  isPast,
 }: {
   slot: SlotView;
   roster: Person[];
-  swapSource: { id: string; name: string } | null;
-  onSwapSource: (v: { id: string; name: string } | null) => void;
+  isPast: boolean;
 }) {
   const { pending, msg, bad, run } = useAction();
-  const [editing, setEditing] = useState<string | null>(null);
+  const [panel, setPanel] = useState<{ id: string; kind: 'replace' | 'sub' } | null>(
+    null,
+  );
   const [adding, setAdding] = useState(false);
   const [anyYear, setAnyYear] = useState(false);
+  const [bounty, setBounty] = useState(1);
 
   const openSeats = slot.size - slot.assignments.length;
   const wantYear = slot.meal === 'lunch' ? 'junior' : 'sophomore';
-  const eligible = roster.filter(
-    (m) => anyYear || m.classYear === wantYear,
-  );
+  const eligible = roster.filter((m) => anyYear || m.classYear === wantYear);
 
   return (
     <div className="slot-editor">
@@ -269,48 +273,70 @@ export function SlotEditor({
             )}
             {a.status === 'flagged' && <span className="tag bad">needs cover</span>}
             {a.status === 'no-show' && <span className="tag bad">no-show</span>}
+            {a.status === 'excused' && <span className="tag locked">excused</span>}
             {a.isMakeup && <span className="tag violet">make-up</span>}
             {a.multiplier > 1 && (
               <span className="wg-mult mono">{a.multiplier}×</span>
             )}
           </div>
 
+          {/* Attendance: only meaningful once the day has arrived. */}
+          {isPast && (
+            <div className="slot-attendance">
+              <span className="slot-attendance-label">Showed up?</span>
+              <button
+                className={`btn sm${a.status === 'no-show' ? ' danger-on' : ''}`}
+                disabled={pending}
+                onClick={() => run(() => markAttendance(a.id, 'no-show'))}
+              >
+                No-show
+              </button>
+              <button
+                className={`btn sm${a.status === 'excused' ? ' excused-on' : ''}`}
+                disabled={pending}
+                onClick={() => run(() => markAttendance(a.id, 'excused'))}
+              >
+                Excuse
+              </button>
+              {a.status !== 'assigned' && a.status !== 'covered' && (
+                <button
+                  className="btn sm"
+                  disabled={pending}
+                  onClick={() => run(() => markAttendance(a.id, 'assigned'))}
+                >
+                  Undo
+                </button>
+              )}
+            </div>
+          )}
+
           <div className="slot-person-actions">
             <button
               className="btn sm"
               disabled={pending}
-              onClick={() => setEditing(editing === a.id ? null : a.id)}
+              onClick={() =>
+                setPanel(
+                  panel?.id === a.id && panel.kind === 'replace'
+                    ? null
+                    : { id: a.id, kind: 'replace' },
+                )
+              }
             >
               Replace
             </button>
-
-            {swapSource?.id === a.id ? (
-              <button className="btn sm gold" onClick={() => onSwapSource(null)}>
-                Cancel swap
-              </button>
-            ) : swapSource ? (
-              <button
-                className="btn sm gold"
-                disabled={pending}
-                onClick={() =>
-                  run(async () => {
-                    const r = await adminSwap(swapSource.id, a.id);
-                    if (r.ok) onSwapSource(null);
-                    return r;
-                  })
-                }
-              >
-                Swap with {swapSource.name.split(' ')[0]}
-              </button>
-            ) : (
-              <button
-                className="btn sm"
-                onClick={() => onSwapSource({ id: a.id, name: a.memberName })}
-              >
-                Swap
-              </button>
-            )}
-
+            <button
+              className="btn sm"
+              disabled={pending}
+              onClick={() =>
+                setPanel(
+                  panel?.id === a.id && panel.kind === 'sub'
+                    ? null
+                    : { id: a.id, kind: 'sub' },
+                )
+              }
+            >
+              {a.coveredByName ? 'Change sub' : 'Add sub'}
+            </button>
             <button
               className="btn sm danger"
               disabled={pending}
@@ -320,28 +346,77 @@ export function SlotEditor({
             </button>
           </div>
 
-          {editing === a.id && (
+          {panel?.id === a.id && (
             <div className="slot-edit-panel">
-              <label className="any-year">
-                <input
-                  type="checkbox"
-                  checked={anyYear}
-                  onChange={(e) => setAnyYear(e.target.checked)}
-                />
-                Allow any class year (normally {wantYear}s only)
-              </label>
-              <PersonPicker
-                roster={eligible}
-                disabled={pending}
-                placeholder={`Replace ${a.memberName} with…`}
-                onPick={(id) =>
-                  run(async () => {
-                    const r = await adminReassign(a.id, id, anyYear);
-                    if (r.ok) setEditing(null);
-                    return r;
-                  })
-                }
-              />
+              {panel.kind === 'replace' ? (
+                <>
+                  <div className="panel-explain">
+                    <strong>Replace</strong> swaps who is on this shift outright.{' '}
+                    {a.memberName} keeps their place in the rotation and owes
+                    nothing.
+                  </div>
+                  <label className="any-year">
+                    <input
+                      type="checkbox"
+                      checked={anyYear}
+                      onChange={(e) => setAnyYear(e.target.checked)}
+                    />
+                    Allow any class year (normally {wantYear}s only)
+                  </label>
+                  <PersonPicker
+                    roster={eligible}
+                    disabled={pending}
+                    placeholder={`Replace ${a.memberName} with…`}
+                    onPick={(id) =>
+                      run(async () => {
+                        const r = await adminReassign(a.id, id, anyYear);
+                        if (r.ok) setPanel(null);
+                        return r;
+                      })
+                    }
+                  />
+                </>
+              ) : (
+                <>
+                  <div className="panel-explain">
+                    <strong>Sub</strong> means somebody covers for{' '}
+                    {a.memberName}. Only the sub earns the point, and{' '}
+                    {a.memberName} still owes their normal turn.
+                  </div>
+                  <div className="bounty-row">
+                    <span className="bounty-label">Award</span>
+                    {[1, 2, 3].map((m) => (
+                      <button
+                        key={m}
+                        className={`btn sm${bounty === m ? ' gold' : ''}`}
+                        onClick={() => setBounty(m)}
+                      >
+                        {m}×
+                      </button>
+                    ))}
+                    <span className="bounty-hint">
+                      {bounty === 1
+                        ? 'Normal credit'
+                        : `Bounty — ${bounty} points for stepping up`}
+                    </span>
+                  </div>
+                  <PersonPicker
+                    roster={roster}
+                    disabled={pending}
+                    placeholder="Who is covering?"
+                    onPick={(id) =>
+                      run(async () => {
+                        const r = await placeSubstitute(a.id, id, bounty);
+                        if (r.ok) {
+                          setPanel(null);
+                          setBounty(1);
+                        }
+                        return r;
+                      })
+                    }
+                  />
+                </>
+              )}
             </div>
           )}
         </div>
@@ -395,27 +470,6 @@ export function SlotEditor({
           {msg}
         </div>
       )}
-    </div>
-  );
-}
-
-export function SwapBanner({
-  source,
-  onCancel,
-}: {
-  source: { id: string; name: string } | null;
-  onCancel: () => void;
-}) {
-  if (!source) return null;
-  return (
-    <div className="alert info swap-banner">
-      <span className="alert-title">Swapping {source.name}</span>
-      <span className="alert-body">
-        Now pick the shift to swap them with — press Swap on the other person.
-      </span>
-      <button className="btn sm" onClick={onCancel}>
-        Cancel
-      </button>
     </div>
   );
 }

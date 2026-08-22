@@ -23,7 +23,6 @@ import {
   republishWeek,
   deleteWeek,
   reassignShift,
-  swapShifts,
   removeFromShift,
   addToShift,
 } from '../src/lib/week-admin.ts';
@@ -51,8 +50,8 @@ async function main() {
 
   const lunchSlots = slotRows.filter((s) => s.meal === 'lunch').sort((x, y) => x.date.localeCompare(y.date));
   const lunch = lunchSlots[0];
-  const otherLunch = lunchSlots[1];
   const dinner = slotRows.find((s) => s.meal === 'dinner')!;
+  void dinner;
 
   const lunchAsg = await db
     .select()
@@ -62,10 +61,6 @@ async function main() {
     .select()
     .from(assignmentsTable)
     .where(eq(assignmentsTable.slotId, dinner.id));
-  const otherLunchAsg = await db
-    .select()
-    .from(assignmentsTable)
-    .where(eq(assignmentsTable.slotId, otherLunch.id));
 
   const roster = await db.select().from(members);
   const onLunch = new Set(lunchAsg.map((a) => a.memberId));
@@ -111,38 +106,6 @@ async function main() {
 
   const dupe = await reassignShift(target.id, spareJunior.id, 'Smoke', {});
   check('refuses to reassign to who is already on it', () => assert.ok(!dupe.ok));
-
-  /* ---------- swap ---------- */
-  console.log('\nswap');
-  const crossMeal = await swapShifts(target.id, dinnerAsg[0].id, 'Smoke');
-  check('refuses a swap across meals with mismatched years', () =>
-    assert.ok(!crossMeal.ok),
-  );
-
-  const sameSlot = await swapShifts(target.id, lunchAsg[1].id, 'Smoke');
-  check('refuses to swap two people on the same shift', () =>
-    assert.ok(!sameSlot.ok),
-  );
-  check('says they are already together', () =>
-    assert.match(sameSlot.message, /same shift/),
-  );
-
-  const sameMeal = await swapShifts(target.id, otherLunchAsg[0].id, 'Smoke');
-  check('swaps lunch shifts across two days', () =>
-    assert.ok(sameMeal.ok, sameMeal.message),
-  );
-
-  const swapped = await db
-    .select()
-    .from(assignmentsTable)
-    .where(inArray(assignmentsTable.id, [target.id, otherLunchAsg[0].id]));
-  check('the two people actually traded places', () => {
-    const a = swapped.find((x) => x.id === target.id)!;
-    assert.equal(a.memberId, otherLunchAsg[0].memberId);
-  });
-
-  // put them back
-  await swapShifts(target.id, otherLunchAsg[0].id, 'Smoke');
 
   /* ---------- remove and add ---------- */
   console.log('\nremove and add');
@@ -211,7 +174,6 @@ async function main() {
   const actions = new Set(log.map((e) => e.action));
   for (const a of [
     'shift.reassigned',
-    'shift.swapped',
     'shift.removed',
     'shift.added',
   ]) {

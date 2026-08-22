@@ -2,7 +2,7 @@
  * Member-facing reads: what a given brother personally needs to see.
  */
 
-import { eq, and, inArray, asc } from 'drizzle-orm';
+import { eq, and, or, inArray, asc } from 'drizzle-orm';
 
 import { db } from '../db/index.ts';
 import {
@@ -20,7 +20,18 @@ export interface MyShift {
   meal: Meal;
   status: string;
   isMakeup: boolean;
+  /**
+   * How this shift concerns you. 'assigned' is your own turn. 'covering' means
+   * you picked it up for somebody else - you are the one who has to show up,
+   * and you are the one who earns the point.
+   */
+  role: 'assigned' | 'covering';
+  /** Set when somebody is covering your shift. */
   coveredByName: string | null;
+  /** Set when you are covering for somebody - whose shift it originally was. */
+  coveringForName: string | null;
+  /** Points this shift is worth, including any bounty. */
+  multiplier: number;
   weekStatus: string;
   weekLocksAt: Date | null;
   /** Who else is on that shift, so they know who to coordinate with. */
@@ -50,28 +61,35 @@ export async function getMyShifts(memberId: string): Promise<MyShift[]> {
 
   if (slotRows.length === 0) return [];
 
+  const slotIds = slotRows.map((s) => s.id);
+
+  /**
+   * Both the shifts assigned to you AND the ones you picked up for somebody
+   * else. Matching only on memberId used to hide covered shifts from the
+   * person who actually has to work them, which made volunteering feel like
+   * it had done nothing.
+   */
   const mine = await db
     .select()
     .from(assignmentsTable)
     .where(
       and(
-        eq(assignmentsTable.memberId, memberId),
-        inArray(
-          assignmentsTable.slotId,
-          slotRows.map((s) => s.id),
+        or(
+          eq(assignmentsTable.memberId, memberId),
+          eq(assignmentsTable.coveredByMemberId, memberId),
         ),
+        inArray(assignmentsTable.slotId, slotIds),
       ),
     );
 
   if (mine.length === 0) return [];
 
-  const mySlotIds = new Set(mine.map((a) => a.slotId));
+  const mySlotIds = [...new Set(mine.map((a) => a.slotId))];
 
-  // Everyone sharing those slots, so we can list the crew.
   const crewRows = await db
     .select()
     .from(assignmentsTable)
-    .where(inArray(assignmentsTable.slotId, [...mySlotIds]));
+    .where(inArray(assignmentsTable.slotId, mySlotIds));
 
   const memberIds = [
     ...new Set(
@@ -94,20 +112,31 @@ export async function getMyShifts(memberId: string): Promise<MyShift[]> {
     .map((a) => {
       const slot = slotById.get(a.slotId)!;
       const week = weekById.get(slot.weekId)!;
+      const covering = a.coveredByMemberId === memberId;
+
       return {
         assignmentId: a.id,
         date: slot.date,
         meal: slot.meal,
         status: a.status,
         isMakeup: a.isMakeup,
-        coveredByName: a.coveredByMemberId
-          ? (nameById.get(a.coveredByMemberId) ?? null)
-          : null,
+        role: covering ? ('covering' as const) : ('assigned' as const),
+        coveredByName:
+          !covering && a.coveredByMemberId
+            ? (nameById.get(a.coveredByMemberId) ?? null)
+            : null,
+        coveringForName: covering ? (nameById.get(a.memberId) ?? null) : null,
+        multiplier: a.multiplier,
         weekStatus: week.status,
         weekLocksAt: week.locksAt,
+        // Whoever is actually turning up, which is the coverer where there is
+        // one - the person you need to coordinate with is the one who shows up.
         crew: crewRows
-          .filter((c) => c.slotId === a.slotId && c.memberId !== memberId)
-          .map((c) => nameById.get(c.memberId) ?? 'Unknown')
+          .filter((c) => c.slotId === a.slotId && c.id !== a.id)
+          .map((c) => {
+            const who = c.coveredByMemberId ?? c.memberId;
+            return nameById.get(who) ?? 'Unknown';
+          })
           .sort(),
       };
     })

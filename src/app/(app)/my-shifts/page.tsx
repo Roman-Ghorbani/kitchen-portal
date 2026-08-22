@@ -74,7 +74,17 @@ export default async function MyShiftsPage() {
           <div className="next-meal">
             {next.meal === 'lunch' ? 'Lunch cleanup' : 'Dinner cleanup'}
             {next.isMakeup && <span className="wg-badge makeup">make-up</span>}
+            {next.multiplier > 1 && (
+              <span className="wg-mult mono">{next.multiplier}× points</span>
+            )}
           </div>
+
+          {next.role === 'covering' && (
+            <div className="next-covering">
+              You picked this up for {next.coveringForName}. You are the one who
+              needs to show up, and the point is yours.
+            </div>
+          )}
 
           <div className="next-crew">
             {next.crew.length > 0
@@ -95,7 +105,7 @@ export default async function MyShiftsPage() {
             </div>
           )}
 
-          {next.status === 'assigned' && (
+          {next.status === 'assigned' && next.role === 'assigned' && (
             <div className="next-action">
               <FlagButton
                 assignmentId={next.assignmentId}
@@ -172,13 +182,18 @@ export default async function MyShiftsPage() {
                   {weekday(s.date)}, {dateLine(s.date)}
                 </div>
                 <div className="shift-crew">
-                  {s.crew.length > 0 ? `With ${s.crew.join(', ')}` : 'On your own'}
+                  {s.role === 'covering'
+                    ? `Covering for ${s.coveringForName}`
+                    : s.crew.length > 0
+                      ? `With ${s.crew.join(', ')}`
+                      : 'On your own'}
                 </div>
               </div>
               <span className={`tag ${s.meal === 'lunch' ? 'jun' : 'soph'}`}>
                 {s.meal}
               </span>
-              {s.status === 'assigned' && (
+              {s.role === 'covering' && <span className="tag ok">covering</span>}
+              {s.status === 'assigned' && s.role === 'assigned' && (
                 <FlagButton
                   assignmentId={s.assignmentId}
                   disabled={

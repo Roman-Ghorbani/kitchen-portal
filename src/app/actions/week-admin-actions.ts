@@ -8,7 +8,6 @@ import {
   republishWeek,
   deleteWeek,
   reassignShift,
-  swapShifts,
   removeFromShift,
   addToShift,
   type AdminResult,
@@ -82,13 +81,6 @@ export async function adminReassign(
   const res = await reassignShift(assignmentId, newMemberId, admin.name, {
     allowAnyClassYear,
   });
-  if (res.ok) refresh();
-  return res;
-}
-
-export async function adminSwap(aId: string, bId: string): Promise<AdminResult> {
-  const admin = await requireAdmin();
-  const res = await swapShifts(aId, bId, admin.name);
   if (res.ok) refresh();
   return res;
 }
