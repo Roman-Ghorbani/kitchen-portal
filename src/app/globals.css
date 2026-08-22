@@ -825,3 +825,186 @@ button {
     gap: 2px;
   }
 }
+
+/* ------------------------------------------------------------------ */
+/* Flag / cover / attendance                                           */
+/* ------------------------------------------------------------------ */
+
+.person-chip.flagged {
+  background: var(--red-100);
+  border-color: var(--red-600);
+}
+
+.person-chip.noshow {
+  opacity: 0.7;
+  text-decoration-color: var(--red-600);
+}
+
+.person-chip .mult {
+  background: var(--gold-500);
+  color: var(--navy-950);
+  border-radius: 10px;
+  padding: 0 6px;
+  font-size: 10.5px;
+  font-weight: 800;
+}
+
+.flag-wrap {
+  margin-left: auto;
+}
+
+.flag-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 280px;
+}
+
+.flag-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.claim-msg {
+  font-size: 12px;
+  font-weight: 600;
+  margin-left: 8px;
+}
+
+.att-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card);
+  margin-bottom: 9px;
+  flex-wrap: wrap;
+}
+
+.att-who {
+  flex: 1;
+  min-width: 200px;
+}
+
+.att-name {
+  font-size: 14.5px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.att-sub {
+  font-size: 12px;
+  color: var(--gold-600);
+  font-weight: 600;
+  margin-top: 3px;
+}
+
+.att-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.att-pts {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--green-600);
+}
+
+.att-pts.owed {
+  color: var(--red-600);
+}
+
+.att-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.att-buttons {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.btn.danger-on {
+  background: var(--red-600);
+  color: #fff;
+  border-color: var(--red-600);
+}
+
+.btn.excused-on {
+  background: var(--navy-700);
+  color: #fff;
+  border-color: var(--navy-700);
+}
+
+.sub-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 300px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--navy-50);
+}
+
+.bounty-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.bounty-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-600);
+}
+
+.bounty-hint {
+  font-size: 11.5px;
+  color: var(--ink-400);
+  flex-basis: 100%;
+}
+
+.sub-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.att-msg {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--green-600);
+  text-align: right;
+}
+
+@media (max-width: 620px) {
+  .att-controls {
+    align-items: stretch;
+    width: 100%;
+  }
+  .sub-panel {
+    min-width: 0;
+  }
+  .flag-wrap {
+    margin-left: 0;
+    width: 100%;
+  }
+  .flag-form {
+    min-width: 0;
+  }
+}

@@ -4,6 +4,11 @@ import { getSession } from '../../../lib/session.ts';
 import { getMyShifts, getMemberById } from '../../../lib/member-queries.ts';
 import { parseISO } from '../../../lib/dates.ts';
 import { AppShell } from '../shell.tsx';
+import { FlagButton } from './flag-button.tsx';
+
+function pastDeadline(locksAt: Date | null): boolean {
+  return locksAt !== null && new Date() > locksAt;
+}
 
 export const dynamic = 'force-dynamic';
 
@@ -99,10 +104,24 @@ export default async function MyShiftsPage() {
 
             {s.isMakeup && <span className="tag bad">Make-up</span>}
 
-            {s.weekStatus === 'posted' ? (
-              <span className="tag ok">Can flag</span>
-            ) : (
-              <span className="tag locked">Locked</span>
+            {s.status === 'flagged' && (
+              <span className="tag bad">Flagged — open to the house</span>
+            )}
+
+            {s.coveredByName && (
+              <span className="tag ok">Covered by {s.coveredByName}</span>
+            )}
+
+            {s.status === 'assigned' && (
+              <FlagButton
+                assignmentId={s.assignmentId}
+                disabled={s.weekStatus !== 'posted' || pastDeadline(s.weekLocksAt)}
+                disabledReason={
+                  s.weekStatus !== 'posted'
+                    ? 'Locked — contact Roman'
+                    : 'Deadline passed'
+                }
+              />
             )}
           </div>
         ))

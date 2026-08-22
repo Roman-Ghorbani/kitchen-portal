@@ -242,6 +242,18 @@ export const assignments = pgTable(
     /** Set when points were actually credited, so we never double-credit. */
     settledAt: timestamp('settled_at', { withTimezone: true }),
 
+    /**
+     * What settlement has already handed out for this shift. Kept so that a
+     * later attendance correction applies only the difference rather than
+     * double-crediting or requiring anyone to unwind points by hand.
+     */
+    pointsAwarded: integer('points_awarded').notNull().default(0),
+    debtAwarded: integer('debt_awarded').notNull().default(0),
+    /** Who last received the points, so credit can be moved cleanly. */
+    settledRecipientId: uuid('settled_recipient_id').references(() => members.id, {
+      onDelete: 'set null',
+    }),
+
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),

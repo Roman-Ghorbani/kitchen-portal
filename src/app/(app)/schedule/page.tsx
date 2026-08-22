@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { getSession } from '../../../lib/session.ts';
 import { getWeek, getLiveWeeks, type DisplaySlot } from '../../../lib/week-service.ts';
 import { AppShell } from '../shell.tsx';
+import { CoverButton } from './cover-button.tsx';
 import { parseISO, mondayOf, addDays } from '../../../lib/dates.ts';
 
 export const dynamic = 'force-dynamic';
@@ -31,10 +32,12 @@ function SlotView({
   slot,
   label,
   meId,
+  canCover,
 }: {
   slot: DisplaySlot | null;
   label: string;
   meId: string;
+  canCover: boolean;
 }) {
   if (!slot) return null;
 
@@ -46,29 +49,51 @@ function SlotView({
         {label} · {slot.size} {slot.meal === 'lunch' ? 'juniors' : 'sophomores'}
       </div>
       <div className="slot-people">
-        {slot.assignments.map((a) => (
-          <span
-            key={a.id}
-            className={`person-chip${a.memberId === meId ? ' is-me' : ''}`}
-            title={a.isMakeup ? 'Make-up shift' : undefined}
-          >
-            <span className={`avatar${a.memberId === meId ? ' me' : ''}`}>
-              {initials(a.memberName)}
+        {slot.assignments.map((a) => {
+          const mine = a.memberId === meId || a.coveredByMemberId === meId;
+          const isOpen = a.status === 'flagged';
+
+          return (
+            <span
+              key={a.id}
+              className={
+                `person-chip${mine ? ' is-me' : ''}` +
+                (isOpen ? ' flagged' : '') +
+                (a.status === 'no-show' ? ' noshow' : '')
+              }
+              title={a.isMakeup ? 'Make-up shift' : undefined}
+            >
+              <span className={`avatar${mine ? ' me' : ''}`}>
+                {initials(a.memberName)}
+              </span>
+
+              {a.coveredByName ? (
+                <>
+                  <s>{a.memberName}</s> → {a.coveredByName}
+                  {a.multiplier > 1 && (
+                    <span className="mult mono">{a.multiplier}x</span>
+                  )}
+                </>
+              ) : (
+                a.memberName
+              )}
+
+              {a.status === 'no-show' && <span className="tag bad">no-show</span>}
+
+              {isOpen && (
+                <>
+                  <span className="tag bad">needs cover</span>
+                  {canCover && a.memberId !== meId && (
+                    <CoverButton assignmentId={a.id} label="Pick up" />
+                  )}
+                </>
+              )}
             </span>
-            {a.coveredByName ? (
-              <>
-                <s>{a.memberName}</s> → {a.coveredByName}
-              </>
-            ) : (
-              a.memberName
-            )}
-          </span>
-        ))}
+          );
+        })}
 
         {openSeats > 0 && (
-          <span className="empty-slot">
-            {openSeats} open — needs coverage
-          </span>
+          <span className="empty-slot">{openSeats} unfilled</span>
         )}
       </div>
     </div>
@@ -120,6 +145,8 @@ export default async function SchedulePage({
 
   const isLocked = week.status === 'locked' || week.status === 'complete';
   const meId = session.role === 'brother' ? session.sub : '';
+  // Coverage is open to anyone signed in as a brother, any class year.
+  const canCover = session.role === 'brother' && !isLocked;
 
   return (
     <AppShell
@@ -165,8 +192,18 @@ export default async function SchedulePage({
               <div className="daynum">{dayNum(day.date)}</div>
             </div>
             <div className="day-slots">
-              <SlotView slot={day.lunch} label="Lunch" meId={meId} />
-              <SlotView slot={day.dinner} label="Dinner" meId={meId} />
+              <SlotView
+                slot={day.lunch}
+                label="Lunch"
+                meId={meId}
+                canCover={canCover}
+              />
+              <SlotView
+                slot={day.dinner}
+                label="Dinner"
+                meId={meId}
+                canCover={canCover}
+              />
             </div>
           </div>
         ))}

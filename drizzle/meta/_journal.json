@@ -8,6 +8,13 @@
       "when": 1787264577587,
       "tag": "0000_quick_cardiac",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1787424330348,
+      "tag": "0001_flaky_jubilee",
+      "breakpoints": true
     }
   ]
 }
