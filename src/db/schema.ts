@@ -105,6 +105,13 @@ export const members = pgTable(
     /** Denormalized from assignments for fast tie-breaking during generation. */
     lastServedDate: date('last_served_date'),
 
+    /**
+     * Slack member id (e.g. U01ABC23DEF), so day-before reminders can @mention
+     * the actual person rather than printing a name nobody gets notified by.
+     * Optional - reminders fall back to plain text when it is missing.
+     */
+    slackUserId: text('slack_user_id'),
+
     /** Off the roster (graduated, moved out) without deleting their history. */
     active: boolean('active').notNull().default(true),
 

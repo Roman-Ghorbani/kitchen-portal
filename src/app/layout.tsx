@@ -4,6 +4,9 @@ import './globals.css';
 export const metadata: Metadata = {
   title: 'ZBT Kitchen Duty',
   description: 'Kitchen duty schedule for the ZBT chapter house',
+  // The schedule is public so it is as easy to check as the screenshot it
+  // replaces, but 95 real names should not become search results.
+  robots: { index: false, follow: false, nocache: true },
 };
 
 export const viewport: Viewport = {

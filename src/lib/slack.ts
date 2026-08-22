@@ -145,3 +145,52 @@ export async function announceOpenShifts(
 export function slackConfigured(): boolean {
   return webhook() !== null;
 }
+
+export interface ReminderPerson {
+  name: string;
+  slackUserId: string | null;
+  needsCover: boolean;
+}
+
+/**
+ * Reminds tomorrow's crew.
+ *
+ * Mentions anyone whose Slack id is known and falls back to their plain name
+ * otherwise, so this is useful from day one rather than waiting on a complete
+ * roster mapping.
+ */
+export async function announceTomorrow(
+  date: string,
+  crews: { meal: string; people: ReminderPerson[] }[],
+  appUrl: string,
+): Promise<SlackResult> {
+  const withPeople = crews.filter((c) => c.people.length > 0);
+  if (withPeople.length === 0) return { sent: false, reason: 'nobody on duty' };
+
+  const render = (p: ReminderPerson) => {
+    const who = p.slackUserId ? `<@${p.slackUserId}>` : `*${p.name}*`;
+    return p.needsCover ? `${who} _(needs cover!)_` : who;
+  };
+
+  const lines = withPeople.map(
+    (c) =>
+      `*${c.meal === 'lunch' ? 'Lunch' : 'Dinner'}:* ` +
+      c.people.map(render).join(', '),
+  );
+
+  const anyOpen = withPeople.some((c) => c.people.some((p) => p.needsCover));
+
+  return post(`Kitchen duty tomorrow, ${pretty(date)}`, [
+    {
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text:
+          `🍳 *Kitchen duty tomorrow — ${pretty(date)}*\n\n${lines.join('\n')}` +
+          (anyOpen
+            ? `\n\n⚠️ Something still needs cover — <${appUrl}/schedule|grab it and keep the point>.`
+            : ''),
+      },
+    },
+  ]);
+}

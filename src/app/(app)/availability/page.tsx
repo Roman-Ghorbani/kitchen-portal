@@ -39,26 +39,25 @@ export default async function AvailabilityPage() {
       session={session}
       active="/availability"
       title="My Availability"
-      subtitle={`Standing weekly conflicts · ${semester.name}`}
+      subtitle="Set this once — it applies every week"
     >
+      <div className="alert info">
+        <span className="alert-title">This is the setting that saves you hassle</span>
+        <span className="alert-body">
+          You are a {member.classYear}, so you only ever get{' '}
+          <strong>{meal}</strong>. Block a day here and you are simply never
+          scheduled then — no flagging every week, nothing to forget, and no
+          argument later about whether you told anyone.
+        </span>
+      </div>
+
       <div className="card card-pad">
-        <h2 className="section-title" style={{ marginTop: 0 }}>
-          Which days can you never make {meal}?
-        </h2>
-        <p style={{ fontSize: 13, color: 'var(--ink-400)', marginTop: 0 }}>
-          You are a {member.classYear}, so you are only ever scheduled for{' '}
-          <strong>{meal}</strong>. Mark a day unavailable and you simply will not
-          be scheduled then — no flagging, no reminders, nothing to forget.
-        </p>
-
         <AvailabilityForm initial={initial} mealLabel={meal} />
+      </div>
 
-        <div className="note">
-          This is the setting that saves you the most hassle. A recurring class
-          conflict set once here beats flagging the same shift every week — and
-          it means a missed shift is never something you can say you were never
-          asked about.
-        </div>
+      <div className="note">
+        Changes apply to weeks generated from now on. If you are already on a
+        posted week, flag that shift from <strong>My Shifts</strong> as well.
       </div>
     </AppShell>
   );

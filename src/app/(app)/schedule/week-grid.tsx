@@ -24,14 +24,7 @@ function monthOf(iso: string): string {
   });
 }
 
-/**
- * One person on one shift.
- *
- * Kept deliberately compact: the whole point of the grid is that a week fits
- * on one screen, so a chip is an avatar plus a name and nothing else unless
- * something is actually wrong with it.
- */
-function PersonCell({
+function PersonChip({
   assignment,
   meId,
   canCover,
@@ -56,18 +49,18 @@ function PersonCell({
     >
       <span className={`avatar${mine ? ' me' : ''}`}>{initials(served)}</span>
 
-      <span className="wg-person-name">
+      <span className="wg-name">
         {a.coveredByName ? (
           <>
-            <span className="wg-covered-by">{a.coveredByName}</span>
-            <span className="wg-replaced">for {a.memberName}</span>
+            <b>{a.coveredByName}</b>
+            <em>covering {a.memberName}</em>
           </>
         ) : (
-          a.memberName
+          <b>{a.memberName}</b>
         )}
       </span>
 
-      {a.multiplier > 1 && <span className="wg-mult mono">{a.multiplier}x</span>}
+      {a.multiplier > 1 && <span className="wg-mult mono">{a.multiplier}×</span>}
       {a.isMakeup && <span className="wg-badge makeup">make-up</span>}
       {a.status === 'no-show' && <span className="wg-badge bad">no-show</span>}
 
@@ -85,39 +78,66 @@ function PersonCell({
 
 function SlotCell({
   slot,
+  meal,
+  index,
   meId,
   canCover,
   isToday,
+  isPast,
 }: {
   slot: DisplaySlot | null;
+  meal: 'lunch' | 'dinner';
+  index: number;
   meId: string;
   canCover: boolean;
   isToday: boolean;
+  isPast: boolean;
 }) {
-  if (!slot) {
-    return (
-      <div className={`wg-cell empty${isToday ? ' today' : ''}`}>
-        <span className="wg-noservice">no service</span>
-      </div>
-    );
-  }
-
-  const unfilled = slot.size - slot.assignments.length;
+  const cls =
+    `wg-cell ${meal}` +
+    (isToday ? ' today' : '') +
+    (isPast ? ' past' : '') +
+    (slot ? '' : ' empty');
 
   return (
-    <div className={`wg-cell${isToday ? ' today' : ''}`}>
-      {slot.assignments.map((a) => (
-        <PersonCell key={a.id} assignment={a} meId={meId} canCover={canCover} />
-      ))}
-      {unfilled > 0 && (
-        <div className="wg-unfilled">
-          {unfilled} unfilled seat{unfilled === 1 ? '' : 's'}
-        </div>
+    <div className={cls} style={{ ['--i' as string]: String(index) }}>
+      {/* Visible only in the mobile layout, where columns are meals not days. */}
+      <span className="wg-cell-tag">{meal === 'lunch' ? 'Lunch' : 'Dinner'}</span>
+
+      {!slot ? (
+        <span className="wg-noservice">No service</span>
+      ) : (
+        <>
+          {slot.assignments.map((a) => (
+            <PersonChip
+              key={a.id}
+              assignment={a}
+              meId={meId}
+              canCover={canCover}
+            />
+          ))}
+          {slot.size - slot.assignments.length > 0 && (
+            <div className="wg-unfilled">
+              {slot.size - slot.assignments.length} seat
+              {slot.size - slot.assignments.length === 1 ? '' : 's'} unfilled
+            </div>
+          )}
+        </>
       )}
     </div>
   );
 }
 
+/**
+ * A whole week at a glance.
+ *
+ * One set of markup, two layouts. On a wide screen days run across as columns
+ * with lunch and dinner as rows. On a phone that is physically impossible -
+ * six columns of readable names needs about 900px - so the same grid flips:
+ * days become rows and the two meals become the columns. Every item carries
+ * its day index as a custom property, and the stylesheet places it, so
+ * nothing is rendered twice and there is no duplicate DOM to keep in sync.
+ */
 export function WeekGrid({
   week,
   meId,
@@ -132,57 +152,62 @@ export function WeekGrid({
   const days = week.days;
 
   return (
-    <div className="wg-scroll">
-      <div
-        className="week-grid"
-        style={{ ['--wg-cols' as string]: String(days.length) }}
-      >
-        {/* header row */}
-        <div className="wg-corner" />
-        {days.map((d) => (
-          <div
-            key={`h-${d.date}`}
-            className={`wg-day${d.date === today ? ' today' : ''}`}
-          >
-            <span className="wg-dow">{dow(d.date)}</span>
-            <span className="wg-date">
-              <span className="wg-num">{dayOfMonth(d.date)}</span>
-              <span className="wg-mon">{monthOf(d.date)}</span>
-            </span>
-            {d.date === today && <span className="wg-today-chip">Today</span>}
-          </div>
-        ))}
+    <div className="week-grid" style={{ ['--wg-cols' as string]: String(days.length) }}>
+      <div className="wg-corner" />
 
-        {/* lunch row */}
-        <div className="wg-label lunch">
-          <span className="wg-label-name">Lunch</span>
-          <span className="wg-label-sub">juniors</span>
-        </div>
-        {days.map((d) => (
-          <SlotCell
-            key={`l-${d.date}`}
-            slot={d.lunch}
-            meId={meId}
-            canCover={canCover}
-            isToday={d.date === today}
-          />
-        ))}
-
-        {/* dinner row */}
-        <div className="wg-label dinner">
-          <span className="wg-label-name">Dinner</span>
-          <span className="wg-label-sub">sophomores</span>
-        </div>
-        {days.map((d) => (
-          <SlotCell
-            key={`d-${d.date}`}
-            slot={d.dinner}
-            meId={meId}
-            canCover={canCover}
-            isToday={d.date === today}
-          />
-        ))}
+      <div className="wg-head lunch">
+        <span className="wg-head-name">Lunch</span>
+        <span className="wg-head-sub">juniors</span>
       </div>
+      <div className="wg-head dinner">
+        <span className="wg-head-name">Dinner</span>
+        <span className="wg-head-sub">sophomores</span>
+      </div>
+
+      {days.map((d, i) => (
+        <div
+          key={`day-${d.date}`}
+          className={
+            'wg-day' +
+            (d.date === today ? ' today' : '') +
+            (d.date < today ? ' past' : '')
+          }
+          style={{ ['--i' as string]: String(i) }}
+        >
+          <span className="wg-dow">{dow(d.date)}</span>
+          <span className="wg-date">
+            <span className="wg-num">{dayOfMonth(d.date)}</span>
+            <span className="wg-mon">{monthOf(d.date)}</span>
+          </span>
+          {d.date === today && <span className="wg-today-chip">Today</span>}
+        </div>
+      ))}
+
+      {days.map((d, i) => (
+        <SlotCell
+          key={`l-${d.date}`}
+          slot={d.lunch}
+          meal="lunch"
+          index={i}
+          meId={meId}
+          canCover={canCover}
+          isToday={d.date === today}
+          isPast={d.date < today}
+        />
+      ))}
+
+      {days.map((d, i) => (
+        <SlotCell
+          key={`d-${d.date}`}
+          slot={d.dinner}
+          meal="dinner"
+          index={i}
+          meId={meId}
+          canCover={canCover}
+          isToday={d.date === today}
+          isPast={d.date < today}
+        />
+      ))}
     </div>
   );
 }

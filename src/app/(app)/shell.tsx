@@ -17,6 +17,9 @@ const ADMIN_NAV = [
   { href: '/admin/settings', label: 'Settings' },
 ];
 
+/** Signed out, the only thing worth showing is the schedule itself. */
+const PUBLIC_NAV = [{ href: '/schedule', label: 'Schedule' }];
+
 export function AppShell({
   session,
   active,
@@ -24,13 +27,17 @@ export function AppShell({
   subtitle,
   children,
 }: {
-  session: SessionPayload;
+  session: SessionPayload | null;
   active: string;
   title: string;
   subtitle?: string;
   children: React.ReactNode;
 }) {
-  const nav = session.role === 'admin' ? ADMIN_NAV : BROTHER_NAV;
+  const nav = !session
+    ? PUBLIC_NAV
+    : session.role === 'admin'
+      ? ADMIN_NAV
+      : BROTHER_NAV;
 
   return (
     <div className="shell">
@@ -53,6 +60,12 @@ export function AppShell({
               {item.label}
             </Link>
           ))}
+
+          {!session && (
+            <Link href="/signin" className="nav-item nav-signin">
+              Sign in
+            </Link>
+          )}
         </div>
       </nav>
 
@@ -62,11 +75,18 @@ export function AppShell({
             <h1>{title}</h1>
             {subtitle && <div className="sub">{subtitle}</div>}
           </div>
-          <form action={signOut}>
-            <button className="btn sm" type="submit">
-              {session.name} · Sign out
-            </button>
-          </form>
+
+          {session ? (
+            <form action={signOut}>
+              <button className="btn sm" type="submit">
+                {session.name} · Sign out
+              </button>
+            </form>
+          ) : (
+            <Link className="btn gold sm" href="/signin">
+              Sign in
+            </Link>
+          )}
         </header>
 
         <div className="content">{children}</div>

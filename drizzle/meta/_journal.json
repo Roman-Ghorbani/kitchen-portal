@@ -15,6 +15,13 @@
       "when": 1787424330348,
       "tag": "0001_flaky_jubilee",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1787439325700,
+      "tag": "0002_salty_gateway",
+      "breakpoints": true
     }
   ]
 }
