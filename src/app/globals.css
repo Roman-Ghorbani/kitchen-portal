@@ -2522,3 +2522,139 @@ button {
   border-radius: 8px;
   padding: 9px 11px;
 }
+
+/* ------------------------------------------------------------------ */
+/* Later shifts                                                        */
+/*                                                                     */
+/* Same visual language as the next-shift hero, one step quieter. A    */
+/* shift further out is still one you have to turn up to, so it gets a */
+/* card rather than a list row - the row version read as metadata      */
+/* about the first shift instead of a second obligation.               */
+/* ------------------------------------------------------------------ */
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.section-count {
+  font-size: 12px;
+  font-weight: 800;
+  background: var(--navy-800);
+  color: #fff;
+  border-radius: 20px;
+  padding: 2px 9px;
+}
+
+.upcoming-shift {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-left: 5px solid var(--gold-500);
+  border-radius: 14px;
+  padding: 16px 18px;
+  margin-bottom: 10px;
+  box-shadow: var(--shadow-sm);
+}
+
+.up-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.up-when {
+  font-size: 11.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1.1px;
+  color: var(--gold-600);
+}
+
+.up-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.up-date {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+
+.up-day {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.8px;
+  line-height: 1.1;
+}
+
+.up-full {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-400);
+}
+
+.up-meal {
+  font-size: 14px;
+  font-weight: 800;
+  padding: 7px 15px;
+  border-radius: 22px;
+  white-space: nowrap;
+}
+
+.up-meal.lunch {
+  background: var(--gold-100);
+  color: var(--gold-600);
+  border: 1.5px solid var(--gold-500);
+}
+
+.up-meal.dinner {
+  background: var(--navy-50);
+  color: var(--navy-700);
+  border: 1.5px solid var(--navy-700);
+}
+
+.up-crew {
+  font-size: 13px;
+  color: var(--ink-600);
+  margin-top: 9px;
+  line-height: 1.5;
+}
+
+.up-action {
+  margin-top: 12px;
+}
+
+@media (max-width: 620px) {
+  .upcoming-shift {
+    padding: 14px 15px;
+  }
+
+  .up-day {
+    font-size: 21px;
+  }
+
+  .up-main {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .up-meal {
+    font-size: 13px;
+    padding: 6px 13px;
+  }
+
+  .up-action .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}

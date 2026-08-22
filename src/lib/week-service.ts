@@ -7,7 +7,7 @@
  * the app exists to provide.
  */
 
-import { eq, and, inArray, asc } from 'drizzle-orm';
+import { eq, and, inArray, asc, sql } from 'drizzle-orm';
 
 import { db } from '../db/index.ts';
 import {
@@ -95,6 +95,51 @@ export interface GenerateOptions {
   locksAt?: Date;
 }
 
+/**
+ * Credits the point for every assignment in a freshly generated week.
+ *
+ * Being on the schedule is what earns the point. Attendance is assumed, and
+ * the point is taken back only if somebody actually fails to serve - so the
+ * credit lands the moment the week is drawn, not after the day has passed.
+ *
+ * This is not cosmetic. The scheduler picks by fewest points, so if credit
+ * lagged behind scheduling, a second week drawn before the first one ran
+ * would see an all-zero pool and could pick the same people again. Points
+ * have to reflect what somebody has been asked to do, not only what has
+ * already happened.
+ *
+ * Done as two statements rather than a settle call per row: generation writes
+ * thirty assignments at once, and thirty sequential round trips to a remote
+ * database is a slow way to do arithmetic.
+ */
+async function creditNewAssignments(weekId: string): Promise<void> {
+  await db.execute(sql`
+    UPDATE assignments a
+    SET points_awarded = a.multiplier,
+        settled_recipient_id = a.member_id,
+        settled_at = now()
+    FROM slots s
+    WHERE s.id = a.slot_id AND s.week_id = ${weekId}
+  `);
+
+  await db.execute(sql`
+    UPDATE members m
+    SET points = m.points + agg.pts,
+        last_served_date = GREATEST(
+          COALESCE(m.last_served_date, DATE '1970-01-01'),
+          agg.latest
+        )
+    FROM (
+      SELECT a.member_id, SUM(a.multiplier)::int AS pts, MAX(s.date) AS latest
+      FROM assignments a
+      JOIN slots s ON s.id = a.slot_id
+      WHERE s.week_id = ${weekId}
+      GROUP BY a.member_id
+    ) agg
+    WHERE m.id = agg.member_id
+  `);
+}
+
 export async function generateAndSaveWeek(
   weekStart: string,
   options: GenerateOptions = {},
@@ -176,6 +221,7 @@ export async function generateAndSaveWeek(
 
   if (assignmentValues.length > 0) {
     await db.insert(assignmentsTable).values(assignmentValues);
+    await creditNewAssignments(week.id);
   }
 
   await db.insert(events).values({

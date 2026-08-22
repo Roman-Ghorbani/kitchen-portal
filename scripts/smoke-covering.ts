@@ -11,7 +11,12 @@ import assert from 'node:assert/strict';
 
 import { db } from '../src/db/index.ts';
 import { members, assignments as assignmentsTable, events } from '../src/db/schema.ts';
-import { flagConflict, volunteerToCover } from '../src/lib/shift-service.ts';
+import {
+  flagConflict,
+  volunteerToCover,
+  settleAssignment,
+  unsettleAssignment,
+} from '../src/lib/shift-service.ts';
 import { getMyShifts } from '../src/lib/member-queries.ts';
 import { hashPin, verifyPin } from '../src/lib/auth.ts';
 
@@ -45,6 +50,10 @@ async function main() {
 
   const volBefore = await getMyShifts(volunteer.id);
   const ownerBefore = await getMyShifts(owner.id);
+
+  // Points are credited at scheduling now, so people legitimately hold them
+  // at rest. Compare against a baseline rather than assuming zero.
+  const pointsBefore = roster.reduce((n, m) => n + m.points, 0);
 
   /* ---------- cover it ---------- */
   console.log('flag and cover');
@@ -116,18 +125,15 @@ async function main() {
 
   /* ---------- restore ---------- */
   console.log('\nrestoring');
+  // Hand the credit back before rewriting the row, then re-credit the owner.
+  // Blanking the award columns on their own would strand the point with the
+  // coverer, which is exactly the mistake the settlement model exists to stop.
+  await unsettleAssignment(target.id);
   await db
     .update(assignmentsTable)
-    .set({
-      status: 'assigned',
-      coveredByMemberId: null,
-      multiplier: 1,
-      pointsAwarded: 0,
-      debtAwarded: 0,
-      settledRecipientId: null,
-      settledAt: null,
-    })
+    .set({ status: 'assigned', coveredByMemberId: null, multiplier: 1 })
     .where(eq(assignmentsTable.id, target.id));
+  await settleAssignment(target.id);
 
   await db.delete(events).where(eq(events.action, 'shift.flagged'));
   await db.delete(events).where(eq(events.action, 'shift.covered'));
@@ -138,8 +144,8 @@ async function main() {
   );
 
   const m = await db.select().from(members);
-  check('no stray points', () =>
-    assert.equal(m.filter((x) => x.points !== 0).length, 0),
+  check('points back to the starting total', () =>
+    assert.equal(m.reduce((n, x) => n + x.points, 0), pointsBefore),
   );
 
   console.log(

@@ -1,6 +1,11 @@
 /**
  * Deciding what a finished shift is worth.
  *
+ * The point is credited the moment somebody is put on the schedule - being
+ * scheduled is what earns it, because attendance is assumed. It is taken back
+ * only when they actually fail to serve. So this runs at generation, not after
+ * the day has passed.
+ *
  * Kept pure and separate from the database because this is the arithmetic
  * people argue about, and it has to be re-runnable. Roman corrects attendance
  * whenever he notices - sometimes days later, sometimes after points have
@@ -55,7 +60,8 @@ export interface SettleDelta {
  *             stay in the pool at their current total
  * - no-show   nobody earns; the assignee owes a make-up shift
  * - excused   nobody earns and nothing is owed
- * - flagged   unresolved, so nothing is settled yet
+ * - flagged   they handed it back in time, so the point returns with it;
+ *             nothing is owed and they rejoin the pool at their old total
  */
 export function desiredOutcome(input: SettleInput): SettleOutcome {
   switch (input.status) {

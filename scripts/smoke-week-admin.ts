@@ -65,6 +65,11 @@ async function main() {
   const roster = await db.select().from(members);
   const onLunch = new Set(lunchAsg.map((a) => a.memberId));
 
+  // Scheduled people hold points at rest, so assert the total is unchanged
+  // rather than that it is zero.
+  const pointsBefore = roster.reduce((n, m) => n + m.points, 0);
+  const debtBefore = roster.reduce((n, m) => n + m.makeupDebt, 0);
+
   const spareJunior = roster.find(
     (m) => m.active && m.classYear === 'junior' && !onLunch.has(m.id),
   )!;
@@ -194,11 +199,11 @@ async function main() {
 
   // Points were never settled for a future week, but make sure of it.
   const dirty = await db.select().from(members);
-  check('no stray points', () =>
-    assert.equal(dirty.filter((m) => m.points !== 0).length, 0),
+  check('points back to the starting total', () =>
+    assert.equal(dirty.reduce((n, m) => n + m.points, 0), pointsBefore),
   );
-  check('no stray make-up debt', () =>
-    assert.equal(dirty.filter((m) => m.makeupDebt !== 0).length, 0),
+  check('make-up debt back to the starting total', () =>
+    assert.equal(dirty.reduce((n, m) => n + m.makeupDebt, 0), debtBefore),
   );
 
   console.log(

@@ -261,8 +261,8 @@ export async function reassignShift(
     })
     .where(eq(assignmentsTable.id, assignmentId));
 
-  // Only settle a shift that has already happened; a future one settles later.
-  if (ctx.slot.date <= today()) await settleAssignment(assignmentId);
+  // Credit lands immediately: being on the schedule is what earns the point.
+  await settleAssignment(assignmentId);
 
   await db.insert(events).values({
     action: 'shift.reassigned',
@@ -379,7 +379,7 @@ export async function addToShift(
     })
     .returning({ id: assignmentsTable.id });
 
-  if (slot.date <= today()) await settleAssignment(created.id);
+  await settleAssignment(created.id);
 
   await db.insert(events).values({
     action: 'shift.added',

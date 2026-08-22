@@ -119,6 +119,11 @@ export async function flagConflict(
     return { ok: false, message: 'That shift was just changed. Reload and retry.' };
   }
 
+  // Flagging gives the point back: they are no longer doing this shift.
+  // They owe nothing either - they said so in time - so they simply return
+  // to the pool at their previous total.
+  await settleAssignment(assignmentId);
+
   const name = await memberName(actorMemberId);
 
   await db.insert(events).values({
@@ -217,6 +222,9 @@ export async function volunteerToCover(
   if (claimed.length === 0) {
     return { ok: false, message: 'Someone beat you to it by a second.' };
   }
+
+  // The coverer earns the point from the moment they claim it.
+  await settleAssignment(assignmentId);
 
   const originalName = await memberName(ctx.assignment.memberId);
 
@@ -510,4 +518,26 @@ export async function unsettleAssignment(assignmentId: string): Promise<void> {
       settledAt: null,
     })
     .where(eq(assignmentsTable.id, assignmentId));
+
+  // Roll lastServedDate back too, recomputed from whatever that person is
+  // still credited for. Reversing the points but leaving the date behind
+  // makes somebody look recently served when the shift no longer exists,
+  // and the tie-break would quietly push them down the queue for it.
+  if (a.settledRecipientId) {
+    await recomputeLastServed(a.settledRecipientId);
+  }
+}
+
+/** Derives lastServedDate from the assignments a member is still credited for. */
+export async function recomputeLastServed(memberId: string): Promise<void> {
+  await db.execute(sql`
+    UPDATE members m
+    SET last_served_date = (
+      SELECT MAX(s.date)
+      FROM assignments a
+      JOIN slots s ON s.id = a.slot_id
+      WHERE a.settled_recipient_id = m.id AND a.points_awarded > 0
+    )
+    WHERE m.id = ${memberId}
+  `);
 }

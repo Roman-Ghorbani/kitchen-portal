@@ -143,7 +143,7 @@ export default async function MyShiftsPage() {
       <div className="my-stats">
         <div className="my-stat">
           <span className="my-stat-value mono">{member?.points ?? 0}</span>
-          <span className="my-stat-label">Points earned</span>
+          <span className="my-stat-label">Kitchen points</span>
         </div>
         <div className="my-stat">
           <span className="my-stat-value mono">{upcoming.length}</span>
@@ -174,35 +174,64 @@ export default async function MyShiftsPage() {
 
       {later.length > 0 && (
         <>
-          <h2 className="section-title">Also coming up</h2>
+          <h2 className="section-title">
+            Your other shift{later.length === 1 ? '' : 's'}
+            <span className="section-count mono">{later.length}</span>
+          </h2>
+
+          {/* Full cards rather than list rows. A later shift is still a shift
+              you have to turn up to, and rendering it as a thin row made it
+              read as a footnote to the first one. */}
           {later.map((s) => (
-            <div key={s.assignmentId} className="shift-row">
-              <div className="shift-when">
-                <div className="shift-day">
-                  {weekday(s.date)}, {dateLine(s.date)}
-                </div>
-                <div className="shift-crew">
-                  {s.role === 'covering'
-                    ? `Covering for ${s.coveringForName}`
-                    : s.crew.length > 0
-                      ? `With ${s.crew.join(', ')}`
-                      : 'On your own'}
-                </div>
+            <div key={s.assignmentId} className="upcoming-shift">
+              <div className="up-top">
+                <span className="up-when">{whenPhrase(s.date, today)}</span>
+                {s.role === 'covering' && (
+                  <span className="wg-badge makeup">covering</span>
+                )}
+                {s.isMakeup && <span className="wg-badge makeup">make-up</span>}
+                {s.status === 'flagged' && (
+                  <span className="wg-badge bad">flagged — open to the house</span>
+                )}
+                {s.multiplier > 1 && (
+                  <span className="wg-mult mono">{s.multiplier}× points</span>
+                )}
               </div>
-              <span className={`tag ${s.meal === 'lunch' ? 'jun' : 'soph'}`}>
-                {s.meal}
-              </span>
-              {s.role === 'covering' && <span className="tag ok">covering</span>}
+
+              <div className="up-main">
+                <div className="up-date">
+                  <span className="up-day">{weekday(s.date)}</span>
+                  <span className="up-full">{dateLine(s.date)}</span>
+                </div>
+                <span className={`up-meal ${s.meal}`}>
+                  {s.meal === 'lunch' ? 'Lunch cleanup' : 'Dinner cleanup'}
+                </span>
+              </div>
+
+              <div className="up-crew">
+                {s.role === 'covering'
+                  ? `You picked this up for ${s.coveringForName}`
+                  : s.coveredByName
+                    ? `${s.coveredByName} is covering this for you`
+                    : s.crew.length > 0
+                      ? `With ${s.crew.join(' and ')}`
+                      : 'You are on your own for this one'}
+              </div>
+
               {s.status === 'assigned' && s.role === 'assigned' && (
-                <FlagButton
-                  assignmentId={s.assignmentId}
-                  disabled={
-                    s.weekStatus !== 'posted' || pastDeadline(s.weekLocksAt)
-                  }
-                  disabledReason={
-                    s.weekStatus !== 'posted' ? 'Locked' : 'Deadline passed'
-                  }
-                />
+                <div className="up-action">
+                  <FlagButton
+                    assignmentId={s.assignmentId}
+                    disabled={
+                      s.weekStatus !== 'posted' || pastDeadline(s.weekLocksAt)
+                    }
+                    disabledReason={
+                      s.weekStatus !== 'posted'
+                        ? 'Locked — contact Roman'
+                        : 'Deadline passed'
+                    }
+                  />
+                </div>
               )}
             </div>
           ))}
