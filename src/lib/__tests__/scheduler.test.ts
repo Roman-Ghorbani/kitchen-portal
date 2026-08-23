@@ -64,15 +64,16 @@ describe('hard constraints', () => {
         `${slot.date} ${slot.meal} was short`,
       );
     }
-    // House default is 6 service days (no Saturday) x (2 lunch + 3 dinner).
+    // House default is 6 lunch days + 7 dinner days (Saturday dinner for cleanings).
     const total = result.week.slots.reduce((n, s) => n + s.assignments.length, 0);
-    assert.equal(total, 30);
+    assert.equal(total, 33);
   });
 
-  test('no slots are generated on Saturday', () => {
+  test('only Saturday dinner is generated on Saturday (no Saturday lunch)', () => {
     const result = generateWeek({ weekStart: WEEK, members: makeRoster() });
     const saturdays = result.week.slots.filter((s) => dayIndex(s.date) === 5);
-    assert.equal(saturdays.length, 0, 'the house does not serve meals Saturday');
+    assert.equal(saturdays.length, 1, 'Saturday has dinner service for supplemental cleanings');
+    assert.equal(saturdays[0].meal, 'dinner');
   });
 
   test('nobody is scheduled more than once in a week', () => {

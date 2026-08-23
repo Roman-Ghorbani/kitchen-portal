@@ -66,9 +66,9 @@ export type MealDayConfig = Record<Meal, boolean[]>;
  * Stored per-semester in the database; this is the seed value.
  */
 export const DEFAULT_MEAL_DAYS: MealDayConfig = {
-  //          Mon   Tue   Wed   Thu   Fri   Sat    Sun
+  //          Mon   Tue   Wed   Thu   Fri   Sat   Sun
   lunch: [true, true, true, true, true, false, true],
-  dinner: [true, true, true, true, true, false, true],
+  dinner: [true, true, true, true, true, true, true],
 };
 
 export const DEFAULT_SLOT_SIZES: Record<Meal, number> = {

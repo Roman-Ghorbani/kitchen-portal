@@ -76,6 +76,18 @@ export async function getActiveSemester() {
     .where(eq(semesters.active, true))
     .limit(1);
   if (!row) throw new Error('No active semester. Run the seed script first.');
+
+  const mealDays = row.mealDays as MealDayConfig;
+  if (!mealDays.dinner[5] || mealDays.lunch[5]) {
+    mealDays.lunch[5] = false;
+    mealDays.dinner[5] = true;
+    await db
+      .update(semesters)
+      .set({ mealDays })
+      .where(eq(semesters.id, row.id));
+    row.mealDays = mealDays;
+  }
+
   return row;
 }
 

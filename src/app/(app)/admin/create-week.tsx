@@ -24,8 +24,8 @@ export function CreateWeekButton({
     true,
     true,
     true,
-    false,
-    false,
+    true,
+    true,
   ]);
   const [message, setMessage] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
