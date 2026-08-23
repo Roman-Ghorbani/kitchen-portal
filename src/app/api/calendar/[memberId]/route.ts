@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getMemberById, getMyShifts } from '../../../../lib/member-queries.ts';
 
-function formatICSDate(dateIso: string, hour: number, minute: number): string {
+function formatLocalICSDate(dateIso: string, hour: number, minute: number): string {
   const cleanDate = dateIso.replace(/-/g, '');
   const hh = hour.toString().padStart(2, '0');
   const mm = minute.toString().padStart(2, '0');
-  return `${cleanDate}T${hh}${mm}00Z`;
+  return `${cleanDate}T${hh}${mm}00`;
 }
 
 export async function GET(
@@ -29,36 +29,81 @@ export async function GET(
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
     'X-WR-CALNAME:ZBT Kitchen Duty',
-    'X-WR-TIMEZONE:UTC',
+    'X-WR-TIMEZONE:America/New_York',
     'REFRESH-INTERVAL;VALUE=DURATION:PT2H',
     'X-PUBLISHED-TTL:PT2H',
+    'BEGIN:VTIMEZONE',
+    'TZID:America/New_York',
+    'X-LIC-LOCATION:America/New_York',
+    'BEGIN:DAYLIGHT',
+    'TZOFFSETFROM:-0500',
+    'TZOFFSETTO:-0400',
+    'TZNAME:EDT',
+    'DTSTART:19700308T020000',
+    'RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=2SU',
+    'END:DAYLIGHT',
+    'BEGIN:STANDARD',
+    'TZOFFSETFROM:-0400',
+    'TZOFFSETTO:-0500',
+    'TZNAME:EST',
+    'DTSTART:19701101T020000',
+    'RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU',
+    'END:STANDARD',
+    'END:VTIMEZONE',
   ];
+
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const nowStamp = formatLocalICSDate(todayIso, 12, 0) + 'Z';
 
   for (const shift of shifts) {
     if (shift.status === 'covered') continue;
 
     const isLunch = shift.meal === 'lunch';
-    const startHour = isLunch ? 12 : 17;
+    // Lunch: 2:30 PM (14:30) to 3:00 PM (15:00)
+    // Dinner: 7:30 PM (19:30) to 9:00 PM (21:00)
+    const startHour = isLunch ? 14 : 19;
     const startMin = 30;
-    const endHour = isLunch ? 13 : 18;
-    const endMin = isLunch ? 15 : 30;
+    const endHour = isLunch ? 15 : 21;
+    const endMin = 0;
 
-    const dtStart = formatICSDate(shift.date, startHour, startMin);
-    const dtEnd = formatICSDate(shift.date, endHour, endMin);
+    const dtStart = formatLocalICSDate(shift.date, startHour, startMin);
+    const dtEnd = formatLocalICSDate(shift.date, endHour, endMin);
     const title = `ZBT Kitchen Duty — ${isLunch ? 'Lunch Cleanup' : 'Dinner Cleanup'}`;
-    const description =
-      shift.role === 'covering'
-        ? `Covering shift for ${shift.coveringForName}`
-        : `Assigned shift for ${member.name}`;
+
+    const crewText =
+      shift.crew.length > 0
+        ? `Working with: ${shift.crew.join(', ')}`
+        : `Single duty shift`;
+
+    let roleText = `Duty: Regular assigned shift for ${member.name}`;
+    if (shift.role === 'covering') {
+      roleText = `Duty: Covering shift for ${shift.coveringForName}`;
+    } else if (shift.isMakeup) {
+      roleText = `Duty: Make-up shift for ${member.name}`;
+    }
+
+    const pointsText =
+      shift.multiplier > 1
+        ? `Bonus Value: ${shift.multiplier}x points`
+        : `Value: 1 point`;
+
+    const descriptionParts = [
+      roleText,
+      crewText,
+      pointsText,
+      `Time: ${isLunch ? '2:30 PM – 3:00 PM' : '7:30 PM – 9:00 PM'}`,
+      'Location: ZBT Chapter House Kitchen',
+      'Manage / Flag: https://kitchen.zbtaa.online/schedule',
+    ];
 
     lines.push(
       'BEGIN:VEVENT',
       `UID:shift-${shift.assignmentId}@kitchen.zbtaa.online`,
-      `DTSTAMP:${formatICSDate(new Date().toISOString().slice(0, 10), 12, 0)}`,
-      `DTSTART:${dtStart}`,
-      `DTEND:${dtEnd}`,
+      `DTSTAMP:${nowStamp}`,
+      `DTSTART;TZID=America/New_York:${dtStart}`,
+      `DTEND;TZID=America/New_York:${dtEnd}`,
       `SUMMARY:${title}`,
-      `DESCRIPTION:${description}`,
+      `DESCRIPTION:${descriptionParts.join('\\n')}`,
       `LOCATION:ZBT Chapter House Kitchen`,
       'END:VEVENT',
     );
