@@ -86,10 +86,13 @@ export function AvailabilityForm({
   }
 
   return (
-    <>
-      <p className="avail-instruction">
-        Tap any day you can <strong>never</strong> make {mealLabel}.
-      </p>
+    <div className="avail-container">
+      <div className="avail-header">
+        <h2>Set your recurring conflicts</h2>
+        <p className="avail-sub-text">
+          Select any day you have a recurring class or conflict during {mealLabel}.
+        </p>
+      </div>
 
       <div className="avail-days">
         {days.map((d) => {
@@ -97,7 +100,7 @@ export function AvailabilityForm({
             return (
               <div key={d.dayIndex} className="avail-chip none">
                 <span className="avail-chip-day">{SHORT[d.dayIndex]}</span>
-                <span className="avail-chip-state">no {mealLabel}</span>
+                <span className="avail-chip-state">No service</span>
               </div>
             );
           }
@@ -108,55 +111,29 @@ export function AvailabilityForm({
               className={`avail-chip${d.blocked ? ' blocked' : ' free'}`}
               onClick={() => toggle(d.dayIndex)}
               disabled={pending}
+              type="button"
               aria-pressed={d.blocked}
             >
               <span className="avail-chip-day">{SHORT[d.dayIndex]}</span>
               <span className="avail-chip-state">
-                {d.blocked ? "Can't" : 'Free'}
+                {d.blocked ? 'Unavailable' : 'Available'}
               </span>
             </button>
           );
         })}
       </div>
 
-      <div className={`avail-summary${blocked.length ? ' has-blocks' : ''}`}>
-        {blocked.length === 0 ? (
-          <>
-            <span className="avail-summary-main">
-              You can be scheduled any service day.
-            </span>
-            <span className="avail-summary-sub">
-              That is the right setting for most people — only block a day you
-              genuinely can never make.
-            </span>
-          </>
-        ) : (
-          <>
-            <span className="avail-summary-main">
-              Never scheduled on{' '}
-              {blocked.map((d) => FULL[d.dayIndex]).join(', ')}.
-            </span>
-            <span className="avail-summary-sub">
-              You can still be scheduled on {free.length} other day
-              {free.length === 1 ? '' : 's'}.
-            </span>
-          </>
-        )}
-      </div>
-
       {flash && <div className="avail-flash">{flash}</div>}
 
       {blocked.length > 0 && (
         <div className="avail-notes">
-          <div className="avail-notes-title">
-            Why? (optional — helps Roman if it ever comes up)
-          </div>
+          <div className="avail-notes-title">Reason / Note (optional):</div>
           {blocked.map((d) => (
             <div key={d.dayIndex} className="avail-note-row">
               <span className="avail-note-day">{FULL[d.dayIndex]}</span>
               <input
                 className="field"
-                placeholder="e.g. Chem lab until 6"
+                placeholder="e.g. Chem lab"
                 defaultValue={d.note}
                 onBlur={(e) => saveNote(d.dayIndex, e.target.value)}
               />
@@ -164,16 +141,6 @@ export function AvailabilityForm({
           ))}
         </div>
       )}
-
-      {free.length === 0 && service.length > 0 && (
-        <div className="alert bad">
-          <span className="alert-title">You have blocked every day</span>
-          <span className="alert-body">
-            You can never be scheduled, which Roman will see and ask about.
-            Block only the days you genuinely cannot make.
-          </span>
-        </div>
-      )}
-    </>
+    </div>
   );
 }

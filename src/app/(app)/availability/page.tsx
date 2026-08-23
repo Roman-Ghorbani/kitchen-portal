@@ -38,26 +38,11 @@ export default async function AvailabilityPage() {
     <AppShell
       session={session}
       active="/availability"
-      title="My Availability"
-      subtitle="Set this once — it applies every week"
+      title="Weekly Availability"
+      subtitle={`${member.name} · ${meal === 'lunch' ? 'Lunch' : 'Dinner'} duty`}
     >
-      <div className="alert info">
-        <span className="alert-title">This is the setting that saves you hassle</span>
-        <span className="alert-body">
-          You are a {member.classYear}, so you only ever get{' '}
-          <strong>{meal}</strong>. Block a day here and you are simply never
-          scheduled then — no flagging every week, nothing to forget, and no
-          argument later about whether you told anyone.
-        </span>
-      </div>
-
       <div className="card card-pad">
         <AvailabilityForm initial={initial} mealLabel={meal} />
-      </div>
-
-      <div className="note">
-        Changes apply to weeks generated from now on. If you are already on a
-        posted week, flag that shift from <strong>My Shifts</strong> as well.
       </div>
     </AppShell>
   );

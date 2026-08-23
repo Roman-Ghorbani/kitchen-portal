@@ -5,9 +5,9 @@ import type { SessionPayload } from '../../lib/auth.ts';
 import { NavIcon } from './nav-icons.tsx';
 
 const BROTHER_NAV = [
-  { href: '/my-shifts', label: 'My Shifts', icon: 'my-shifts' },
   { href: '/schedule', label: 'Schedule', icon: 'schedule' },
   { href: '/availability', label: 'Availability', icon: 'availability' },
+  { href: '/my-shifts', label: 'My Shifts', icon: 'my-shifts' },
 ];
 
 const ADMIN_NAV = [
@@ -94,6 +94,25 @@ export function AppShell({
 
         <div className="content">{children}</div>
       </div>
+
+      <nav className="mobile-bottom-nav" aria-label="Mobile Navigation">
+        {nav.map((item) => (
+          <Link
+            key={item.href}
+            href={item.href}
+            className={`mobile-nav-item${active === item.href ? ' active' : ''}`}
+          >
+            <NavIcon name={item.icon} />
+            <span>{item.label}</span>
+          </Link>
+        ))}
+        {!session && (
+          <Link href="/signin" className="mobile-nav-item nav-signin">
+            <NavIcon name="signin" />
+            <span>Sign in</span>
+          </Link>
+        )}
+      </nav>
     </div>
   );
 }

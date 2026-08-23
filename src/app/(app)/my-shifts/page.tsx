@@ -31,6 +31,14 @@ function dateLine(iso: string): string {
   });
 }
 
+function shortDate(iso: string): string {
+  return parseISO(iso).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    timeZone: 'UTC',
+  });
+}
+
 function whenPhrase(iso: string, today: string): string {
   const d = daysBetween(today, iso);
   if (d === 0) return 'Today';
@@ -63,9 +71,44 @@ export default async function MyShiftsPage() {
       session={session}
       active="/my-shifts"
       title="My Shifts"
-      subtitle={`${session.name} · ${meal} duty`}
+      subtitle={`${session.name} · ${meal === 'lunch' ? 'Lunch' : 'Dinner'} duty`}
     >
-      {/* The one question this screen exists to answer, answered first. */}
+      <div className="my-shifts-stats-bar">
+        <div className="stat-card">
+          <span className="stat-val mono">{formatPoints(member?.points ?? 0)}</span>
+          <span className="stat-lbl">Kitchen Points</span>
+        </div>
+        <div className="stat-card">
+          <span className="stat-val">{upcoming.length}</span>
+          <span className="stat-lbl">Upcoming Shifts</span>
+        </div>
+        {(member?.makeupDebt ?? 0) > 0 && (
+          <div className="stat-card bad">
+            <span className="stat-val mono">{member!.makeupDebt}</span>
+            <span className="stat-lbl">Make-ups Owed</span>
+          </div>
+        )}
+      </div>
+
+      {(member?.makeupDebt ?? 0) > 0 && (
+        <div className="alert bad">
+          <span className="alert-title">
+            You owe {member!.makeupDebt} make-up shift
+            {member!.makeupDebt === 1 ? '' : 's'}
+          </span>
+          <span className="alert-body">
+            You missed a shift without flagging it. You will be scheduled again
+            sooner than normal until it is worked off.
+          </span>
+        </div>
+      )}
+
+      {/* ---------------- Section 1: Upcoming Shifts ---------------- */}
+      <h2 className="section-title">
+        Upcoming Shifts
+        <span className="section-count mono">{upcoming.length}</span>
+      </h2>
+
       {next ? (
         <div className={`next-shift${next.date === today ? ' is-today' : ''}`}>
           <div className="next-when">{whenPhrase(next.date, today)}</div>
@@ -82,27 +125,25 @@ export default async function MyShiftsPage() {
 
           {next.role === 'covering' && (
             <div className="next-covering">
-              You picked this up for {next.coveringForName}. You are the one who
-              needs to show up, and the point is yours.
+              You picked this up for {next.coveringForName}. You earn the point when served.
             </div>
           )}
 
           <div className="next-crew">
             {next.crew.length > 0
               ? `With ${next.crew.join(' and ')}`
-              : 'You are on your own for this one'}
+              : 'Single shift'}
           </div>
 
           {next.status === 'flagged' && (
             <div className="next-flagged">
-              You flagged this — it is open for anyone to pick up. Until
-              somebody does, it is still yours.
+              You flagged this shift — open for anyone to pick up.
             </div>
           )}
 
           {next.coveredByName && (
             <div className="next-covered">
-              {next.coveredByName} is covering this for you.
+              {next.coveredByName} is covering this shift for you.
             </div>
           )}
 
@@ -124,57 +165,25 @@ export default async function MyShiftsPage() {
         </div>
       ) : (
         <div className="next-shift none">
-          <div className="next-when">You are not scheduled</div>
-          <div className="next-day">Nothing coming up</div>
+          <div className="next-when">No upcoming shifts</div>
+          <div className="next-day">You are clear for now</div>
           <div className="next-crew">
             {member?.exempt
-              ? 'You are marked exempt, so you are not in the rotation. You can still pick up a shift any time.'
+              ? 'You are marked exempt from the regular duty rotation.'
               : horizon.lastDate
-                ? 'In the schedule posted so far. That only runs through the date below — you may still be assigned in a week that has not been posted yet.'
-                : 'Nothing has been posted for this semester yet.'}
+                ? `You are not scheduled on posted weeks through ${shortDate(horizon.lastDate)}.`
+                : 'No schedule posted yet.'}
           </div>
           <div className="next-action">
-            <Link className="btn sm" href="/schedule">
-              See the full schedule
+            <Link className="btn sm gold" href="/schedule">
+              Browse full house schedule →
             </Link>
           </div>
         </div>
       )}
 
-      {(member?.makeupDebt ?? 0) > 0 && (
-        <div className="my-stats">
-          <div className="my-stat owed">
-            <span className="my-stat-value mono">{member!.makeupDebt}</span>
-            <span className="my-stat-label">Make-ups owed</span>
-          </div>
-        </div>
-      )}
-
-      {(member?.makeupDebt ?? 0) > 0 && (
-        <div className="alert bad">
-          <span className="alert-title">
-            You owe {member!.makeupDebt} make-up shift
-            {member!.makeupDebt === 1 ? '' : 's'}
-          </span>
-          <span className="alert-body">
-            You missed a shift without flagging it. You will be scheduled again
-            sooner than normal until it is worked off.
-          </span>
-        </div>
-      )}
-
-      <HorizonNote horizon={horizon} today={today} />
-
       {later.length > 0 && (
-        <>
-          <h2 className="section-title">
-            Your other shift{later.length === 1 ? '' : 's'}
-            <span className="section-count mono">{later.length}</span>
-          </h2>
-
-          {/* Full cards rather than list rows. A later shift is still a shift
-              you have to turn up to, and rendering it as a thin row made it
-              read as a footnote to the first one. */}
+        <div className="later-shifts-list">
           {later.map((s) => (
             <div key={s.assignmentId} className="upcoming-shift">
               <div className="up-top">
@@ -184,7 +193,7 @@ export default async function MyShiftsPage() {
                 )}
                 {s.isMakeup && <span className="wg-badge makeup">make-up</span>}
                 {s.status === 'flagged' && (
-                  <span className="wg-badge bad">flagged — open to the house</span>
+                  <span className="wg-badge bad">flagged</span>
                 )}
                 {s.multiplier > 1 && (
                   <span className="wg-mult mono">{s.multiplier}× points</span>
@@ -203,12 +212,12 @@ export default async function MyShiftsPage() {
 
               <div className="up-crew">
                 {s.role === 'covering'
-                  ? `You picked this up for ${s.coveringForName}`
+                  ? `Covering for ${s.coveringForName}`
                   : s.coveredByName
-                    ? `${s.coveredByName} is covering this for you`
+                    ? `${s.coveredByName} covering`
                     : s.crew.length > 0
                       ? `With ${s.crew.join(' and ')}`
-                      : 'You are on your own for this one'}
+                      : 'Single shift'}
               </div>
 
               {s.status === 'assigned' && s.role === 'assigned' && (
@@ -228,26 +237,24 @@ export default async function MyShiftsPage() {
               )}
             </div>
           ))}
-        </>
+        </div>
       )}
 
-      <h2 className="section-title">
-        Your shifts and points
-        <span className="section-count mono">
-          {formatPoints(member?.points ?? 0)} total
-        </span>
+      {/* ---------------- Section 2: Shift History & Points ---------------- */}
+      <h2 className="section-title" style={{ marginTop: 36 }}>
+        Shift History & Points Record
+        <span className="section-count mono">{past.length} past</span>
       </h2>
 
-      {shifts.length === 0 ? (
+      {past.length === 0 ? (
         <div className="card card-pad">
-          <span style={{ fontSize: 13, color: 'var(--ink-400)' }}>
-            Nothing yet. Points show up here as soon as you are scheduled.
+          <span style={{ fontSize: 13.5, color: 'var(--ink-400)' }}>
+            No past shift history recorded yet. Completed shifts will appear here.
           </span>
         </div>
       ) : (
         <div className="history">
-          {[...shifts].reverse().map((s) => {
-            const served = s.date < today;
+          {past.map((s) => {
             const noShow = s.status === 'no-show';
             const handedOff = s.role === 'assigned' && s.coveredByName !== null;
             const flagged = s.status === 'flagged';
@@ -265,7 +272,7 @@ export default async function MyShiftsPage() {
                   <span className="history-what">
                     {s.meal === 'lunch' ? 'Lunch' : 'Dinner'}
                     {s.role === 'covering' && ` · covering for ${s.coveringForName}`}
-                    {handedOff && ` · ${s.coveredByName} took it`}
+                    {handedOff && ` · ${s.coveredByName} covered`}
                     {s.isMakeup && ' · make-up'}
                     {s.multiplier > 1 && earns && ` · ${formatPoints(s.multiplier)}× bonus`}
                   </span>
@@ -292,9 +299,7 @@ export default async function MyShiftsPage() {
                       <span className="history-points">
                         +{formatPoints(s.pointsAwarded || s.multiplier)}
                       </span>
-                      <span className={`history-state${served ? ' done' : ' pending'}`}>
-                        {served ? 'Served' : 'Pending'}
-                      </span>
+                      <span className="history-state done">Served</span>
                     </>
                   )}
                 </div>
@@ -303,25 +308,6 @@ export default async function MyShiftsPage() {
           })}
         </div>
       )}
-
-      <div className="note">
-        Points are credited as soon as you are put on the schedule — a shift
-        that has not happened yet shows as <strong>Pending</strong>. If you do
-        not show up, the point comes off and you move back toward the front of
-        the queue.
-      </div>
-
-      <div className="alert info">
-        <span className="alert-title">Have a class every week at that time?</span>
-        <span className="alert-body">
-          Set it once under <strong>Availability</strong> and you will never be
-          scheduled then again — much easier than flagging the same shift every
-          week.
-        </span>
-        <Link className="btn sm" href="/availability">
-          Set my availability
-        </Link>
-      </div>
     </AppShell>
   );
 }

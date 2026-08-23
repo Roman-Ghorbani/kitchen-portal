@@ -25,6 +25,8 @@ function fmt(iso: string): string {
   });
 }
 
+import { CopyAnnouncementButton } from './copy-announcement.tsx';
+
 export default async function AdminPage() {
   const session = await getSession();
   if (!session) redirect('/signin');
@@ -47,6 +49,9 @@ export default async function AdminPage() {
   const today = new Date().toISOString().slice(0, 10);
   const currentMonday = mondayOf(today);
   const posted = weekRows.map((w) => w.weekStart);
+
+  const activeWeeks = weekRows.filter((w) => w.weekStart >= currentMonday);
+  const pastWeeks = weekRows.filter((w) => w.weekStart < currentMonday);
 
   // Simply the week after the last one that exists.
   const nextToPost =
@@ -93,7 +98,7 @@ export default async function AdminPage() {
         </div>
       </div>
 
-      <h2 className="section-title">Weeks</h2>
+      <h2 className="section-title">Schedule Weeks</h2>
 
       <HorizonNote horizon={horizon} today={today} />
 
@@ -116,18 +121,14 @@ export default async function AdminPage() {
         </div>
       ) : (
         <>
-          {weekRows.map((w) => {
+          {activeWeeks.map((w) => {
             const locked = w.status === 'locked' || w.status === 'complete';
             return (
               <div key={w.id} className="shift-row">
                 <div className="shift-when">
                   <div className="shift-day">Week of {fmt(w.weekStart)}</div>
                   <div className="shift-crew">
-                    {w.weekStart === currentMonday
-                      ? 'Running now'
-                      : w.weekStart > currentMonday
-                        ? 'Upcoming'
-                        : 'Finished'}
+                    {w.weekStart === currentMonday ? 'Running now' : 'Upcoming'}
                     {' · '}
                     {locked
                       ? 'locked, no changes from brothers'
@@ -144,13 +145,38 @@ export default async function AdminPage() {
             );
           })}
 
-          <div className="row-actions">
+          <div className="row-actions" style={{ marginTop: 16 }}>
             <CreateWeekButton
               suggested={nextToPost}
               suggestedLabel={fmt(nextToPost)}
               existing={posted}
             />
+            {posted.length > 0 && (
+              <CopyAnnouncementButton weekStart={fmt(posted.at(-1)!)} />
+            )}
           </div>
+
+          {pastWeeks.length > 0 && (
+            <details className="past-weeks-archive" style={{ marginTop: 24 }}>
+              <summary className="archive-summary">
+                📁 Past Weeks Archive ({pastWeeks.length} finished week{pastWeeks.length === 1 ? '' : 's'})
+              </summary>
+              <div className="archive-list" style={{ marginTop: 12 }}>
+                {pastWeeks.map((w) => (
+                  <div key={w.id} className="shift-row past" style={{ opacity: 0.8 }}>
+                    <div className="shift-when">
+                      <div className="shift-day">Week of {fmt(w.weekStart)}</div>
+                      <div className="shift-crew">Finished · Archived record</div>
+                    </div>
+                    <span className="tag locked">Archived</span>
+                    <Link className="btn sm" href={`/admin/week?week=${w.weekStart}`}>
+                      View
+                    </Link>
+                  </div>
+                ))}
+              </div>
+            </details>
+          )}
         </>
       )}
 

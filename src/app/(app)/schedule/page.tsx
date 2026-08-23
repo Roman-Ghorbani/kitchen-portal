@@ -13,6 +13,8 @@ import { WeekGrid } from './week-grid.tsx';
 import { CopyWeekButton } from './copy-week.tsx';
 import { HorizonNote } from '../horizon-note.tsx';
 import { parseISO, mondayOf, addDays } from '../../../lib/dates.ts';
+import { getMemberDossier } from '../../../lib/member-dossier.ts';
+import { CalendarSyncButton } from '../calendar-sync-button.tsx';
 
 export const dynamic = 'force-dynamic';
 
@@ -134,6 +136,9 @@ export default async function SchedulePage({
     0,
   );
 
+  const dossier = meId ? await getMemberDossier(meId) : null;
+  const myNextShift = dossier?.shifts.find((s) => s.date >= today && s.status !== 'covered');
+
   return (
     <AppShell
       session={session}
@@ -155,6 +160,34 @@ export default async function SchedulePage({
           <Link className="btn gold sm" href="/signin">
             Sign in
           </Link>
+        </div>
+      )}
+
+      {session?.role === 'brother' && (
+        <div className="my-status-hero">
+          <div className="hero-left">
+            <div className="hero-greeting">
+              <span className="hero-welcome-text">Signed in as <strong>{session.name}</strong></span>
+              <span className="hero-points">
+                {dossier?.member.points ?? 0} kitchen pts
+              </span>
+            </div>
+            {myNextShift ? (
+              <div className="hero-shift-info">
+                <strong>Next Shift:</strong> {shortDate(myNextShift.date)} ({myNextShift.meal === 'lunch' ? 'Lunch Cleanup' : 'Dinner Cleanup'})
+              </div>
+            ) : (
+              <div className="hero-shift-info ok">
+                No remaining assigned shifts scheduled for today or upcoming!
+              </div>
+            )}
+          </div>
+          <div className="hero-right">
+            <CalendarSyncButton memberId={session.sub} />
+            <Link className="btn primary sm" href="/my-shifts">
+              My Shifts & History →
+            </Link>
+          </div>
         </div>
       )}
 
@@ -213,13 +246,15 @@ export default async function SchedulePage({
         </div>
       )}
 
-      <WeekGrid
-        week={week}
-        meId={meId}
-        canCover={canCover}
-        isAdmin={session?.role === 'admin'}
-        today={today}
-      />
+      <div id="week-grid">
+        <WeekGrid
+          week={week}
+          meId={meId}
+          canCover={canCover}
+          isAdmin={session?.role === 'admin'}
+          today={today}
+        />
+      </div>
 
       <div className="wg-legend">
         {session?.role === 'brother' && (

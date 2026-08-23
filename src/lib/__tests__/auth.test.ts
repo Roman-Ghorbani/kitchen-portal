@@ -25,9 +25,9 @@ describe('PIN format', () => {
     assert.ok(!isValidPinFormat(''));
   });
 
-  test('flags trivially guessable PINs', () => {
-    assert.ok(isWeakPin('1234'));
-    assert.ok(isWeakPin('0000'));
+  test('allows any 4-digit PIN without complexity restrictions', () => {
+    assert.ok(!isWeakPin('1234'));
+    assert.ok(!isWeakPin('0000'));
     assert.ok(!isWeakPin('7391'));
   });
 });

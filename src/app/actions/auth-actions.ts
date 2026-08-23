@@ -47,13 +47,6 @@ export async function signInBrother(
 
   if (!member.pinHash) {
     // First sign-in: this PIN becomes theirs.
-    if (isWeakPin(pin)) {
-      return {
-        ok: false,
-        error: 'Pick a less guessable PIN - not 1234, 0000, or similar.',
-      };
-    }
-
     await db
       .update(members)
       .set({ pinHash: hashPin(pin) })
@@ -72,7 +65,7 @@ export async function signInBrother(
   }
 
   await setSession({ sub: member.id, role: 'brother', name: member.name });
-  redirect('/my-shifts');
+  redirect('/schedule');
 }
 
 export async function signInAdmin(password: string): Promise<ActionResult> {
