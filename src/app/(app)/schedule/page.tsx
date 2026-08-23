@@ -146,7 +146,7 @@ export default async function SchedulePage({
       title="Kitchen Duty"
       subtitle={
         lastDay
-          ? `${shortDate(week.weekStart)} – ${shortDate(lastDay)} · ${week.days.length} service days`
+          ? `${shortDate(week.weekStart)} – ${shortDate(lastDay)}`
           : `Week of ${shortDate(week.weekStart)}`
       }
     >
