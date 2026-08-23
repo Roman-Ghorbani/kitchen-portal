@@ -358,6 +358,8 @@ export async function getWeek(weekStart: string): Promise<DisplayWeek | null> {
     ),
   });
 
+  const standardWeekdays = new Set(weekDates(weekStart).slice(0, 5));
+
   const days = weekDates(weekStart)
     .map((date) => ({
       date,
@@ -368,8 +370,7 @@ export async function getWeek(weekStart: string): Promise<DisplayWeek | null> {
         ? toDisplay(slotRows.find((s) => s.date === date && s.meal === 'dinner')!)
         : null,
     }))
-    // A day with no service at all (Saturday) is not shown.
-    .filter((d) => d.lunch || d.dinner);
+    .filter((d) => standardWeekdays.has(d.date) || d.lunch || d.dinner);
 
   return {
     id: week.id,
