@@ -91,10 +91,9 @@ export interface SessionPayload {
   exp: number;
 }
 
-export const SESSION_COOKIE = 'zbt_session';
+import { SESSION_TTL_SECONDS } from './session-constants.ts';
 
-/** Brothers stay signed in for a full semester; this is a low-stakes app. */
-export const SESSION_TTL_SECONDS = 60 * 60 * 24 * 120;
+export { SESSION_COOKIE, SESSION_TTL_SECONDS } from './session-constants.ts';
 
 function secret(): Buffer {
   const s = process.env.SESSION_SECRET;
