@@ -127,7 +127,12 @@ function SlotCell({
       <span className="wg-cell-tag">{meal === 'lunch' ? 'Lunch' : 'Dinner'}</span>
 
       {!slot ? (
-        <span className="wg-noservice">No service</span>
+        <div className="wg-noservice-card">
+          <span className="wg-noservice-icon">🚫</span>
+          <span className="wg-noservice-text">
+            No {meal === 'lunch' ? 'Lunch' : 'Dinner'} Service
+          </span>
+        </div>
       ) : (
         <>
           {slot.assignments.map((a) => (

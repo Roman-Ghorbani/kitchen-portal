@@ -1654,6 +1654,30 @@ button {
   font-style: italic;
 }
 
+.wg-noservice-card {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: rgba(163, 174, 195, 0.08);
+  border: 1px dashed var(--line);
+  color: var(--ink-400);
+  font-size: 12px;
+  font-weight: 600;
+  margin: 4px 0;
+}
+
+.wg-noservice-icon {
+  font-size: 13px;
+  opacity: 0.7;
+}
+
+.wg-noservice-text {
+  font-size: 12px;
+  color: #a3aec3;
+}
+
 /* ---- person chip ---- */
 
 .wg-person {

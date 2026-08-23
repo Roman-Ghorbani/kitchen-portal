@@ -7,7 +7,7 @@ import { members } from '../../../../db/schema.ts';
 import { getSession } from '../../../../lib/session.ts';
 import { getLiveWeeks } from '../../../../lib/week-service.ts';
 import { getWeekForManagement } from '../../../../lib/week-admin.ts';
-import { parseISO } from '../../../../lib/dates.ts';
+import { parseISO, weekDates } from '../../../../lib/dates.ts';
 import { AppShell } from '../../shell.tsx';
 import { WeekControls } from './week-controls.tsx';
 import { ManageDays } from './manage-client.tsx';
@@ -102,7 +102,7 @@ export default async function ManageWeekPage({
       0,
     ) ?? 0;
 
-  const dates = [...new Set(managed.slots.map((s) => s.date))].sort();
+  const dates = weekDates(managed.week.weekStart);
   // Attendance controls only appear once a day has actually happened.
   const days = dates.map((date) => ({
     date,
