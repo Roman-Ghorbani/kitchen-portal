@@ -29,6 +29,7 @@ export function CoverButton({
   return (
     <>
       <button className="btn gold sm" onClick={claim} disabled={pending}>
+        {pending && <span className="spinner" />}
         {pending ? 'Claiming…' : label}
       </button>
       {message && (

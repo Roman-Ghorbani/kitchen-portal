@@ -62,6 +62,7 @@ export function FlagButton({
               Cancel
             </button>
             <button className="btn primary sm" onClick={submit} disabled={pending}>
+              {pending && <span className="spinner" />}
               {pending ? 'Flagging…' : 'Flag it'}
             </button>
           </div>

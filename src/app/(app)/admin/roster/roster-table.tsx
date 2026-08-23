@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 import {
   setClassYear,
@@ -144,6 +145,19 @@ export function RosterTable({ rows }: { rows: RosterRow[] }) {
 
             {expanded === r.id && (
               <div className="roster-detail">
+                <div className="detail-group">
+                  <span className="detail-label">Record</span>
+                  <div className="detail-actions">
+                    <Link className="btn sm primary" href={`/admin/member/${r.id}`}>
+                      See everything on {r.name.split(' ')[0]}
+                    </Link>
+                  </div>
+                  <div className="detail-hint">
+                    Every shift, how much notice they had, what they flagged,
+                    and every correction — the answer to any dispute.
+                  </div>
+                </div>
+
                 <div className="detail-group">
                   <span className="detail-label">Duty year</span>
                   <div className="detail-actions">

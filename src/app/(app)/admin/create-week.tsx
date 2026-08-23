@@ -82,6 +82,7 @@ export function CreateWeekButton({
           onClick={create}
           disabled={pending || clash || !isMonday}
         >
+          {pending && <span className="spinner" />}
           {pending ? 'Drawing…' : 'Draw it and post it'}
         </button>
         <button className="btn" onClick={() => setOpen(false)}>

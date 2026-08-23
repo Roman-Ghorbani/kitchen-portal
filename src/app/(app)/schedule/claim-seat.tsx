@@ -36,7 +36,12 @@ export function ClaimSeatButton({
   return (
     <>
       <button className="btn gold sm" onClick={claim} disabled={pending}>
-        {pending ? 'Claiming…' : bounty > 1 ? `Take it — ${bounty}× points` : 'Take it'}
+        {pending && <span className="spinner" />}
+        {pending
+          ? 'Claiming…'
+          : bounty > 1
+            ? `Take it — ${bounty}× points`
+            : 'Take it'}
       </button>
       {message && (
         <span

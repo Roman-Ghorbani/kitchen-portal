@@ -2,23 +2,24 @@ import Link from 'next/link';
 
 import { signOut } from '../actions/auth-actions.ts';
 import type { SessionPayload } from '../../lib/auth.ts';
+import { NavIcon } from './nav-icons.tsx';
 
 const BROTHER_NAV = [
-  { href: '/my-shifts', label: 'My Shifts' },
-  { href: '/schedule', label: 'Schedule' },
-  { href: '/availability', label: 'Availability' },
+  { href: '/my-shifts', label: 'My Shifts', icon: 'my-shifts' },
+  { href: '/schedule', label: 'Schedule', icon: 'schedule' },
+  { href: '/availability', label: 'Availability', icon: 'availability' },
 ];
 
 const ADMIN_NAV = [
-  { href: '/admin', label: 'Dashboard' },
-  { href: '/admin/roster', label: 'Roster' },
-  { href: '/schedule', label: 'Schedule' },
-  { href: '/admin/week', label: 'Manage week' },
-  { href: '/admin/settings', label: 'Settings' },
+  { href: '/admin', label: 'Dashboard', icon: 'dashboard' },
+  { href: '/admin/roster', label: 'Roster', icon: 'roster' },
+  { href: '/schedule', label: 'Schedule', icon: 'schedule' },
+  { href: '/admin/week', label: 'Manage week', icon: 'manage' },
+  { href: '/admin/settings', label: 'Settings', icon: 'settings' },
 ];
 
 /** Signed out, the only thing worth showing is the schedule itself. */
-const PUBLIC_NAV = [{ href: '/schedule', label: 'Schedule' }];
+const PUBLIC_NAV = [{ href: '/schedule', label: 'Schedule', icon: 'schedule' }];
 
 export function AppShell({
   session,
@@ -57,13 +58,15 @@ export function AppShell({
               href={item.href}
               className={`nav-item${active === item.href ? ' active' : ''}`}
             >
-              {item.label}
+              <NavIcon name={item.icon} />
+              <span>{item.label}</span>
             </Link>
           ))}
 
           {!session && (
             <Link href="/signin" className="nav-item nav-signin">
-              Sign in
+              <NavIcon name="signin" />
+              <span>Sign in</span>
             </Link>
           )}
         </div>
