@@ -213,7 +213,13 @@ export default async function SchedulePage({
         </div>
       )}
 
-      <WeekGrid week={week} meId={meId} canCover={canCover} today={today} />
+      <WeekGrid
+        week={week}
+        meId={meId}
+        canCover={canCover}
+        isAdmin={session?.role === 'admin'}
+        today={today}
+      />
 
       <div className="wg-legend">
         {session?.role === 'brother' && (

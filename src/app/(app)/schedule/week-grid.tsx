@@ -1,4 +1,5 @@
 import { parseISO } from '../../../lib/dates.ts';
+import { formatPoints } from '../../../lib/types.ts';
 import type { DisplaySlot, DisplayWeek } from '../../../lib/week-service.ts';
 import { CoverButton } from './cover-button.tsx';
 
@@ -28,15 +29,18 @@ function PersonChip({
   assignment,
   meId,
   canCover,
+  isAdmin,
 }: {
   assignment: DisplaySlot['assignments'][number];
   meId: string;
   canCover: boolean;
+  isAdmin: boolean;
 }) {
   const a = assignment;
   const mine = a.memberId === meId || a.coveredByMemberId === meId;
   const flagged = a.status === 'flagged';
   const served = a.coveredByName ?? a.memberName;
+  const seesLedger = mine || isAdmin;
 
   return (
     <div
@@ -60,8 +64,15 @@ function PersonChip({
         )}
       </span>
 
-      {a.multiplier > 1 && <span className="wg-mult mono">{a.multiplier}×</span>}
-      {a.isMakeup && <span className="wg-badge makeup">make-up</span>}
+      {/* What a shift is worth, and whether it is somebody working off a
+          missed one, is between that brother and the kitchen manager. The
+          board is public, so these only show to the person concerned. */}
+      {seesLedger && a.multiplier > 1 && (
+        <span className="wg-mult mono">{formatPoints(a.multiplier)}×</span>
+      )}
+      {seesLedger && a.isMakeup && (
+        <span className="wg-badge makeup">make-up</span>
+      )}
       {a.status === 'no-show' && <span className="wg-badge bad">no-show</span>}
 
       {flagged && (
@@ -82,6 +93,7 @@ function SlotCell({
   index,
   meId,
   canCover,
+  isAdmin,
   isToday,
   isPast,
 }: {
@@ -90,6 +102,7 @@ function SlotCell({
   index: number;
   meId: string;
   canCover: boolean;
+  isAdmin: boolean;
   isToday: boolean;
   isPast: boolean;
 }) {
@@ -114,6 +127,7 @@ function SlotCell({
               assignment={a}
               meId={meId}
               canCover={canCover}
+              isAdmin={isAdmin}
             />
           ))}
           {slot.size - slot.assignments.length > 0 && (
@@ -142,11 +156,13 @@ export function WeekGrid({
   week,
   meId,
   canCover,
+  isAdmin,
   today,
 }: {
   week: DisplayWeek;
   meId: string;
   canCover: boolean;
+  isAdmin: boolean;
   today: string;
 }) {
   const days = week.days;
@@ -191,6 +207,7 @@ export function WeekGrid({
           index={i}
           meId={meId}
           canCover={canCover}
+          isAdmin={isAdmin}
           isToday={d.date === today}
           isPast={d.date < today}
         />
@@ -204,6 +221,7 @@ export function WeekGrid({
           index={i}
           meId={meId}
           canCover={canCover}
+          isAdmin={isAdmin}
           isToday={d.date === today}
           isPast={d.date < today}
         />
