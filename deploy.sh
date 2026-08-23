@@ -24,9 +24,9 @@
 set -euo pipefail
 
 # ---- your settings -------------------------------------------------------
-DROPLET="${KITCHEN_HOST:-kitchen@YOUR.DROPLET.IP}"
+DROPLET="${KITCHEN_HOST:-kitchen@203.0.113.10}"
 APP_DIR=/srv/kitchen
-SITE="${KITCHEN_URL:-https://kitchen.yourdomain.com}"
+SITE="${KITCHEN_URL:-https://kitchen.zbtaa.online}"
 # --------------------------------------------------------------------------
 
 BOLD=$'\e[1m'; DIM=$'\e[2m'; RED=$'\e[31m'; GREEN=$'\e[32m'; YELLOW=$'\e[33m'; OFF=$'\e[0m'
