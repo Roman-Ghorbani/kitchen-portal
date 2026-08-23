@@ -171,6 +171,14 @@ export async function volunteerToCover(
   const ctx = await loadAssignmentContext(assignmentId);
   if (!ctx) return { ok: false, message: 'That shift no longer exists.' };
 
+  const todayIso = new Date().toISOString().slice(0, 10);
+  if (ctx.slot.date < todayIso) {
+    return {
+      ok: false,
+      message: 'You cannot pick up an open shift for a day that has already passed.',
+    };
+  }
+
   if (ctx.assignment.memberId === volunteerId) {
     return { ok: false, message: 'This is already your shift.' };
   }
@@ -736,6 +744,14 @@ export async function claimOpenSeat(
     .where(eq(slotsTable.id, slotId))
     .limit(1);
   if (!slot) return { ok: false, message: 'That shift no longer exists.' };
+
+  const todayIso = new Date().toISOString().slice(0, 10);
+  if (slot.date < todayIso) {
+    return {
+      ok: false,
+      message: 'You cannot pick up an open shift for a day that has already passed.',
+    };
+  }
 
   const [person] = await db
     .select()

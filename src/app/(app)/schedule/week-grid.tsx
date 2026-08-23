@@ -31,11 +31,13 @@ function PersonChip({
   meId,
   canCover,
   isAdmin,
+  isPast,
 }: {
   assignment: DisplaySlot['assignments'][number];
   meId: string;
   canCover: boolean;
   isAdmin: boolean;
+  isPast: boolean;
 }) {
   const a = assignment;
   const mine = a.memberId === meId || a.coveredByMemberId === meId;
@@ -85,7 +87,7 @@ function PersonChip({
               {formatPoints(a.multiplier)}× points
             </span>
           )}
-          {canCover && a.memberId !== meId && (
+          {canCover && !isPast && a.memberId !== meId && (
             <CoverButton assignmentId={a.id} label="Pick up" />
           )}
         </span>
@@ -135,6 +137,7 @@ function SlotCell({
               meId={meId}
               canCover={canCover}
               isAdmin={isAdmin}
+              isPast={isPast}
             />
           ))}
           {slot.size - slot.assignments.length > 0 && (
@@ -145,7 +148,7 @@ function SlotCell({
                 {slot.coverBounty > 1 &&
                   ` · ${formatPoints(slot.coverBounty)}× points`}
               </span>
-              {canCover && (
+              {canCover && !isPast && (
                 <ClaimSeatButton slotId={slot.id} bounty={slot.coverBounty} />
               )}
             </div>
