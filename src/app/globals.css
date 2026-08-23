@@ -3852,3 +3852,104 @@ body {
     padding-top: 11px;
   }
 }
+
+/* ------------------------------------------------------------------ */
+/* Week controls                                                       */
+/* ------------------------------------------------------------------ */
+
+.wk-panel {
+  border-left: 3px solid var(--gold-500);
+}
+
+.wk-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.wk-title {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.wk-sub {
+  font-size: 12.5px;
+  color: var(--ink-400);
+  margin-top: 3px;
+  line-height: 1.55;
+  max-width: 46ch;
+}
+
+.wk-state {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 5px 11px;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+
+.wk-state.open {
+  background: var(--green-100);
+  color: var(--green-600);
+}
+
+.wk-state.locked {
+  background: var(--sunken);
+  color: var(--ink-400);
+}
+
+.create-week {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--gold-500);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  box-shadow: var(--shadow-sm);
+  width: 100%;
+}
+
+.create-week-title {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.create-week-sub {
+  display: block;
+  font-size: 12.5px;
+  color: var(--ink-400);
+  margin-top: 3px;
+  line-height: 1.55;
+}
+
+.create-week-row {
+  display: flex;
+  gap: 9px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.create-week-row .field {
+  flex: 0 1 190px;
+  font-size: 14px;
+}
+
+@media (max-width: 620px) {
+  .create-week-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .create-week-row .field,
+  .create-week-row .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}

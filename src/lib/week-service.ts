@@ -84,7 +84,10 @@ export async function getActiveSemester() {
 /* ------------------------------------------------------------------ */
 
 export interface GenerateOptions {
-  /** Post immediately rather than leaving it as a draft. */
+  /**
+   * Unused. Kept so existing callers compile; a generated week is always on
+   * the board. There is no hidden state - a week either exists or it does not.
+   */
   post?: boolean;
   /**
    * True only for the first week of a semester, which cannot get the normal
@@ -153,15 +156,10 @@ export async function generateAndSaveWeek(
     .limit(1);
 
   if (existing.length > 0) {
-    const week = existing[0];
-    if (week.status !== 'draft') {
-      throw new Error(
-        `Week of ${weekStart} is already ${week.status} and cannot be regenerated. ` +
-          'What the house was told is the record.',
-      );
-    }
-    // A draft nobody has seen is safe to discard and rebuild.
-    await db.delete(weeks).where(eq(weeks.id, week.id));
+    throw new Error(
+      `The week of ${weekStart} already exists. Delete it first if you want ` +
+        'to draw it again.',
+    );
   }
 
   const roster = await loadSchedulingRoster(semester.id);
@@ -180,10 +178,10 @@ export async function generateAndSaveWeek(
     .values({
       semesterId: semester.id,
       weekStart,
-      status: options.post ? 'posted' : 'draft',
+      status: 'posted',
       seed: weekStart,
-      postedAt: options.post ? new Date() : null,
-      locksAt: options.post ? locksAt : null,
+      postedAt: new Date(),
+      locksAt,
       isBootstrap: options.isBootstrap ?? false,
     })
     .returning();
@@ -225,13 +223,11 @@ export async function generateAndSaveWeek(
   }
 
   await db.insert(events).values({
-    action: options.post ? 'week.posted' : 'week.generated',
+    action: 'week.posted',
     entityType: 'week',
     entityId: week.id,
     actorName: 'scheduler',
-    summary: options.post
-      ? `Posted week of ${weekStart} (${assignmentValues.length} assignments)`
-      : `Generated draft week of ${weekStart}`,
+    summary: `Posted week of ${weekStart} (${assignmentValues.length} assignments)`,
     payload: {
       weekStart,
       assignments: assignmentValues.length,

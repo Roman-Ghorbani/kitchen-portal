@@ -88,6 +88,20 @@ export default async function ManageWeekPage({
   const today = new Date().toISOString().slice(0, 10);
   const hasStarted = managed.week.weekStart <= today;
 
+  const lastDay = managed.slots.map((s) => s.date).sort().at(-1);
+  const weekLabel = lastDay
+    ? `${shortDate(managed.week.weekStart)} – ${shortDate(lastDay)}`
+    : `Week of ${shortDate(managed.week.weekStart)}`;
+
+  const unresolved =
+    managed.slots.reduce(
+      (n, s) =>
+        n +
+        s.assignments.filter((a) => a.status === 'flagged').length +
+        (s.size - s.assignments.length),
+      0,
+    ) ?? 0;
+
   const dates = [...new Set(managed.slots.map((s) => s.date))].sort();
   // Attendance controls only appear once a day has actually happened.
   const days = dates.map((date) => ({
@@ -113,7 +127,7 @@ export default async function ManageWeekPage({
           >
             {shortDate(w.weekStart)}
             <span className={`tag ${w.status === 'posted' ? 'ok' : 'locked'}`}>
-              {w.status}
+              {w.status === 'posted' ? 'open' : 'locked'}
             </span>
           </Link>
         ))}
@@ -122,18 +136,11 @@ export default async function ManageWeekPage({
       <WeekControls
         weekId={managed.week.id}
         weekStart={managed.week.weekStart}
+        weekLabel={weekLabel}
         status={managed.week.status}
         hasStarted={hasStarted}
+        unresolved={unresolved}
       />
-
-      <div className="alert info" style={{ marginTop: 16 }}>
-        <span className="alert-title">Every change here is logged</span>
-        <span className="alert-body">
-          Replacing, subbing, removing, and marking attendance all record who
-          did it and what it was before. That is deliberate — the point of the
-          record is that it survives you changing your mind.
-        </span>
-      </div>
 
       <h2 className="section-title">Shifts</h2>
 

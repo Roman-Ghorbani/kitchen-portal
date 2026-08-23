@@ -4,10 +4,9 @@ import { useState, useTransition, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 
 import {
-  adminUnpublishWeek,
-  adminRepublishWeek,
+  adminLockWeek,
+  adminUnlockWeek,
   adminDeleteWeek,
-  adminRegenerateWeek,
   adminRemove,
   adminAdd,
 } from '../../../actions/week-admin-actions.ts';
@@ -72,93 +71,104 @@ function useAction() {
 export function WeekControls({
   weekId,
   weekStart,
+  weekLabel,
   status,
   hasStarted,
+  unresolved,
 }: {
   weekId: string;
   weekStart: string;
+  weekLabel: string;
   status: string;
   hasStarted: boolean;
+  unresolved: number;
 }) {
   const { pending, msg, bad, run } = useAction();
   const [confirmDelete, setConfirmDelete] = useState(false);
 
+  const locked = status === 'locked' || status === 'complete';
+
   return (
-    <div className="card card-pad">
-      <div className="wk-status">
-        <span className={`tag ${status === 'posted' ? 'ok' : 'locked'}`}>
-          {status}
+    <div className="card card-pad wk-panel">
+      <div className="wk-head">
+        <div>
+          <div className="wk-title">{weekLabel}</div>
+          <div className="wk-sub">
+            {locked
+              ? 'Locked — nobody can flag a conflict or pick a shift up.'
+              : 'Open — brothers can flag conflicts and pick up shifts.'}
+            {hasStarted && ' This week has already started.'}
+          </div>
+        </div>
+        <span className={`wk-state ${locked ? 'locked' : 'open'}`}>
+          {locked ? 'Locked' : 'Open'}
         </span>
-        {hasStarted && <span className="tag bad">already started</span>}
       </div>
 
-      {status === 'posted' && !hasStarted && (
-        <div className="detail-hint" style={{ marginTop: 8 }}>
-          The house can see this week right now. Unpublishing hides it so you
-          can fix it, then repost.
-        </div>
-      )}
-
-      {hasStarted && (
-        <div className="alert warn" style={{ marginTop: 10 }}>
-          <span className="alert-title">This week has already begun</span>
+      {unresolved > 0 && !locked && (
+        <div className="alert bad" style={{ marginTop: 14, marginBottom: 0 }}>
+          <span className="alert-title">
+            {unresolved} shift{unresolved === 1 ? '' : 's'} still need cover
+          </span>
           <span className="alert-body">
-            Brothers have worked shifts from it, so it cannot be unpublished or
-            deleted. Edit individual shifts below — each change is logged.
+            Locking now leaves {unresolved === 1 ? 'it' : 'them'} uncovered.
+            Put somebody on {unresolved === 1 ? 'it' : 'them'} first, or offer
+            more points.
           </span>
         </div>
       )}
 
       <div className="row-actions">
-        {status === 'posted' ? (
+        {locked ? (
           <button
             className="btn"
-            disabled={pending || hasStarted}
-            onClick={() => run(() => adminUnpublishWeek(weekId))}
+            disabled={pending}
+            onClick={() => run(() => adminUnlockWeek(weekId))}
           >
-            Unpublish — hide from the house
+            Unlock — let people flag again
           </button>
         ) : (
-          <>
-            <button
-              className="btn gold"
-              disabled={pending}
-              onClick={() => run(() => adminRepublishWeek(weekId, weekStart))}
-            >
-              Post to the house
-            </button>
-            <button
-              className="btn"
-              disabled={pending}
-              onClick={() => run(() => adminRegenerateWeek(weekStart))}
-            >
-              Redraw from scratch
-            </button>
-            {!confirmDelete ? (
-              <button
-                className="btn danger"
-                disabled={pending || hasStarted}
-                onClick={() => setConfirmDelete(true)}
-              >
-                Delete week
-              </button>
-            ) : (
-              <>
-                <button
-                  className="btn danger-on"
-                  disabled={pending}
-                  onClick={() => run(() => adminDeleteWeek(weekId))}
-                >
-                  Really delete — this cannot be undone
-                </button>
-                <button className="btn" onClick={() => setConfirmDelete(false)}>
-                  Cancel
-                </button>
-              </>
-            )}
-          </>
+          <button
+            className="btn primary"
+            disabled={pending}
+            onClick={() => run(() => adminLockWeek(weekId))}
+          >
+            Lock this week
+          </button>
         )}
+
+        {!hasStarted &&
+          (!confirmDelete ? (
+            <button
+              className="btn danger"
+              disabled={pending}
+              onClick={() => setConfirmDelete(true)}
+            >
+              Delete this week
+            </button>
+          ) : (
+            <>
+              <button
+                className="btn danger-on"
+                disabled={pending}
+                onClick={() => run(() => adminDeleteWeek(weekId))}
+              >
+                Delete it — everyone gets their points back
+              </button>
+              <button className="btn" onClick={() => setConfirmDelete(false)}>
+                Cancel
+              </button>
+            </>
+          ))}
       </div>
+
+      {hasStarted && (
+        <div className="note">
+          A week that has started cannot be deleted — brothers have worked
+          shifts from it, and that record is the point. Edit individual shifts
+          below instead.
+        </div>
+      )}
 
       {msg && (
         <div className="note" style={bad ? { color: 'var(--red-600)' } : undefined}>

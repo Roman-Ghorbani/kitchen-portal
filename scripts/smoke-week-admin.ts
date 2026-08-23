@@ -11,6 +11,8 @@ import { eq, inArray } from 'drizzle-orm';
 import assert from 'node:assert/strict';
 
 import { db } from '../src/db/index.ts';
+import { generateAndSaveWeek } from '../src/lib/week-service.ts';
+import { addDays } from '../src/lib/dates.ts';
 import {
   members,
   weeks,
@@ -19,14 +21,13 @@ import {
   events,
 } from '../src/db/schema.ts';
 import {
-  unpublishWeek,
-  republishWeek,
+  lockWeek,
+  unlockWeek,
   deleteWeek,
   reassignShift,
   removeFromShift,
   addToShift,
 } from '../src/lib/week-admin.ts';
-import { chapterLockFor } from '../src/lib/dates.ts';
 
 const fails: string[] = [];
 function check(label: string, fn: () => void) {
@@ -40,8 +41,9 @@ function check(label: string, fn: () => void) {
 }
 
 async function main() {
-  const [week] = await db.select().from(weeks);
-  if (!week) throw new Error('no weeks - post one first');
+  const allWeeks = await db.select().from(weeks);
+  if (allWeeks.length === 0) throw new Error('no weeks - create one first');
+  const week = allWeeks[0];
 
   const slotRows = await db
     .select()
@@ -138,41 +140,51 @@ async function main() {
   const overfill = await addToShift(lunch.id, spareJunior.id, 'Smoke', {});
   check('refuses to overfill a full slot', () => assert.ok(!overfill.ok));
 
-  /* ---------- week-level guards ---------- */
+  /* ---------- week-level ---------- */
   console.log('\nweek-level');
-  const wasPosted = week.status === 'posted';
-  const started = week.weekStart <= new Date().toISOString().slice(0, 10);
 
-  const unpub = await unpublishWeek(week.id, 'Smoke');
-  if (started) {
-    check('refuses to unpublish a week already running', () =>
-      assert.ok(!unpub.ok),
+  // Lock and unlock the real week - both are reversible.
+  const locked = await lockWeek(week.id, 'Smoke');
+  check('locks the week', () => assert.ok(locked.ok, locked.message));
+  const afterLock = await db.select().from(weeks).where(eq(weeks.id, week.id));
+  check('status is locked', () => assert.equal(afterLock[0].status, 'locked'));
+  check('lock time recorded', () => assert.ok(afterLock[0].lockedAt !== null));
+
+  const unlocked = await unlockWeek(week.id, 'Smoke');
+  check('unlocks it again', () => assert.ok(unlocked.ok, unlocked.message));
+  const afterUnlock = await db.select().from(weeks).where(eq(weeks.id, week.id));
+  check('status is open', () => assert.equal(afterUnlock[0].status, 'posted'));
+
+  // Deletion is tested on a week this script creates, never on a real one.
+  // An earlier version of this test deleted whichever week it found first and
+  // destroyed a posted schedule.
+  const throwawayStart = addDays(
+    allWeeks.map((w) => w.weekStart).sort().at(-1)!,
+    7,
+  );
+  const throwaway = await generateAndSaveWeek(throwawayStart);
+  check('created a throwaway week to test deletion on', () =>
+    assert.ok(throwaway.week.id),
+  );
+
+  const del = await deleteWeek(throwaway.week.id, 'Smoke');
+  check('a future week can be deleted', () => assert.ok(del.ok, del.message));
+  const gone = await db
+    .select()
+    .from(weeks)
+    .where(eq(weeks.id, throwaway.week.id));
+  check('it is actually gone', () => assert.equal(gone.length, 0));
+
+  const startedWeek = allWeeks.find(
+    (w) => w.weekStart <= new Date().toISOString().slice(0, 10),
+  );
+  if (startedWeek) {
+    const refused = await deleteWeek(startedWeek.id, 'Smoke');
+    check('refuses to delete a week already running', () =>
+      assert.ok(!refused.ok),
     );
-    check('says why', () => assert.match(unpub.message, /already started/));
-  } else {
-    check('unpublishes a future week', () => assert.ok(unpub.ok, unpub.message));
-
-    const hidden = await db.select().from(weeks).where(eq(weeks.id, week.id));
-    check('status is draft', () => assert.equal(hidden[0].status, 'draft'));
-    check('lock deadline cleared', () => assert.equal(hidden[0].locksAt, null));
-
-    if (wasPosted) {
-      const re = await republishWeek(
-        week.id,
-        'Smoke',
-        new Date(`${chapterLockFor(week.weekStart)}T23:59:59Z`),
-      );
-      check('reposts it', () => assert.ok(re.ok, re.message));
-      const live = await db.select().from(weeks).where(eq(weeks.id, week.id));
-      check('status is posted again', () => assert.equal(live[0].status, 'posted'));
-      check('deadline restored before the week starts', () =>
-        assert.ok(live[0].locksAt!.toISOString().slice(0, 10) < live[0].weekStart),
-      );
-    }
+    check('says why', () => assert.match(refused.message, /already started/));
   }
-
-  const del = await deleteWeek(week.id, 'Smoke');
-  check('refuses to delete a posted week', () => assert.ok(!del.ok));
 
   /* ---------- audit ---------- */
   const log = await db.select().from(events);

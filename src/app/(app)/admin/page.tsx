@@ -12,8 +12,7 @@ import {
 } from '../../../lib/week-service.ts';
 import { mondayOf, addDays, parseISO } from '../../../lib/dates.ts';
 import { AppShell } from '../shell.tsx';
-import { PostWeekButton } from './post-week-button.tsx';
-import { ChapterButton } from './chapter-button.tsx';
+import { CreateWeekButton } from './create-week.tsx';
 import { HorizonNote } from '../horizon-note.tsx';
 
 export const dynamic = 'force-dynamic';
@@ -49,12 +48,11 @@ export default async function AdminPage() {
   const currentMonday = mondayOf(today);
   const posted = weekRows.map((w) => w.weekStart);
 
-  // The first week of the semester, then the normal 8-days-ahead cadence.
+  // Simply the week after the last one that exists.
   const nextToPost =
     posted.length === 0
       ? mondayOf(semester.startsOn)
       : addDays(posted.slice().sort().at(-1)!, 7);
-  const isBootstrap = posted.length === 0;
 
   return (
     <AppShell
@@ -101,55 +99,57 @@ export default async function AdminPage() {
 
       {weekRows.length === 0 ? (
         <div className="card card-pad">
-          <div style={{ fontWeight: 700, fontSize: 14 }}>
-            No week posted yet — the house cannot see anything.
+          <div style={{ fontWeight: 700, fontSize: 15 }}>
+            No week exists yet — the house sees nothing.
           </div>
           <div className="note">
-            {semester.name} starts {fmt(semester.startsOn)}. Posting the first
-            week is a one-time exception: the normal rule gives a week a full
-            7-day window between posting and going live, but the semester begins
-            right after the first chapter, so week one gets a shortened window.
-            Say so when you announce it.
+            {semester.name} starts {fmt(semester.startsOn)}. Draw the first week
+            and it goes straight onto the board.
           </div>
           <div className="row-actions">
-            <PostWeekButton
-              weekStart={nextToPost}
-              isBootstrap
-              label={`Generate and post week of ${fmt(nextToPost)}`}
+            <CreateWeekButton
+              suggested={nextToPost}
+              suggestedLabel={fmt(nextToPost)}
+              existing={posted}
             />
           </div>
         </div>
       ) : (
         <>
-          {weekRows.map((w) => (
-            <div key={w.id} className="shift-row">
-              <div className="shift-when">
-                <div className="shift-day">Week of {fmt(w.weekStart)}</div>
-                <div className="shift-crew">
-                  {w.weekStart === currentMonday
-                    ? 'Running now'
-                    : w.weekStart > currentMonday
-                      ? 'Upcoming'
-                      : 'Past'}
-                  {w.isBootstrap && ' · bootstrap week'}
+          {weekRows.map((w) => {
+            const locked = w.status === 'locked' || w.status === 'complete';
+            return (
+              <div key={w.id} className="shift-row">
+                <div className="shift-when">
+                  <div className="shift-day">Week of {fmt(w.weekStart)}</div>
+                  <div className="shift-crew">
+                    {w.weekStart === currentMonday
+                      ? 'Running now'
+                      : w.weekStart > currentMonday
+                        ? 'Upcoming'
+                        : 'Finished'}
+                    {' · '}
+                    {locked
+                      ? 'locked, no changes from brothers'
+                      : 'open for conflicts and pickups'}
+                  </div>
                 </div>
+                <span className={`tag ${locked ? 'locked' : 'ok'}`}>
+                  {locked ? 'Locked' : 'Open'}
+                </span>
+                <Link className="btn sm" href={`/admin/week?week=${w.weekStart}`}>
+                  Manage
+                </Link>
               </div>
-              <span className={`tag ${w.status === 'posted' ? 'ok' : 'locked'}`}>
-                {w.status}
-              </span>
-              <Link className="btn sm" href={`/schedule?week=${w.weekStart}`}>
-                View
-              </Link>
-            </div>
-          ))}
+            );
+          })}
 
           <div className="row-actions">
-            <PostWeekButton
-              weekStart={nextToPost}
-              isBootstrap={isBootstrap}
-              label={`Generate and post week of ${fmt(nextToPost)}`}
+            <CreateWeekButton
+              suggested={nextToPost}
+              suggestedLabel={fmt(nextToPost)}
+              existing={posted}
             />
-            <ChapterButton />
           </div>
         </>
       )}

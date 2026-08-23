@@ -54,80 +54,94 @@ function today(): string {
 /* ------------------------------------------------------------------ */
 
 /**
- * Pulls a posted week back out of sight so it can be fixed and reposted.
+ * Locks a week: no more conflict flags, no more picking shifts up.
  *
- * Refused once the week has started. At that point people have already worked
- * shifts from it, and there is no honest way to un-tell them.
+ * Deliberately a manual switch rather than something that happens on a
+ * schedule. The lock is what makes "you had a week to say something" true, so
+ * the kitchen manager should be the one who decides the moment it falls, and
+ * should be able to see plainly whether it has.
  */
-export async function unpublishWeek(
+export async function lockWeek(
   weekId: string,
   actorName: string,
 ): Promise<AdminResult> {
   const w = await loadWeek(weekId);
   if (!w) return { ok: false, message: 'No such week.' };
-
-  if (w.status === 'draft') {
-    return { ok: true, message: 'That week is already unpublished.' };
-  }
-
-  if (w.weekStart <= today()) {
-    return {
-      ok: false,
-      message:
-        `The week of ${w.weekStart} has already started — brothers have worked ` +
-        'shifts from it. Edit individual shifts instead of unpublishing.',
-    };
+  if (w.status === 'locked' || w.status === 'complete') {
+    return { ok: true, message: 'That week is already locked.' };
   }
 
   await db
     .update(weeks)
-    .set({ status: 'draft', postedAt: null, locksAt: null, lockedAt: null })
+    .set({ status: 'locked', lockedAt: new Date() })
     .where(eq(weeks.id, weekId));
 
+  const stillOpen = await db
+    .select({ id: assignmentsTable.id })
+    .from(assignmentsTable)
+    .innerJoin(slotsTable, eq(assignmentsTable.slotId, slotsTable.id))
+    .where(
+      and(eq(slotsTable.weekId, weekId), eq(assignmentsTable.status, 'flagged')),
+    );
+
   await db.insert(events).values({
-    action: 'week.unpublished',
+    action: 'week.locked',
     entityType: 'week',
     entityId: weekId,
     actorName,
-    summary: `${actorName} unpublished the week of ${w.weekStart} — hidden from the house`,
-    payload: { weekStart: w.weekStart, previousStatus: w.status },
+    summary:
+      `${actorName} locked the week of ${w.weekStart}` +
+      (stillOpen.length > 0
+        ? ` with ${stillOpen.length} shift(s) still needing cover`
+        : ''),
+    payload: { weekStart: w.weekStart, unresolved: stillOpen.length },
   });
 
   return {
     ok: true,
-    message: `Week of ${w.weekStart} is hidden. Nobody can see it until you repost.`,
+    message:
+      `Week of ${w.weekStart} is locked — no more flagging or pickups.` +
+      (stillOpen.length > 0
+        ? ` ${stillOpen.length} shift(s) still need cover; put somebody on them yourself.`
+        : ''),
   };
 }
 
-export async function republishWeek(
+/** Reopens a locked week for flagging and pickups. */
+export async function unlockWeek(
   weekId: string,
   actorName: string,
-  locksAt: Date,
 ): Promise<AdminResult> {
   const w = await loadWeek(weekId);
   if (!w) return { ok: false, message: 'No such week.' };
   if (w.status === 'posted') {
-    return { ok: true, message: 'That week is already posted.' };
+    return { ok: true, message: 'That week is already open.' };
   }
 
   await db
     .update(weeks)
-    .set({ status: 'posted', postedAt: new Date(), locksAt })
+    .set({ status: 'posted', lockedAt: null })
     .where(eq(weeks.id, weekId));
 
   await db.insert(events).values({
-    action: 'week.reposted',
+    action: 'week.unlocked',
     entityType: 'week',
     entityId: weekId,
     actorName,
-    summary: `${actorName} posted the week of ${w.weekStart}`,
+    summary: `${actorName} reopened the week of ${w.weekStart} for flagging`,
     payload: { weekStart: w.weekStart },
   });
 
-  return { ok: true, message: `Week of ${w.weekStart} is live again.` };
+  return { ok: true, message: `Week of ${w.weekStart} is open again.` };
 }
 
-/** Deletes a week outright. Only a draft that has not started. */
+/**
+ * Deletes a week outright. There is no hidden or half-posted state: a week is
+ * either on the board or it does not exist.
+ *
+ * Refused once the week has begun. People have worked shifts from it by then,
+ * and deleting it would erase the record of what they were asked to do.
+ */
 export async function deleteWeek(
   weekId: string,
   actorName: string,
@@ -135,18 +149,17 @@ export async function deleteWeek(
   const w = await loadWeek(weekId);
   if (!w) return { ok: false, message: 'No such week.' };
 
-  if (w.status !== 'draft') {
+  if (w.weekStart <= today()) {
     return {
       ok: false,
-      message: 'Unpublish the week first, so the deletion is a deliberate two-step.',
+      message:
+        `The week of ${w.weekStart} has already started — brothers have worked ` +
+        'shifts from it, and deleting it would erase that record. Edit the ' +
+        'individual shifts instead.',
     };
   }
 
-  if (w.weekStart <= today()) {
-    return { ok: false, message: 'That week has already started and cannot be deleted.' };
-  }
-
-  // Reverse anything that somehow got credited before dropping the rows.
+  // Hand back every point this week issued before the rows disappear.
   const slotRows = await db
     .select({ id: slotsTable.id })
     .from(slotsTable)
@@ -171,11 +184,14 @@ export async function deleteWeek(
     action: 'week.deleted',
     entityType: 'week',
     actorName,
-    summary: `${actorName} deleted the draft week of ${w.weekStart}`,
+    summary: `${actorName} deleted the week of ${w.weekStart}`,
     payload: { weekStart: w.weekStart },
   });
 
-  return { ok: true, message: `Deleted the week of ${w.weekStart}.` };
+  return {
+    ok: true,
+    message: `Deleted the week of ${w.weekStart}. Everyone got their points back.`,
+  };
 }
 
 /* ------------------------------------------------------------------ */

@@ -4,8 +4,8 @@ import { revalidatePath } from 'next/cache';
 
 import { requireAdmin } from '../../lib/session.ts';
 import {
-  unpublishWeek,
-  republishWeek,
+  lockWeek,
+  unlockWeek,
   deleteWeek,
   reassignShift,
   removeFromShift,
@@ -13,7 +13,6 @@ import {
   type AdminResult,
 } from '../../lib/week-admin.ts';
 import { generateAndSaveWeek } from '../../lib/week-service.ts';
-import { chapterLockFor } from '../../lib/dates.ts';
 
 function refresh() {
   revalidatePath('/admin');
@@ -22,23 +21,16 @@ function refresh() {
   revalidatePath('/my-shifts');
 }
 
-export async function adminUnpublishWeek(weekId: string): Promise<AdminResult> {
+export async function adminLockWeek(weekId: string): Promise<AdminResult> {
   const admin = await requireAdmin();
-  const res = await unpublishWeek(weekId, admin.name);
+  const res = await lockWeek(weekId, admin.name);
   if (res.ok) refresh();
   return res;
 }
 
-export async function adminRepublishWeek(
-  weekId: string,
-  weekStart: string,
-): Promise<AdminResult> {
+export async function adminUnlockWeek(weekId: string): Promise<AdminResult> {
   const admin = await requireAdmin();
-  const res = await republishWeek(
-    weekId,
-    admin.name,
-    new Date(`${chapterLockFor(weekStart)}T23:59:59Z`),
-  );
+  const res = await unlockWeek(weekId, admin.name);
   if (res.ok) refresh();
   return res;
 }
@@ -50,10 +42,8 @@ export async function adminDeleteWeek(weekId: string): Promise<AdminResult> {
   return res;
 }
 
-/** Throws away a draft and draws it again from the current roster. */
-export async function adminRegenerateWeek(
-  weekStart: string,
-): Promise<AdminResult> {
+/** Draws and posts a new week. */
+export async function adminCreateWeek(weekStart: string): Promise<AdminResult> {
   await requireAdmin();
   try {
     const { assignmentCount, result } = await generateAndSaveWeek(weekStart);
@@ -61,11 +51,11 @@ export async function adminRegenerateWeek(
     return {
       ok: true,
       message:
-        `Redrew the week of ${weekStart} with ${assignmentCount} assignments` +
+        `Posted the week of ${weekStart} with ${assignmentCount} shifts` +
         (result.unfilled.length > 0
-          ? `, ${result.unfilled.length} slot(s) short`
+          ? `, ${result.unfilled.length} seat(s) nobody could fill`
           : '') +
-        '. It is still a draft — post it when you are happy.',
+        '. The house can see it now.',
     };
   } catch (err) {
     return { ok: false, message: (err as Error).message };
