@@ -31,8 +31,8 @@ export function SignInForm({ roster }: { roster: PickerMember[] }) {
 
   const matches = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return roster.slice(0, 8);
-    return roster.filter((m) => m.name.toLowerCase().includes(q)).slice(0, 12);
+    if (!q) return roster;
+    return roster.filter((m) => m.name.toLowerCase().includes(q));
   }, [query, roster]);
 
   function submitPin() {
