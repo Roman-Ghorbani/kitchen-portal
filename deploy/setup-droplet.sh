@@ -65,11 +65,19 @@ mkdir -p "$APP_DIR" "$DATA_DIR" "$BACKUP_DIR"
 chown -R kitchen:kitchen "$APP_DIR" "$DATA_DIR" "$BACKUP_DIR"
 
 echo "==> Fetching the app"
+# SSH rather than HTTPS: the repo is private, and a deploy key scoped to just
+# this repo is the right amount of access for a droplet to have - unlike a
+# personal token, it cannot read anything else on the GitHub account.
+REPO_SSH="git@github.com:$(echo "$REPO" | sed 's#^github.com/##').git"
+BRANCH="${DEPLOY_BRANCH:-sqlite}"
+
 if [ -d "$APP_DIR/.git" ]; then
   sudo -u kitchen git -C "$APP_DIR" fetch --all --quiet
-  sudo -u kitchen git -C "$APP_DIR" reset --hard origin/main --quiet
+  sudo -u kitchen git -C "$APP_DIR" reset --hard "origin/$BRANCH" --quiet
 else
-  sudo -u kitchen git clone --quiet "https://$REPO" "$APP_DIR"
+  sudo -u kitchen mkdir -p /home/kitchen/.ssh
+  sudo -u kitchen ssh-keyscan -t ed25519 github.com >> /home/kitchen/.ssh/known_hosts 2>/dev/null
+  sudo -u kitchen git clone --quiet --branch "$BRANCH" "$REPO_SSH" "$APP_DIR"
 fi
 
 echo "==> Writing the environment file"
