@@ -1,46 +1,40 @@
 /**
- * Database client.
+ * Database client (SQLite via better-sqlite3).
  *
- * Currently on Neon over HTTP, which suits Vercel's serverless functions
- * (no persistent connection pool to manage).
+ * The whole database is one file on the same machine as the app, so a query
+ * costs microseconds rather than a network round trip. That matters here: this
+ * codebase deliberately favours several small, readable queries over one
+ * clever one, and rendering the schedule board takes about five of them while
+ * settling a full week takes closer to two hundred. Against a remote database
+ * that arithmetic forces you to write worse code.
  *
- * MOVING TO A DROPLET LATER: Neon is ordinary Postgres, so the migration is
- * contained to this file. Replace the neon/drizzle imports below with:
- *
- *   import { Pool } from 'pg';
- *   import { drizzle } from 'drizzle-orm/node-postgres';
- *   const pool = new Pool({ connectionString: process.env.DATABASE_URL });
- *   export const db = drizzle(pool, { schema });
- *
- * The retry wiring can go at the same time - a droplet's Postgres does not
- * suspend, so there is no cold start to absorb.
+ * WAL mode lets readers carry on while a write is in progress, which is what
+ * makes this comfortable for a few dozen people refreshing at once.
  */
 
-import { neon, neonConfig } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-http';
+import { existsSync, mkdirSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+
+import Database from 'better-sqlite3';
+import { drizzle } from 'drizzle-orm/better-sqlite3';
+
 import * as schema from './schema.ts';
-import { makeRetryingFetch } from './retry-fetch.ts';
 
-const connectionString = process.env.DATABASE_URL;
+const file = resolve(process.env.DATABASE_FILE ?? './data/kitchen.db');
 
-if (!connectionString) {
-  throw new Error(
-    'DATABASE_URL is not set. Copy .env.example to .env.local and paste your ' +
-      'Neon connection string into it.',
-  );
-}
+const dir = dirname(file);
+if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
 
-/**
- * Absorbs Neon's free-tier cold start. See retry-fetch.ts for why this matters
- * here specifically.
- *
- * `fetchFunction` is global-only on this driver: the neon() constructor
- * destructures a fixed set of options and silently drops this one if it is
- * passed per-client, so it has to be set on neonConfig to take effect.
- */
-neonConfig.fetchFunction = makeRetryingFetch(fetch);
+const sqlite = new Database(file);
 
-const sql = neon(connectionString);
+// Concurrent readers during a write, rather than the whole file locking.
+sqlite.pragma('journal_mode = WAL');
+// Wait rather than failing instantly if a write is briefly in progress.
+sqlite.pragma('busy_timeout = 5000');
+// Referential integrity is off by default in SQLite, which surprises people.
+sqlite.pragma('foreign_keys = ON');
+// Durable enough for this, and much faster than full fsync on every commit.
+sqlite.pragma('synchronous = NORMAL');
 
-export const db = drizzle(sql, { schema });
-export { schema };
+export const db = drizzle(sqlite, { schema });
+export { schema, sqlite };

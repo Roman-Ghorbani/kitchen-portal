@@ -112,34 +112,46 @@ export interface GenerateOptions {
  * already happened.
  *
  * Done as two statements rather than a settle call per row: generation writes
- * thirty assignments at once, and thirty sequential round trips to a remote
- * database is a slow way to do arithmetic.
+ * thirty-odd assignments at once, and a set-based update is the honest way to
+ * express "credit everybody in this week".
  */
 async function creditNewAssignments(weekId: string): Promise<void> {
-  await db.execute(sql`
-    UPDATE assignments a
-    SET points_awarded = a.multiplier,
-        settled_recipient_id = a.member_id,
-        settled_at = now()
-    FROM slots s
-    WHERE s.id = a.slot_id AND s.week_id = ${weekId}
+  const now = Math.floor(Date.now() / 1000);
+
+  db.run(sql`
+    UPDATE assignments
+    SET points_awarded = multiplier,
+        settled_recipient_id = member_id,
+        settled_at = ${now}
+    WHERE slot_id IN (SELECT id FROM slots WHERE week_id = ${weekId})
   `);
 
-  await db.execute(sql`
-    UPDATE members m
-    SET points = m.points + agg.pts,
-        last_served_date = GREATEST(
-          COALESCE(m.last_served_date, DATE '1970-01-01'),
-          agg.latest
+  // Correlated subqueries rather than UPDATE...FROM: SQLite supports both, but
+  // this form reads plainly and needs no alias gymnastics. MAX() with two
+  // arguments is SQLite's scalar max, and dates compare correctly as text.
+  db.run(sql`
+    UPDATE members
+    SET points = points + (
+          SELECT COALESCE(SUM(a.multiplier), 0)
+          FROM assignments a
+          JOIN slots s ON s.id = a.slot_id
+          WHERE s.week_id = ${weekId} AND a.member_id = members.id
+        ),
+        last_served_date = MAX(
+          COALESCE(last_served_date, '1970-01-01'),
+          COALESCE((
+            SELECT MAX(s.date)
+            FROM assignments a
+            JOIN slots s ON s.id = a.slot_id
+            WHERE s.week_id = ${weekId} AND a.member_id = members.id
+          ), '1970-01-01')
         )
-    FROM (
-      SELECT a.member_id, SUM(a.multiplier)::int AS pts, MAX(s.date) AS latest
+    WHERE id IN (
+      SELECT a.member_id
       FROM assignments a
       JOIN slots s ON s.id = a.slot_id
       WHERE s.week_id = ${weekId}
-      GROUP BY a.member_id
-    ) agg
-    WHERE m.id = agg.member_id
+    )
   `);
 }
 

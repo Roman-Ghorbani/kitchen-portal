@@ -1,0 +1,8 @@
+# Replace kitchen.example.com with your domain before copying this to
+# /etc/caddy/Caddyfile. Caddy gets and renews the TLS certificate itself;
+# there is nothing else to do for HTTPS.
+
+kitchen.example.com {
+	encode zstd gzip
+	reverse_proxy 127.0.0.1:3000
+}

@@ -1,0 +1,8 @@
+# Shell scripts and unit files run on Linux. Git's autocrlf would give them
+# Windows line endings on checkout here, and bash on the droplet then fails
+# with an unhelpful "bad interpreter" error. Force LF for anything the server
+# executes or parses.
+*.sh            text eol=lf
+*.service       text eol=lf
+Caddyfile       text eol=lf
+*.sql           text eol=lf

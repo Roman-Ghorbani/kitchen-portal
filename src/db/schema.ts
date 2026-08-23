@@ -1,103 +1,99 @@
 /**
- * Database schema.
+ * Database schema (SQLite).
  *
  * Two things drive the shape here beyond ordinary CRUD:
  *
- *  1. Assignments are append-only history. A posted week is never regenerated
- *     in place - once it locks it is the record of what people were told to do,
+ *  1. Assignments are append-only history. A week is never regenerated in
+ *     place - once it exists it is the record of what people were told to do,
  *     which is the whole point of the app.
  *
- *  2. Every consequential action writes an `events` row. When somebody disputes
- *     a missed shift, the answer is a timestamped chain: posted on this date,
- *     viewed on that date, flag window closed with no flag, marked absent.
+ *  2. Every consequential action writes an `events` row. When somebody
+ *     disputes a missed shift, the answer is a timestamped chain: posted on
+ *     this date, flag window closed with no flag, marked absent afterwards.
+ *
+ * SQLite notes, for whoever reads this next:
+ *  - Ids are text holding a UUID, generated in JS rather than by the database.
+ *  - Dates are text in YYYY-MM-DD, which sorts and compares correctly.
+ *  - Timestamps are integers (unix seconds); drizzle hands back Date objects.
+ *  - Booleans are 0/1. Enums are text with the allowed set declared.
  */
 
+import { randomUUID } from 'node:crypto';
 import {
-  pgTable,
+  sqliteTable,
   text,
   integer,
-  boolean,
-  date,
-  timestamp,
-  jsonb,
-  uuid,
-  doublePrecision,
+  real,
   index,
   uniqueIndex,
-  pgEnum,
-} from 'drizzle-orm/pg-core';
+} from 'drizzle-orm/sqlite-core';
 
-export const classYearEnum = pgEnum('class_year', ['sophomore', 'junior']);
-export const mealEnum = pgEnum('meal', ['lunch', 'dinner']);
-export const exemptReasonEnum = pgEnum('exempt_reason', [
-  'officer',
-  'medical',
-  'off-campus',
-  'other',
-]);
-export const weekStatusEnum = pgEnum('week_status', [
-  'draft', // generated, not yet shown to the house
-  'posted', // visible, flag window open
-  'locked', // chapter passed, running or run
-  'complete', // attendance settled
-]);
-export const assignmentStatusEnum = pgEnum('assignment_status', [
+const CLASS_YEARS = ['sophomore', 'junior'] as const;
+const MEALS = ['lunch', 'dinner'] as const;
+const EXEMPT_REASONS = ['officer', 'medical', 'off-campus', 'other'] as const;
+const WEEK_STATUSES = ['draft', 'posted', 'locked', 'complete'] as const;
+const ASSIGNMENT_STATUSES = [
   'assigned',
   'flagged', // conflict raised; slot open to volunteers
   'covered', // someone else served; only they earn the point
   'no-show', // marked absent; generates make-up debt
   'excused', // waived by the manager, no debt
-]);
-export const conflictScopeEnum = pgEnum('conflict_scope', [
-  'semester',
-  'temporary',
-]);
+] as const;
+const CONFLICT_SCOPES = ['semester', 'temporary'] as const;
+
+const pk = () =>
+  text('id')
+    .primaryKey()
+    .$defaultFn(() => randomUUID());
+
+const created = () =>
+  integer('created_at', { mode: 'timestamp' })
+    .notNull()
+    .$defaultFn(() => new Date());
 
 /* ------------------------------------------------------------------ */
 
-export const semesters = pgTable('semesters', {
-  id: uuid('id').defaultRandom().primaryKey(),
+export const semesters = sqliteTable('semesters', {
+  id: pk(),
   name: text('name').notNull(), // e.g. "Fall 2026"
-  startsOn: date('starts_on').notNull(),
-  endsOn: date('ends_on').notNull(),
-  active: boolean('active').notNull().default(false),
+  startsOn: text('starts_on').notNull(),
+  endsOn: text('ends_on').notNull(),
+  active: integer('active', { mode: 'boolean' }).notNull().default(false),
 
   /**
    * Which day/meal combinations the house serves, as
    * { lunch: boolean[7], dinner: boolean[7] } with index 0 = Monday.
    * Per-semester so it can change between Fall and Spring.
    */
-  mealDays: jsonb('meal_days').notNull(),
+  mealDays: text('meal_days', { mode: 'json' }).notNull(),
   /** { lunch: 2, dinner: 3 } - house rule, but stored rather than hardcoded. */
-  slotSizes: jsonb('slot_sizes').notNull(),
+  slotSizes: text('slot_sizes', { mode: 'json' }).notNull(),
 
-  createdAt: timestamp('created_at', { withTimezone: true })
-    .notNull()
-    .defaultNow(),
+  createdAt: created(),
 });
 
-export const members = pgTable(
+export const members = sqliteTable(
   'members',
   {
-    id: uuid('id').defaultRandom().primaryKey(),
+    id: pk(),
     name: text('name').notNull(),
-    classYear: classYearEnum('class_year').notNull(),
+    classYear: text('class_year', { enum: CLASS_YEARS }).notNull(),
 
     /**
      * Rotation priority. Lower is scheduled sooner. Increments by the
      * assignment multiplier, so a 3x pickup adds 3.
      *
-     * Floating point because half-point awards (1.5x) are allowed. Every
+     * Real rather than integer because half-point awards are allowed. Every
      * permitted multiplier is a multiple of 0.5, and halves are exact in
      * binary floating point, so these sums never drift.
      */
-    points: doublePrecision('points').notNull().default(0),
+    points: real('points').notNull().default(0),
 
     /** Unworked make-up shifts owed from no-shows. Forces front of queue. */
     makeupDebt: integer('makeup_debt').notNull().default(0),
 
-    exempt: boolean('exempt').notNull().default(false),
-    exemptReason: exemptReasonEnum('exempt_reason'),
+    exempt: integer('exempt', { mode: 'boolean' }).notNull().default(false),
+    exemptReason: text('exempt_reason', { enum: EXEMPT_REASONS }),
     exemptNotes: text('exempt_notes'),
 
     /**
@@ -108,21 +104,18 @@ export const members = pgTable(
     pinHash: text('pin_hash'),
 
     /** Denormalized from assignments for fast tie-breaking during generation. */
-    lastServedDate: date('last_served_date'),
+    lastServedDate: text('last_served_date'),
 
     /**
      * Slack member id (e.g. U01ABC23DEF), so day-before reminders can @mention
-     * the actual person rather than printing a name nobody gets notified by.
-     * Optional - reminders fall back to plain text when it is missing.
+     * the actual person rather than printing a name nobody is notified by.
      */
     slackUserId: text('slack_user_id'),
 
     /** Off the roster (graduated, moved out) without deleting their history. */
-    active: boolean('active').notNull().default(true),
+    active: integer('active', { mode: 'boolean' }).notNull().default(true),
 
-    createdAt: timestamp('created_at', { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    createdAt: created(),
   },
   (t) => [
     index('members_year_idx').on(t.classYear),
@@ -131,17 +124,17 @@ export const members = pgTable(
 );
 
 /**
- * Standing weekly conflicts - the primary defense against last-minute drama.
+ * Standing weekly conflicts - the primary defence against last-minute drama.
  * Because class year fixes the meal, one day index per row is sufficient.
  */
-export const standingConflicts = pgTable(
+export const standingConflicts = sqliteTable(
   'standing_conflicts',
   {
-    id: uuid('id').defaultRandom().primaryKey(),
-    memberId: uuid('member_id')
+    id: pk(),
+    memberId: text('member_id')
       .notNull()
       .references(() => members.id, { onDelete: 'cascade' }),
-    semesterId: uuid('semester_id')
+    semesterId: text('semester_id')
       .notNull()
       .references(() => semesters.id, { onDelete: 'cascade' }),
 
@@ -149,13 +142,10 @@ export const standingConflicts = pgTable(
     dayIndex: integer('day_index').notNull(),
     note: text('note'), // "Chem lab"
 
-    /** Semester-long, or a short-lived block that expires. */
-    scope: conflictScopeEnum('scope').notNull().default('semester'),
-    expiresOn: date('expires_on'),
+    scope: text('scope', { enum: CONFLICT_SCOPES }).notNull().default('semester'),
+    expiresOn: text('expires_on'),
 
-    createdAt: timestamp('created_at', { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    createdAt: created(),
   },
   (t) => [
     uniqueIndex('standing_conflict_unique').on(
@@ -166,49 +156,49 @@ export const standingConflicts = pgTable(
   ],
 );
 
-export const weeks = pgTable(
+export const weeks = sqliteTable(
   'weeks',
   {
-    id: uuid('id').defaultRandom().primaryKey(),
-    semesterId: uuid('semester_id')
+    id: pk(),
+    semesterId: text('semester_id')
       .notNull()
       .references(() => semesters.id, { onDelete: 'cascade' }),
 
     /** ISO Monday this week starts. */
-    weekStart: date('week_start').notNull(),
-    status: weekStatusEnum('status').notNull().default('draft'),
+    weekStart: text('week_start').notNull(),
+    status: text('status', { enum: WEEK_STATUSES }).notNull().default('posted'),
 
     /** Seed used to generate it, so the draw can be reproduced exactly. */
     seed: text('seed').notNull(),
 
-    postedAt: timestamp('posted_at', { withTimezone: true }),
+    postedAt: integer('posted_at', { mode: 'timestamp' }),
     /** Server-anchored deadline. Never trust a phone clock for this. */
-    locksAt: timestamp('locks_at', { withTimezone: true }),
-    lockedAt: timestamp('locked_at', { withTimezone: true }),
+    locksAt: integer('locks_at', { mode: 'timestamp' }),
+    lockedAt: integer('locked_at', { mode: 'timestamp' }),
 
     /**
      * True for the one-time first week of a semester, which cannot get the
      * normal full 7-day flag window because the semester starts the day after
      * the first chapter.
      */
-    isBootstrap: boolean('is_bootstrap').notNull().default(false),
-
-    createdAt: timestamp('created_at', { withTimezone: true })
+    isBootstrap: integer('is_bootstrap', { mode: 'boolean' })
       .notNull()
-      .defaultNow(),
+      .default(false),
+
+    createdAt: created(),
   },
   (t) => [uniqueIndex('weeks_semester_start_unique').on(t.semesterId, t.weekStart)],
 );
 
-export const slots = pgTable(
+export const slots = sqliteTable(
   'slots',
   {
-    id: uuid('id').defaultRandom().primaryKey(),
-    weekId: uuid('week_id')
+    id: pk(),
+    weekId: text('week_id')
       .notNull()
       .references(() => weeks.id, { onDelete: 'cascade' }),
-    date: date('date').notNull(),
-    meal: mealEnum('meal').notNull(),
+    date: text('date').notNull(),
+    meal: text('meal', { enum: MEALS }).notNull(),
     size: integer('size').notNull(),
 
     /**
@@ -218,7 +208,7 @@ export const slots = pgTable(
      * assignment row to hang it from - and an empty seat is exactly when the
      * manager most needs to offer extra to get somebody to step up.
      */
-    coverBounty: doublePrecision('cover_bounty').notNull().default(1),
+    coverBounty: real('cover_bounty').notNull().default(1),
   },
   (t) => [
     uniqueIndex('slots_week_date_meal_unique').on(t.weekId, t.date, t.meal),
@@ -226,21 +216,23 @@ export const slots = pgTable(
   ],
 );
 
-export const assignments = pgTable(
+export const assignments = sqliteTable(
   'assignments',
   {
-    id: uuid('id').defaultRandom().primaryKey(),
-    slotId: uuid('slot_id')
+    id: pk(),
+    slotId: text('slot_id')
       .notNull()
       .references(() => slots.id, { onDelete: 'cascade' }),
-    memberId: uuid('member_id')
+    memberId: text('member_id')
       .notNull()
       .references(() => members.id, { onDelete: 'restrict' }),
 
-    status: assignmentStatusEnum('status').notNull().default('assigned'),
+    status: text('status', { enum: ASSIGNMENT_STATUSES })
+      .notNull()
+      .default('assigned'),
 
     /** Who actually served, when someone covered. Only they earn the point. */
-    coveredByMemberId: uuid('covered_by_member_id').references(() => members.id, {
+    coveredByMemberId: text('covered_by_member_id').references(() => members.id, {
       onDelete: 'set null',
     }),
 
@@ -248,36 +240,34 @@ export const assignments = pgTable(
      * Points this shift is worth to whoever serves it. 1 normally; the manager
      * can raise it to 1.5, 2, or 3 to get somebody to step up on short notice.
      */
-    multiplier: doublePrecision('multiplier').notNull().default(1),
+    multiplier: real('multiplier').notNull().default(1),
 
     /** This assignment works off make-up debt - the one exception to 1/week. */
-    isMakeup: boolean('is_makeup').notNull().default(false),
+    isMakeup: integer('is_makeup', { mode: 'boolean' }).notNull().default(false),
 
     /**
      * Why the generator chose this person: points at pick time, days since
      * last served, eligible pool size. Frozen at generation so it stays true
      * even after the member's live numbers move on.
      */
-    rationale: jsonb('rationale'),
+    rationale: text('rationale', { mode: 'json' }),
 
     /** Set when points were actually credited, so we never double-credit. */
-    settledAt: timestamp('settled_at', { withTimezone: true }),
+    settledAt: integer('settled_at', { mode: 'timestamp' }),
 
     /**
-     * What settlement has already handed out for this shift. Kept so that a
-     * later attendance correction applies only the difference rather than
-     * double-crediting or requiring anyone to unwind points by hand.
+     * What settlement has already handed out for this shift. Kept so a later
+     * attendance correction applies only the difference rather than
+     * double-crediting or needing anyone to unwind points by hand.
      */
-    pointsAwarded: doublePrecision('points_awarded').notNull().default(0),
+    pointsAwarded: real('points_awarded').notNull().default(0),
     debtAwarded: integer('debt_awarded').notNull().default(0),
     /** Who last received the points, so credit can be moved cleanly. */
-    settledRecipientId: uuid('settled_recipient_id').references(() => members.id, {
+    settledRecipientId: text('settled_recipient_id').references(() => members.id, {
       onDelete: 'set null',
     }),
 
-    createdAt: timestamp('created_at', { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    createdAt: created(),
   },
   (t) => [
     index('assignments_member_idx').on(t.memberId),
@@ -288,22 +278,22 @@ export const assignments = pgTable(
 
 /**
  * Append-only audit log. This is the liability record - never update or delete
- * a row here. Written for: week posted, week locked, shift viewed, conflict
- * flagged, coverage claimed, attendance corrected, points adjusted, exemption
- * changed, roster edited.
+ * a row here. Written for: week posted, week locked, conflict flagged,
+ * coverage claimed, attendance corrected, points adjusted, exemption changed,
+ * roster edited.
  */
-export const events = pgTable(
+export const events = sqliteTable(
   'events',
   {
-    id: uuid('id').defaultRandom().primaryKey(),
+    id: pk(),
     action: text('action').notNull(),
 
     /** What the event is about, e.g. 'assignment' + the assignment id. */
     entityType: text('entity_type').notNull(),
-    entityId: uuid('entity_id'),
+    entityId: text('entity_id'),
 
-    /** Who did it. Null for system actions like the scheduled Sunday lock. */
-    actorMemberId: uuid('actor_member_id').references(() => members.id, {
+    /** Who did it. Null for system actions. */
+    actorMemberId: text('actor_member_id').references(() => members.id, {
       onDelete: 'set null',
     }),
     /** Denormalized so the log stays readable if a member is later removed. */
@@ -311,11 +301,9 @@ export const events = pgTable(
 
     /** Human-readable one-liner for the history view. */
     summary: text('summary').notNull(),
-    payload: jsonb('payload'),
+    payload: text('payload', { mode: 'json' }),
 
-    createdAt: timestamp('created_at', { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    createdAt: created(),
   },
   (t) => [
     index('events_entity_idx').on(t.entityType, t.entityId),

@@ -117,7 +117,7 @@ export async function adjustPoints(
 
   await db
     .update(members)
-    .set({ points: sql`GREATEST(0, ${members.points} + ${delta})` })
+    .set({ points: sql`MAX(0, ${members.points} + ${delta})` })
     .where(eq(members.id, memberId));
 
   const [after] = await db.select().from(members).where(eq(members.id, memberId)).limit(1);

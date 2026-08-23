@@ -14,6 +14,7 @@ knew, the app answers with timestamps rather than recollection.
 ```bash
 npm install
 cp .env.example .env.local   # then fill in the values
+npm run db:migrate           # creates ./data/kitchen.db
 npm run dev
 ```
 
@@ -23,7 +24,8 @@ npm run dev
 | `npm test` | Full test suite (no database needed) |
 | `npm run build` | Production build |
 | `npm run db:generate` | Create a migration after changing `src/db/schema.ts` |
-| `npm run db:migrate` | Apply migrations |
+| `npm run db:migrate` | Apply migrations (creates the database file) |
+| `npm run db:backup` | Verified snapshot into `./backups` |
 
 Scripts that need the database take `--env-file=.env.local`:
 
@@ -37,7 +39,7 @@ node --env-file=.env.local --experimental-strip-types src/db/seed.ts
 
 | Variable | Required | Purpose |
 |---|---|---|
-| `DATABASE_URL` | yes | Neon Postgres. **Use the pooled string** (`-pooler` in the hostname) — the direct endpoint runs out of connections under serverless. |
+| `DATABASE_FILE` | no | Path to the SQLite file. Defaults to `./data/kitchen.db`. |
 | `SESSION_SECRET` | yes | Signs session cookies. 32+ random bytes. |
 | `ADMIN_PASSWORD` | yes | Kitchen manager login. Brothers use 4-digit PINs instead. |
 | `CRON_SECRET` | yes in production | Protects the automated Sunday transition. Without it the endpoint refuses to run rather than sitting open. |
@@ -76,36 +78,31 @@ Monday–Sunday week — with make-up shifts the only exception.
 who covers earns the point. The original assignee's obligation is *not* cleared;
 they stay in the pool at their current total and come back up in rotation.
 
-**Attendance is assumed.** Everyone is presumed to have shown up. The manager
-corrects exceptions whenever he notices, and can drop in a substitute at 1x, 2x,
-or 3x points to get somebody to step up before a meal goes uncleaned.
+**Attendance is assumed.** Everyone is presumed to have shown up, and the point
+is credited when they are scheduled rather than after they serve. The manager
+corrects exceptions whenever he notices; a no-show takes the point back and
+owes a make-up. Any shift can be set to 1x, 1.5x, 2x or 3x, and an open shift
+advertises its rate publicly so somebody can take it.
 
 ---
 
 ## The weekly cadence
 
-The house has chapter every Sunday. At chapter:
+The house has chapter every Sunday, and the manager drives the schedule by
+hand — nothing happens on a timer.
 
-1. Anything still flagged with no volunteer gets a suggested replacement, which
-   waits for approval rather than being applied silently.
-2. The open week locks. Flagging closes.
-3. A new week is posted, starting **8 days later** — so every week gets a full
-   7-day window between being posted and going live.
+- **Create a week.** Pick a Monday; it is drawn and posted immediately. Points
+  are credited to everyone on it the moment it exists.
+- **Lock a week.** Closes flagging and pickups. This is what makes "you had a
+  week to say something" true, so it is a deliberate switch rather than a
+  scheduled job, and the manager can see plainly whether it has fallen.
+- **Delete a week.** Removes it and hands back every point it issued. Refused
+  once the week has begun, because people have worked shifts from it by then.
 
-A week always locks at the chapter *immediately before it runs*, never after.
-That invariant is what makes "you had a week to say something" true, and it is
-covered by test.
+There is no draft or hidden state: a week is on the board or it does not exist.
 
-The transition runs automatically via Vercel Cron (`vercel.json`, Sundays at
-22:00 UTC) and can also be triggered by hand from the admin dashboard. It is
-idempotent — running it twice changes nothing.
-
-### The bootstrap week
-
-The first week of a semester cannot get a full 7-day window, because the
-semester starts right after the first chapter. It is posted as an explicit
-one-time action and flagged `isBootstrap` in the database, so the record shows
-plainly that week one was an exception rather than the rule.
+The only scheduled job is the day-before reminder, which sends a message and
+changes nothing.
 
 ---
 
@@ -142,30 +139,48 @@ schedule history mid-semester.
   state rather than an increment, which is what makes attendance corrections
   idempotent and reversible.
 - `src/lib/shift-service.ts` — flag, cover, attendance, substitutes.
-- `src/lib/chapter-transition.ts` — the Sunday transition.
-- `src/db/schema.ts` — Postgres schema. The `events` table is append-only.
+- `src/lib/week-admin.ts` — the manager's overrides: lock, delete, reassign.
+- `src/lib/member-dossier.ts` — one brother's full record, for disputes.
+- `src/db/schema.ts` — SQLite schema. The `events` table is append-only.
 
 **Claims are conditional writes.** Two brothers tapping "pick up" at the same
-instant cannot both win — the database arbitrates, not application code.
+instant cannot both win — the seat count is re-checked inside the statement
+that inserts, so the database arbitrates rather than application code.
 
 **Posted weeks are never regenerated.** What the house was told is the record.
 
-### Moving off Vercel
+### Hosting
 
-Neon is ordinary Postgres and the app builds with `output: 'standalone'`, so
-moving to a plain server is contained to `src/db/index.ts` — swap the Neon
-driver for `node-postgres`. The instructions are in a comment at the top of
-that file. Nothing else changes.
+Runs on a single DigitalOcean droplet with the database as one SQLite file on
+the same disk. See [DEPLOY.md](DEPLOY.md) for setup, and `./deploy.sh` to push
+changes.
+
+SQLite rather than a hosted database because the workload is tiny — 95 people,
+around 35 writes a week — and because this codebase deliberately favours
+several small readable queries over one clever one. Rendering the schedule
+board takes about five queries; settling a full week takes closer to two
+hundred. Locally that is free. Against a network database it forces you to
+write worse code to compensate.
 
 ---
 
 ## Testing
 
 ```bash
-npm test                       # 119 tests, no database required
-node --env-file=.env.local --experimental-strip-types \
-  scripts/smoke-shift-flow.ts  # end-to-end against the real database
+npm test    # unit tests, no database required
 ```
 
-The smoke test exercises flag → cover → settle → no-show → undo, asserting
-points and make-up debt at every step, then restores the original state.
+Four suites run against a real database and restore whatever they touch:
+
+```bash
+node --env-file=.env.local --experimental-strip-types scripts/smoke-points.ts
+node --env-file=.env.local --experimental-strip-types scripts/smoke-covering.ts
+node --env-file=.env.local --experimental-strip-types scripts/smoke-week-admin.ts
+node --env-file=.env.local --experimental-strip-types scripts/smoke-cover-offer.ts
+```
+
+They cover points landing at scheduling, flag → cover → settle → no-show →
+undo, the manager's overrides and their guards, and cover offers with bounties.
+
+If member totals ever look wrong, `scripts/reconcile-points.ts` recomputes them
+from the assignments, which are the authority. Dry run by default.

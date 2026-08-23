@@ -13,6 +13,8 @@
  *     answers a dispute, so it is appended even when the change is routine.
  */
 
+import { randomUUID } from 'node:crypto';
+
 import { eq, and, sql, inArray, isNull } from 'drizzle-orm';
 
 import { db } from '../db/index.ts';
@@ -394,7 +396,7 @@ export async function settleAssignment(assignmentId: string): Promise<void> {
     // Debt must never go negative, which would silently grant a free pass.
     await db
       .update(members)
-      .set({ makeupDebt: sql`GREATEST(0, ${members.makeupDebt} + ${n})` })
+      .set({ makeupDebt: sql`MAX(0, ${members.makeupDebt} + ${n})` })
       .where(eq(members.id, memberId));
   }
 
@@ -421,7 +423,7 @@ export async function settleAssignment(assignmentId: string): Promise<void> {
       await db
         .update(members)
         .set({
-          lastServedDate: sql`GREATEST(COALESCE(${members.lastServedDate}, DATE '1970-01-01'), ${slot.date}::date)`,
+          lastServedDate: sql`MAX(COALESCE(${members.lastServedDate}, '1970-01-01'), ${slot.date})`,
         })
         .where(eq(members.id, delta.outcome.recipientId));
     }
@@ -496,7 +498,7 @@ export async function unsettleAssignment(assignmentId: string): Promise<void> {
   if (a.settledRecipientId && a.pointsAwarded !== 0) {
     await db
       .update(members)
-      .set({ points: sql`GREATEST(0, ${members.points} - ${a.pointsAwarded})` })
+      .set({ points: sql`MAX(0, ${members.points} - ${a.pointsAwarded})` })
       .where(eq(members.id, a.settledRecipientId));
   }
 
@@ -504,7 +506,7 @@ export async function unsettleAssignment(assignmentId: string): Promise<void> {
     await db
       .update(members)
       .set({
-        makeupDebt: sql`GREATEST(0, ${members.makeupDebt} - ${a.debtAwarded})`,
+        makeupDebt: sql`MAX(0, ${members.makeupDebt} - ${a.debtAwarded})`,
       })
       .where(eq(members.id, a.memberId));
   }
@@ -530,15 +532,15 @@ export async function unsettleAssignment(assignmentId: string): Promise<void> {
 
 /** Derives lastServedDate from the assignments a member is still credited for. */
 export async function recomputeLastServed(memberId: string): Promise<void> {
-  await db.execute(sql`
-    UPDATE members m
+  db.run(sql`
+    UPDATE members
     SET last_served_date = (
       SELECT MAX(s.date)
       FROM assignments a
       JOIN slots s ON s.id = a.slot_id
-      WHERE a.settled_recipient_id = m.id AND a.points_awarded > 0
+      WHERE a.settled_recipient_id = members.id AND a.points_awarded > 0
     )
-    WHERE m.id = ${memberId}
+    WHERE id = ${memberId}
   `);
 }
 
@@ -756,17 +758,19 @@ export async function claimOpenSeat(
     return { ok: false, message: 'That shift is already full.' };
   }
 
-  // The count is evaluated by the database as part of the insert, so a
+  // The seat count is evaluated by the database as part of the insert, so a
   // simultaneous claim cannot slip past a check made a moment earlier.
-  const inserted = await db.execute(sql`
-    INSERT INTO assignments (slot_id, member_id, status, multiplier, is_makeup, rationale)
-    SELECT ${slotId}::uuid, ${memberId}::uuid, 'assigned', ${slot.coverBounty}, false,
-           ${JSON.stringify({ claimedOpenSeat: true, at: new Date().toISOString() })}::jsonb
-    WHERE (SELECT COUNT(*) FROM assignments WHERE slot_id = ${slotId}::uuid) < ${slot.size}
-    RETURNING id
-  `);
+  const newId = randomUUID();
+  const rows = db
+    .all<{ id: string }>(sql`
+      INSERT INTO assignments (id, slot_id, member_id, status, multiplier, is_makeup, rationale, created_at)
+      SELECT ${newId}, ${slotId}, ${memberId}, 'assigned', ${slot.coverBounty}, 0,
+             ${JSON.stringify({ claimedOpenSeat: true, at: new Date().toISOString() })},
+             ${Math.floor(Date.now() / 1000)}
+      WHERE (SELECT COUNT(*) FROM assignments WHERE slot_id = ${slotId}) < ${slot.size}
+      RETURNING id
+    `);
 
-  const rows = (inserted as unknown as { rows?: { id: string }[] }).rows ?? [];
   if (rows.length === 0) {
     return { ok: false, message: 'Somebody just took the last seat.' };
   }

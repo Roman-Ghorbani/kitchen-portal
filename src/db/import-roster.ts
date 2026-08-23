@@ -104,7 +104,7 @@ async function main() {
   /* ---------------- safety ---------------- */
 
   const [{ count: assignmentCount }] = await db
-    .select({ count: sql<number>`count(*)::int` })
+    .select({ count: sql<number>`count(*)` })
     .from(assignments);
 
   if (replace && assignmentCount > 0) {

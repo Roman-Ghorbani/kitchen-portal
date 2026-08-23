@@ -8,3 +8,10 @@ next-env.d.ts
 
 # Roster exports contain phone numbers and emails - never commit them
 *.csv
+
+# SQLite database file
+data/
+*.db
+*.db-wal
+*.db-shm
+backups/
