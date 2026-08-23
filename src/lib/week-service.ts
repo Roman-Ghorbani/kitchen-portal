@@ -263,6 +263,8 @@ export interface DisplaySlot {
   date: string;
   meal: Meal;
   size: number;
+  /** What an unfilled seat on this shift pays. */
+  coverBounty: number;
   assignments: DisplayAssignment[];
 }
 
@@ -340,6 +342,7 @@ export async function getWeek(weekStart: string): Promise<DisplayWeek | null> {
     date: s.date,
     meal: s.meal,
     size: s.size,
+    coverBounty: s.coverBounty,
     assignments: (bySlot.get(s.id) ?? []).sort((a, b) =>
       a.memberName.localeCompare(b.memberName),
     ),

@@ -29,6 +29,13 @@
       "when": 1787443360318,
       "tag": "0003_charming_mojo",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1787445161520,
+      "tag": "0004_organic_talos",
+      "breakpoints": true
     }
   ]
 }

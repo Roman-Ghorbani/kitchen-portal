@@ -600,3 +600,197 @@ export async function setShiftPoints(
     message: `${who} now earns ${formatPoints(multiplier)} point${multiplier === 1 ? '' : 's'} for this shift.`,
   };
 }
+
+/* ------------------------------------------------------------------ */
+/* Opening a shift for cover                                           */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The manager opens somebody's shift to the house, optionally offering extra
+ * points to get it taken.
+ *
+ * This is the "he told me he can't make it" path. Doing it here rather than
+ * making the brother flag it himself means the record still shows he gave
+ * notice - he simply gave it in person. He earns nothing for the shift and
+ * owes nothing for it, and returns to the pool at his previous total, so he
+ * comes back up in rotation sooner.
+ */
+export async function openForCover(
+  assignmentId: string,
+  bounty: number,
+  adminName: string,
+  reason: string | null,
+): Promise<ShiftResult> {
+  if (!isValidMultiplier(bounty)) {
+    return { ok: false, message: 'Bounty must be 1x, 1.5x, 2x, or 3x.' };
+  }
+
+  const ctx = await loadAssignmentContext(assignmentId);
+  if (!ctx) return { ok: false, message: 'That shift no longer exists.' };
+
+  if (ctx.assignment.status === 'flagged') {
+    // Already open - just adjust what it pays.
+    await db
+      .update(assignmentsTable)
+      .set({ multiplier: bounty })
+      .where(eq(assignmentsTable.id, assignmentId));
+    return {
+      ok: true,
+      message: `Already open — now offering ${formatPoints(bounty)}x.`,
+    };
+  }
+
+  await db
+    .update(assignmentsTable)
+    .set({ status: 'flagged', multiplier: bounty, coveredByMemberId: null })
+    .where(eq(assignmentsTable.id, assignmentId));
+
+  // Hands their provisional point back; nobody holds it until it is claimed.
+  await settleAssignment(assignmentId);
+
+  const who = await memberName(ctx.assignment.memberId);
+
+  await db.insert(events).values({
+    action: 'shift.opened_for_cover',
+    entityType: 'assignment',
+    entityId: assignmentId,
+    actorName: adminName,
+    summary:
+      `${adminName} opened ${who}'s ${ctx.slot.meal} on ${ctx.slot.date} for ` +
+      `cover at ${formatPoints(bounty)}x` +
+      (reason ? ` — "${reason}"` : ''),
+    payload: {
+      date: ctx.slot.date,
+      meal: ctx.slot.meal,
+      originalMemberId: ctx.assignment.memberId,
+      bounty,
+      reason,
+      openedByAdmin: true,
+    },
+  });
+
+  return {
+    ok: true,
+    message:
+      `${who}'s shift is open to the house at ${formatPoints(bounty)}x. ` +
+      'Anyone can take it.',
+  };
+}
+
+/** Sets what an unfilled seat on a shift pays. */
+export async function setSlotBounty(
+  slotId: string,
+  bounty: number,
+  adminName: string,
+): Promise<ShiftResult> {
+  if (!isValidMultiplier(bounty)) {
+    return { ok: false, message: 'Bounty must be 1x, 1.5x, 2x, or 3x.' };
+  }
+
+  const [slot] = await db
+    .select()
+    .from(slotsTable)
+    .where(eq(slotsTable.id, slotId))
+    .limit(1);
+  if (!slot) return { ok: false, message: 'No such shift.' };
+
+  await db
+    .update(slotsTable)
+    .set({ coverBounty: bounty })
+    .where(eq(slotsTable.id, slotId));
+
+  await db.insert(events).values({
+    action: 'slot.bounty_set',
+    entityType: 'slot',
+    entityId: slotId,
+    actorName: adminName,
+    summary:
+      `${adminName} offered ${formatPoints(bounty)}x for the open seat on ` +
+      `${slot.meal}, ${slot.date}`,
+    payload: { date: slot.date, meal: slot.meal, bounty },
+  });
+
+  return {
+    ok: true,
+    message: `Open seats on that shift now pay ${formatPoints(bounty)}x.`,
+  };
+}
+
+/**
+ * Claims a seat nobody is assigned to.
+ *
+ * Separate from volunteering to cover a flagged shift: there is no assignment
+ * row to update, so this inserts one. The seat count is re-checked inside the
+ * same statement that inserts, so two people tapping at once cannot both fill
+ * the last seat.
+ */
+export async function claimOpenSeat(
+  slotId: string,
+  memberId: string,
+): Promise<ShiftResult> {
+  const [slot] = await db
+    .select()
+    .from(slotsTable)
+    .where(eq(slotsTable.id, slotId))
+    .limit(1);
+  if (!slot) return { ok: false, message: 'That shift no longer exists.' };
+
+  const [person] = await db
+    .select()
+    .from(members)
+    .where(eq(members.id, memberId))
+    .limit(1);
+  if (!person || !person.active) {
+    return { ok: false, message: 'You are not on the active roster.' };
+  }
+
+  const existing = await db
+    .select()
+    .from(assignmentsTable)
+    .where(eq(assignmentsTable.slotId, slotId));
+
+  if (existing.some((a) => a.memberId === memberId)) {
+    return { ok: false, message: 'You are already on this shift.' };
+  }
+  if (existing.length >= slot.size) {
+    return { ok: false, message: 'That shift is already full.' };
+  }
+
+  // The count is evaluated by the database as part of the insert, so a
+  // simultaneous claim cannot slip past a check made a moment earlier.
+  const inserted = await db.execute(sql`
+    INSERT INTO assignments (slot_id, member_id, status, multiplier, is_makeup, rationale)
+    SELECT ${slotId}::uuid, ${memberId}::uuid, 'assigned', ${slot.coverBounty}, false,
+           ${JSON.stringify({ claimedOpenSeat: true, at: new Date().toISOString() })}::jsonb
+    WHERE (SELECT COUNT(*) FROM assignments WHERE slot_id = ${slotId}::uuid) < ${slot.size}
+    RETURNING id
+  `);
+
+  const rows = (inserted as unknown as { rows?: { id: string }[] }).rows ?? [];
+  if (rows.length === 0) {
+    return { ok: false, message: 'Somebody just took the last seat.' };
+  }
+
+  await settleAssignment(rows[0].id);
+
+  await db.insert(events).values({
+    action: 'shift.seat_claimed',
+    entityType: 'assignment',
+    entityId: rows[0].id,
+    actorMemberId: memberId,
+    actorName: person.name,
+    summary:
+      `${person.name} claimed an open seat on ${slot.meal}, ${slot.date}` +
+      (slot.coverBounty > 1 ? ` at ${formatPoints(slot.coverBounty)}x` : ''),
+    payload: { date: slot.date, meal: slot.meal, bounty: slot.coverBounty },
+  });
+
+  return {
+    ok: true,
+    message:
+      `You're on ${slot.meal} for ${slot.date}` +
+      (slot.coverBounty > 1
+        ? `, earning ${formatPoints(slot.coverBounty)} points.`
+        : '.'),
+  };
+}

@@ -9,6 +9,9 @@ import {
   setAttendance,
   assignSubstitute,
   setShiftPoints,
+  openForCover,
+  setSlotBounty,
+  claimOpenSeat,
   type ShiftResult,
 } from '../../lib/shift-service.ts';
 import type { AssignmentStatus } from '../../lib/types.ts';
@@ -82,6 +85,45 @@ export async function changeShiftPoints(
 ): Promise<ShiftResult> {
   const admin = await requireAdmin();
   const res = await setShiftPoints(assignmentId, multiplier, admin.name);
+  if (res.ok) refresh();
+  return res;
+}
+
+/**
+ * Opens somebody's shift to the house with a bounty. The "he told me he
+ * cannot make it" path, done by the manager rather than the brother.
+ */
+export async function openShiftForCover(
+  assignmentId: string,
+  bounty: number,
+  reason: string,
+): Promise<ShiftResult> {
+  const admin = await requireAdmin();
+  const res = await openForCover(assignmentId, bounty, admin.name, reason.trim() || null);
+  if (res.ok) refresh();
+  return res;
+}
+
+/** Sets what an unfilled seat pays. */
+export async function offerForOpenSeat(
+  slotId: string,
+  bounty: number,
+): Promise<ShiftResult> {
+  const admin = await requireAdmin();
+  const res = await setSlotBounty(slotId, bounty, admin.name);
+  if (res.ok) refresh();
+  return res;
+}
+
+/** A brother takes a seat nobody is assigned to. */
+export async function takeOpenSeat(slotId: string): Promise<ShiftResult> {
+  const session = await getSession();
+  if (!session) return { ok: false, message: 'Sign in first.' };
+  if (session.role === 'admin') {
+    return { ok: false, message: 'Use the manage-week controls to place somebody.' };
+  }
+
+  const res = await claimOpenSeat(slotId, session.sub);
   if (res.ok) refresh();
   return res;
 }

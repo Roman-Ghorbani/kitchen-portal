@@ -210,6 +210,15 @@ export const slots = pgTable(
     date: date('date').notNull(),
     meal: mealEnum('meal').notNull(),
     size: integer('size').notNull(),
+
+    /**
+     * What an unfilled seat on this shift is worth to whoever claims it.
+     *
+     * Lives on the slot rather than an assignment because an empty seat has no
+     * assignment row to hang it from - and an empty seat is exactly when the
+     * manager most needs to offer extra to get somebody to step up.
+     */
+    coverBounty: doublePrecision('cover_bounty').notNull().default(1),
   },
   (t) => [
     uniqueIndex('slots_week_date_meal_unique').on(t.weekId, t.date, t.meal),

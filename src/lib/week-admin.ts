@@ -402,6 +402,7 @@ export interface ManageSlot {
   date: string;
   meal: 'lunch' | 'dinner';
   size: number;
+  coverBounty: number;
   /** True when nobody on the roster could fill it that weekday. */
   assignments: {
     id: string;
@@ -457,6 +458,7 @@ export async function getWeekForManagement(weekId: string) {
     date: s.date,
     meal: s.meal,
     size: s.size,
+    coverBounty: s.coverBounty,
     assignments: asg
       .filter((a) => a.slotId === s.id)
       .map((a) => {

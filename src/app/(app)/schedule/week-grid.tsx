@@ -2,6 +2,7 @@ import { parseISO } from '../../../lib/dates.ts';
 import { formatPoints } from '../../../lib/types.ts';
 import type { DisplaySlot, DisplayWeek } from '../../../lib/week-service.ts';
 import { CoverButton } from './cover-button.tsx';
+import { ClaimSeatButton } from './claim-seat.tsx';
 
 function initials(name: string): string {
   return name.split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase();
@@ -64,10 +65,11 @@ function PersonChip({
         )}
       </span>
 
-      {/* What a shift is worth, and whether it is somebody working off a
-          missed one, is between that brother and the kitchen manager. The
-          board is public, so these only show to the person concerned. */}
-      {seesLedger && a.multiplier > 1 && (
+      {/* What an assigned brother earns is between him and the kitchen
+          manager, so it shows only to him. A bounty on a shift that is OPEN is
+          the opposite: it is an offer, and an offer nobody can see cannot be
+          taken up. */}
+      {seesLedger && !flagged && a.multiplier > 1 && (
         <span className="wg-mult mono">{formatPoints(a.multiplier)}×</span>
       )}
       {seesLedger && a.isMakeup && (
@@ -78,6 +80,11 @@ function PersonChip({
       {flagged && (
         <span className="wg-open">
           <span className="wg-badge bad">needs cover</span>
+          {a.multiplier > 1 && (
+            <span className="wg-bounty mono">
+              {formatPoints(a.multiplier)}× points
+            </span>
+          )}
           {canCover && a.memberId !== meId && (
             <CoverButton assignmentId={a.id} label="Pick up" />
           )}
@@ -132,8 +139,15 @@ function SlotCell({
           ))}
           {slot.size - slot.assignments.length > 0 && (
             <div className="wg-unfilled">
-              {slot.size - slot.assignments.length} seat
-              {slot.size - slot.assignments.length === 1 ? '' : 's'} unfilled
+              <span className="wg-unfilled-label">
+                {slot.size - slot.assignments.length} seat
+                {slot.size - slot.assignments.length === 1 ? '' : 's'} open
+                {slot.coverBounty > 1 &&
+                  ` · ${formatPoints(slot.coverBounty)}× points`}
+              </span>
+              {canCover && (
+                <ClaimSeatButton slotId={slot.id} bounty={slot.coverBounty} />
+              )}
             </div>
           )}
         </>

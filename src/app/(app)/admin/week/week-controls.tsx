@@ -15,6 +15,8 @@ import {
   markAttendance,
   placeSubstitute,
   changeShiftPoints,
+  openShiftForCover,
+  offerForOpenSeat,
 } from '../../../actions/shift-actions.ts';
 import { POINT_MULTIPLIERS, formatPoints } from '../../../../lib/types.ts';
 
@@ -31,6 +33,7 @@ export interface SlotView {
   date: string;
   meal: 'lunch' | 'dinner';
   size: number;
+  coverBounty: number;
   assignments: {
     id: string;
     memberId: string;
@@ -246,6 +249,9 @@ export function SlotEditor({
   const [adding, setAdding] = useState(false);
   const [anyYear, setAnyYear] = useState(false);
   const [bounty, setBounty] = useState<number>(1);
+  const [openPanel, setOpenPanel] = useState<string | null>(null);
+  const [offer, setOffer] = useState<number>(2);
+  const [reason, setReason] = useState('');
 
   const openSeats = slot.size - slot.assignments.length;
   const wantYear = slot.meal === 'lunch' ? 'junior' : 'sophomore';
@@ -342,6 +348,13 @@ export function SlotEditor({
               {a.coveredByName ? 'Change who is serving' : 'Someone else is serving'}
             </button>
             <button
+              className={`btn sm${a.status === 'flagged' ? ' gold' : ''}`}
+              disabled={pending}
+              onClick={() => setOpenPanel(openPanel === a.id ? null : a.id)}
+            >
+              {a.status === 'flagged' ? 'Change the offer' : 'Ask for cover'}
+            </button>
+            <button
               className="btn sm danger"
               disabled={pending}
               onClick={() => run(() => adminRemove(a.id))}
@@ -349,6 +362,56 @@ export function SlotEditor({
               Remove from shift
             </button>
           </div>
+
+          {openPanel === a.id && (
+            <div className="slot-edit-panel">
+              <div className="panel-explain">
+                Puts {a.memberName}&apos;s shift in front of the whole house as
+                needing cover. He earns nothing for it and owes nothing — he
+                told you, so he keeps his place and comes back up sooner.
+                Offering more points makes it likelier somebody takes it.
+              </div>
+              <div className="bounty-row">
+                <span className="bounty-label">Offer</span>
+                {POINT_MULTIPLIERS.map((m) => (
+                  <button
+                    key={m}
+                    className={`btn sm${offer === m ? ' gold' : ''}`}
+                    onClick={() => setOffer(m)}
+                  >
+                    {formatPoints(m)}×
+                  </button>
+                ))}
+              </div>
+              <input
+                className="field"
+                placeholder="Reason (optional) — e.g. told me he has a game"
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+              />
+              <div className="detail-actions">
+                <button
+                  className="btn primary sm"
+                  disabled={pending}
+                  onClick={() =>
+                    run(async () => {
+                      const r = await openShiftForCover(a.id, offer, reason);
+                      if (r.ok) {
+                        setOpenPanel(null);
+                        setReason('');
+                      }
+                      return r;
+                    })
+                  }
+                >
+                  Post it to the house at {formatPoints(offer)}×
+                </button>
+                <button className="btn sm" onClick={() => setOpenPanel(null)}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
 
           {panel === a.id && (
             <div className="slot-edit-panel">
@@ -391,6 +454,28 @@ export function SlotEditor({
 
       {slot.assignments.length === 0 && (
         <div className="slot-empty">Nobody assigned</div>
+      )}
+
+      {openSeats > 0 && (
+        <div className="slot-open-offer">
+          <span className="slot-points-label">
+            {openSeats} open seat{openSeats === 1 ? '' : 's'} — offering
+          </span>
+          {POINT_MULTIPLIERS.map((m) => (
+            <button
+              key={m}
+              className={`btn sm${slot.coverBounty === m ? ' gold' : ''}`}
+              disabled={pending}
+              onClick={() => run(() => offerForOpenSeat(slot.slotId, m))}
+            >
+              {formatPoints(m)}×
+            </button>
+          ))}
+          <span className="slot-points-hint">
+            Anyone in the house can claim an open seat, and this is what it
+            pays them.
+          </span>
+        </div>
       )}
 
       {openSeats > 0 && (

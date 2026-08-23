@@ -1,0 +1,1 @@
+ALTER TABLE "slots" ADD COLUMN "cover_bounty" double precision DEFAULT 1 NOT NULL;
