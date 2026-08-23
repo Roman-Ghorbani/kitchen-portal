@@ -4558,3 +4558,61 @@ body {
     height: 20px;
   }
 }
+
+/* ------------------------------------------------------------------ */
+/* Calendar Connect Popover Menu                                       */
+/* ------------------------------------------------------------------ */
+
+.cal-popover-wrap {
+  position: relative;
+  display: inline-block;
+}
+
+.cal-popover-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  width: 250px;
+  background: var(--navy-950);
+  border: 1.5px solid var(--gold-500);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  padding: 6px;
+  z-index: 1100;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cal-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  text-decoration: none;
+  color: #ffffff;
+  transition: background 0.15s;
+}
+
+.cal-menu-item:hover {
+  background: rgba(217, 178, 105, 0.18);
+}
+
+.cal-menu-item .cal-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.cal-menu-item .cal-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--gold-400);
+  line-height: 1.2;
+}
+
+.cal-menu-item .cal-sub {
+  font-size: 11px;
+  color: #a3aec3;
+  margin-top: 2px;
+}
