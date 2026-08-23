@@ -84,18 +84,10 @@ export async function getActiveSemester() {
 /* ------------------------------------------------------------------ */
 
 export interface GenerateOptions {
-  /**
-   * Unused. Kept so existing callers compile; a generated week is always on
-   * the board. There is no hidden state - a week either exists or it does not.
-   */
   post?: boolean;
-  /**
-   * True only for the first week of a semester, which cannot get the normal
-   * full 7-day flag window because the semester starts right after chapter.
-   */
   isBootstrap?: boolean;
-  /** Overrides the lock deadline; defaults to the chapter before the week. */
   locksAt?: Date;
+  disabledDays?: number[];
 }
 
 /**
@@ -174,11 +166,21 @@ export async function generateAndSaveWeek(
     );
   }
 
+  const customMealDays = JSON.parse(JSON.stringify(semester.mealDays)) as MealDayConfig;
+  if (options.disabledDays && options.disabledDays.length > 0) {
+    for (const d of options.disabledDays) {
+      if (d >= 0 && d < 7) {
+        customMealDays.lunch[d] = false;
+        customMealDays.dinner[d] = false;
+      }
+    }
+  }
+
   const roster = await loadSchedulingRoster(semester.id);
   const result = generateWeek({
     weekStart,
     members: roster,
-    mealDays: semester.mealDays as MealDayConfig,
+    mealDays: customMealDays,
     slotSizes: semester.slotSizes as Record<Meal, number>,
   });
 

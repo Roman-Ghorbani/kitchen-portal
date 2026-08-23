@@ -498,3 +498,93 @@ export async function getWeekForManagement(weekId: string) {
 
   return { week, slots, dayIndexOf: dayIndex };
 }
+
+/**
+ * Cancels/disables kitchen service for a specific slot.
+ * Revokes points awarded to assigned members and deletes the slot.
+ */
+export async function cancelSlotService(
+  slotId: string,
+  actorName: string,
+): Promise<AdminResult> {
+  const [slot] = await db
+    .select()
+    .from(slotsTable)
+    .where(eq(slotsTable.id, slotId))
+    .limit(1);
+  if (!slot) return { ok: false, message: 'Slot does not exist.' };
+
+  const asgList = await db
+    .select()
+    .from(assignmentsTable)
+    .where(eq(assignmentsTable.slotId, slotId));
+
+  for (const a of asgList) {
+    await unsettleAssignment(a.id);
+  }
+
+  await db.delete(slotsTable).where(eq(slotsTable.id, slotId));
+
+  await db.insert(events).values({
+    action: 'slot.cancelled',
+    entityType: 'slot',
+    entityId: slotId,
+    actorName,
+    summary: `${actorName} cancelled kitchen service for ${slot.meal} on ${slot.date}`,
+    payload: { date: slot.date, meal: slot.meal },
+  });
+
+  return {
+    ok: true,
+    message: `Cancelled service for ${slot.meal} on ${slot.date}.`,
+  };
+}
+
+/**
+ * Enables kitchen service for a day/meal combination that was cancelled or missing.
+ */
+export async function enableSlotService(
+  weekId: string,
+  date: string,
+  meal: 'lunch' | 'dinner',
+  actorName: string,
+): Promise<AdminResult> {
+  const existing = await db
+    .select()
+    .from(slotsTable)
+    .where(
+      and(
+        eq(slotsTable.weekId, weekId),
+        eq(slotsTable.date, date),
+        eq(slotsTable.meal, meal),
+      ),
+    )
+    .limit(1);
+
+  if (existing.length > 0) {
+    return { ok: true, message: 'Service is already enabled for this meal.' };
+  }
+
+  const defaultSize = meal === 'lunch' ? 2 : 3;
+  await db.insert(slotsTable).values({
+    weekId,
+    date,
+    meal,
+    size: defaultSize,
+    coverBounty: 1,
+  });
+
+  await db.insert(events).values({
+    action: 'slot.enabled',
+    entityType: 'slot',
+    entityId: weekId,
+    actorName,
+    summary: `${actorName} enabled kitchen service for ${meal} on ${date}`,
+    payload: { date, meal },
+  });
+
+  return {
+    ok: true,
+    message: `Enabled service for ${meal} on ${date}.`,
+  };
+}

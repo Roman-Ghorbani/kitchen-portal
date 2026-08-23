@@ -10,6 +10,8 @@ import {
   reassignShift,
   removeFromShift,
   addToShift,
+  cancelSlotService,
+  enableSlotService,
   type AdminResult,
 } from '../../lib/week-admin.ts';
 import { generateAndSaveWeek } from '../../lib/week-service.ts';
@@ -43,10 +45,15 @@ export async function adminDeleteWeek(weekId: string): Promise<AdminResult> {
 }
 
 /** Draws and posts a new week. */
-export async function adminCreateWeek(weekStart: string): Promise<AdminResult> {
+export async function adminCreateWeek(
+  weekStart: string,
+  disabledDays?: number[],
+): Promise<AdminResult> {
   await requireAdmin();
   try {
-    const { assignmentCount, result } = await generateAndSaveWeek(weekStart);
+    const { assignmentCount, result } = await generateAndSaveWeek(weekStart, {
+      disabledDays,
+    });
     refresh();
     return {
       ok: true,
@@ -91,6 +98,24 @@ export async function adminAdd(
   const res = await addToShift(slotId, memberId, admin.name, {
     allowAnyClassYear,
   });
+  if (res.ok) refresh();
+  return res;
+}
+
+export async function adminCancelSlot(slotId: string): Promise<AdminResult> {
+  const admin = await requireAdmin();
+  const res = await cancelSlotService(slotId, admin.name);
+  if (res.ok) refresh();
+  return res;
+}
+
+export async function adminEnableSlot(
+  weekId: string,
+  date: string,
+  meal: 'lunch' | 'dinner',
+): Promise<AdminResult> {
+  const admin = await requireAdmin();
+  const res = await enableSlotService(weekId, date, meal, admin.name);
   if (res.ok) refresh();
   return res;
 }

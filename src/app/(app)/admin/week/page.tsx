@@ -144,7 +144,7 @@ export default async function ManageWeekPage({
 
       <h2 className="section-title">Shifts</h2>
 
-      <ManageDays days={days} roster={roster} />
+      <ManageDays weekId={managed.week.id} days={days} roster={roster} />
     </AppShell>
   );
 }

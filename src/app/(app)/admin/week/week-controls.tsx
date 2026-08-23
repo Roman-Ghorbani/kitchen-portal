@@ -9,6 +9,8 @@ import {
   adminDeleteWeek,
   adminRemove,
   adminAdd,
+  adminCancelSlot,
+  adminEnableSlot,
 } from '../../../actions/week-admin-actions.ts';
 import {
   markAttendance,
@@ -277,6 +279,18 @@ export function SlotEditor({
           {slot.assignments.length}/{slot.size}
         </span>
         {openSeats > 0 && <span className="tag bad">{openSeats} open</span>}
+        <button
+          className="btn sm danger"
+          style={{ marginLeft: 'auto', fontSize: 11, padding: '3px 8px' }}
+          disabled={pending}
+          onClick={() => {
+            if (confirm(`Cancel kitchen service for ${slot.meal === 'lunch' ? 'Lunch' : 'Dinner'}? Any assigned points will be returned.`)) {
+              run(() => adminCancelSlot(slot.slotId));
+            }
+          }}
+        >
+          🚫 Cancel Service
+        </button>
       </div>
 
       {slot.assignments.map((a) => (

@@ -5,14 +5,8 @@ import { useRouter } from 'next/navigation';
 
 import { adminCreateWeek } from '../../actions/week-admin-actions.ts';
 
-/**
- * Draws and posts a week, on a date the manager picks.
- *
- * Replaces a button labelled "Run Sunday chapter" that silently did four
- * different things. Creating a week and locking one are separate decisions
- * made at different moments, so they are separate controls that say what they
- * do.
- */
+const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
 export function CreateWeekButton({
   suggested,
   suggestedLabel,
@@ -24,6 +18,15 @@ export function CreateWeekButton({
 }) {
   const [open, setOpen] = useState(false);
   const [date, setDate] = useState(suggested);
+  const [activeDays, setActiveDays] = useState<boolean[]>([
+    true,
+    true,
+    true,
+    true,
+    true,
+    false,
+    false,
+  ]);
   const [message, setMessage] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -32,9 +35,19 @@ export function CreateWeekButton({
   const clash = existing.includes(date);
   const isMonday = new Date(`${date}T00:00:00Z`).getUTCDay() === 1;
 
+  function toggleDay(idx: number) {
+    const next = [...activeDays];
+    next[idx] = !next[idx];
+    setActiveDays(next);
+  }
+
   function create() {
+    const disabledDays = activeDays
+      .map((active, idx) => (active ? null : idx))
+      .filter((x): x is number => x !== null);
+
     startTransition(async () => {
-      const res = await adminCreateWeek(date);
+      const res = await adminCreateWeek(date, disabledDays);
       setMessage(res.message);
       setFailed(!res.ok);
       if (res.ok) setOpen(false);
@@ -90,20 +103,48 @@ export function CreateWeekButton({
         </button>
       </div>
 
+      <div className="create-week-days-config" style={{ marginTop: 12 }}>
+        <div className="note" style={{ marginBottom: 6, fontWeight: 600 }}>
+          Active Kitchen Service Days for this week:
+        </div>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          {DAYS.map((dayName, idx) => (
+            <label
+              key={dayName}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 5,
+                fontSize: 13,
+                cursor: 'pointer',
+                userSelect: 'none',
+                background: activeDays[idx] ? 'rgba(217, 178, 105, 0.15)' : 'var(--card)',
+                border:
+                  '1px solid ' +
+                  (activeDays[idx] ? 'var(--gold-500)' : 'var(--line)'),
+                padding: '4px 8px',
+                borderRadius: 6,
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={activeDays[idx]}
+                onChange={() => toggleDay(idx)}
+              />
+              {dayName}
+            </label>
+          ))}
+        </div>
+      </div>
+
       {!isMonday && (
-        <div className="note" style={{ color: 'var(--amber-600)' }}>
+        <div className="note" style={{ color: 'var(--amber-600)', marginTop: 8 }}>
           Pick a Monday — a week runs Monday through Sunday.
         </div>
       )}
       {clash && (
-        <div className="note" style={{ color: 'var(--red-600)' }}>
+        <div className="note" style={{ color: 'var(--red-600)', marginTop: 8 }}>
           That week already exists. Delete it first if you want to draw it again.
-        </div>
-      )}
-      {!clash && isMonday && (
-        <div className="note">
-          Posting it puts it in front of the house straight away. Everyone on it
-          gets their point immediately, and loses it only if they do not show.
         </div>
       )}
 
