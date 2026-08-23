@@ -21,6 +21,7 @@ import {
   timestamp,
   jsonb,
   uuid,
+  doublePrecision,
   index,
   uniqueIndex,
   pgEnum,
@@ -84,9 +85,13 @@ export const members = pgTable(
 
     /**
      * Rotation priority. Lower is scheduled sooner. Increments by the
-     * assignment multiplier, so a 3x bounty pickup adds 3.
+     * assignment multiplier, so a 3x pickup adds 3.
+     *
+     * Floating point because half-point awards (1.5x) are allowed. Every
+     * permitted multiplier is a multiple of 0.5, and halves are exact in
+     * binary floating point, so these sums never drift.
      */
-    points: integer('points').notNull().default(0),
+    points: doublePrecision('points').notNull().default(0),
 
     /** Unworked make-up shifts owed from no-shows. Forces front of queue. */
     makeupDebt: integer('makeup_debt').notNull().default(0),
@@ -231,10 +236,10 @@ export const assignments = pgTable(
     }),
 
     /**
-     * Points awarded to whoever served. 1 normally; the manager can award 2 or
-     * 3 as a bounty to get someone to step up on short notice.
+     * Points this shift is worth to whoever serves it. 1 normally; the manager
+     * can raise it to 1.5, 2, or 3 to get somebody to step up on short notice.
      */
-    multiplier: integer('multiplier').notNull().default(1),
+    multiplier: doublePrecision('multiplier').notNull().default(1),
 
     /** This assignment works off make-up debt - the one exception to 1/week. */
     isMakeup: boolean('is_makeup').notNull().default(false),
@@ -254,7 +259,7 @@ export const assignments = pgTable(
      * later attendance correction applies only the difference rather than
      * double-crediting or requiring anyone to unwind points by hand.
      */
-    pointsAwarded: integer('points_awarded').notNull().default(0),
+    pointsAwarded: doublePrecision('points_awarded').notNull().default(0),
     debtAwarded: integer('debt_awarded').notNull().default(0),
     /** Who last received the points, so credit can be moved cleanly. */
     settledRecipientId: uuid('settled_recipient_id').references(() => members.id, {

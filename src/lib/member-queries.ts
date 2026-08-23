@@ -32,6 +32,8 @@ export interface MyShift {
   coveringForName: string | null;
   /** Points this shift is worth, including any bounty. */
   multiplier: number;
+  /** Points actually credited for it so far. */
+  pointsAwarded: number;
   weekStatus: string;
   weekLocksAt: Date | null;
   /** Who else is on that shift, so they know who to coordinate with. */
@@ -127,6 +129,7 @@ export async function getMyShifts(memberId: string): Promise<MyShift[]> {
             : null,
         coveringForName: covering ? (nameById.get(a.memberId) ?? null) : null,
         multiplier: a.multiplier,
+        pointsAwarded: a.pointsAwarded,
         weekStatus: week.status,
         weekLocksAt: week.locksAt,
         // Whoever is actually turning up, which is the coverer where there is

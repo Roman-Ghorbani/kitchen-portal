@@ -8,6 +8,7 @@ import {
   volunteerToCover,
   setAttendance,
   assignSubstitute,
+  setShiftPoints,
   type ShiftResult,
 } from '../../lib/shift-service.ts';
 import type { AssignmentStatus } from '../../lib/types.ts';
@@ -70,6 +71,17 @@ export async function placeSubstitute(
     multiplier,
     admin.name,
   );
+  if (res.ok) refresh();
+  return res;
+}
+
+/** Changes what a shift is worth without changing who is serving it. */
+export async function changeShiftPoints(
+  assignmentId: string,
+  multiplier: number,
+): Promise<ShiftResult> {
+  const admin = await requireAdmin();
+  const res = await setShiftPoints(assignmentId, multiplier, admin.name);
   if (res.ok) refresh();
   return res;
 }

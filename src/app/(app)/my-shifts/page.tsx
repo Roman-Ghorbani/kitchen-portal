@@ -5,6 +5,7 @@ import { getSession } from '../../../lib/session.ts';
 import { getMyShifts, getMemberById } from '../../../lib/member-queries.ts';
 import { getScheduleHorizon } from '../../../lib/week-service.ts';
 import { parseISO, daysBetween } from '../../../lib/dates.ts';
+import { formatPoints } from '../../../lib/types.ts';
 import { AppShell } from '../shell.tsx';
 import { HorizonNote } from '../horizon-note.tsx';
 import { FlagButton } from './flag-button.tsx';
@@ -140,22 +141,14 @@ export default async function MyShiftsPage() {
         </div>
       )}
 
-      <div className="my-stats">
-        <div className="my-stat">
-          <span className="my-stat-value mono">{member?.points ?? 0}</span>
-          <span className="my-stat-label">Kitchen points</span>
-        </div>
-        <div className="my-stat">
-          <span className="my-stat-value mono">{upcoming.length}</span>
-          <span className="my-stat-label">Shifts coming up</span>
-        </div>
-        {(member?.makeupDebt ?? 0) > 0 && (
+      {(member?.makeupDebt ?? 0) > 0 && (
+        <div className="my-stats">
           <div className="my-stat owed">
             <span className="my-stat-value mono">{member!.makeupDebt}</span>
             <span className="my-stat-label">Make-ups owed</span>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {(member?.makeupDebt ?? 0) > 0 && (
         <div className="alert bad">
@@ -238,24 +231,85 @@ export default async function MyShiftsPage() {
         </>
       )}
 
-      {past.length > 0 && (
-        <>
-          <h2 className="section-title">Already served</h2>
-          {past.slice(-5).reverse().map((s) => (
-            <div key={s.assignmentId} className="shift-row past">
-              <div className="shift-when">
-                <div className="shift-day">
-                  {weekday(s.date)}, {dateLine(s.date)}
+      <h2 className="section-title">
+        Your shifts and points
+        <span className="section-count mono">
+          {formatPoints(member?.points ?? 0)} total
+        </span>
+      </h2>
+
+      {shifts.length === 0 ? (
+        <div className="card card-pad">
+          <span style={{ fontSize: 13, color: 'var(--ink-400)' }}>
+            Nothing yet. Points show up here as soon as you are scheduled.
+          </span>
+        </div>
+      ) : (
+        <div className="history">
+          {[...shifts].reverse().map((s) => {
+            const served = s.date < today;
+            const noShow = s.status === 'no-show';
+            const handedOff = s.role === 'assigned' && s.coveredByName !== null;
+            const flagged = s.status === 'flagged';
+            const earns = !noShow && !handedOff && !flagged;
+
+            return (
+              <div
+                key={s.assignmentId}
+                className={`history-row${noShow ? ' missed' : ''}`}
+              >
+                <div className="history-when">
+                  <span className="history-date">
+                    {weekday(s.date).slice(0, 3)} {dateLine(s.date)}
+                  </span>
+                  <span className="history-what">
+                    {s.meal === 'lunch' ? 'Lunch' : 'Dinner'}
+                    {s.role === 'covering' && ` · covering for ${s.coveringForName}`}
+                    {handedOff && ` · ${s.coveredByName} took it`}
+                    {s.isMakeup && ' · make-up'}
+                    {s.multiplier > 1 && earns && ` · ${formatPoints(s.multiplier)}× bonus`}
+                  </span>
+                </div>
+
+                <div className="history-right">
+                  {noShow ? (
+                    <>
+                      <span className="history-points zero">0</span>
+                      <span className="history-state bad">No-show</span>
+                    </>
+                  ) : handedOff ? (
+                    <>
+                      <span className="history-points zero">0</span>
+                      <span className="history-state">Handed off</span>
+                    </>
+                  ) : flagged ? (
+                    <>
+                      <span className="history-points zero">0</span>
+                      <span className="history-state">Flagged</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="history-points">
+                        +{formatPoints(s.pointsAwarded || s.multiplier)}
+                      </span>
+                      <span className={`history-state${served ? ' done' : ' pending'}`}>
+                        {served ? 'Served' : 'Pending'}
+                      </span>
+                    </>
+                  )}
                 </div>
               </div>
-              <span className="tag locked">{s.meal}</span>
-              <span className={`tag ${s.status === 'no-show' ? 'bad' : 'ok'}`}>
-                {s.status === 'assigned' ? 'served' : s.status}
-              </span>
-            </div>
-          ))}
-        </>
+            );
+          })}
+        </div>
       )}
+
+      <div className="note">
+        Points are credited as soon as you are put on the schedule — a shift
+        that has not happened yet shows as <strong>Pending</strong>. If you do
+        not show up, the point comes off and you move back toward the front of
+        the queue.
+      </div>
 
       <div className="alert info">
         <span className="alert-title">Have a class every week at that time?</span>

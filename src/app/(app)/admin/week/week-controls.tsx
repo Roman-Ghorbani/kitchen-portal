@@ -8,14 +8,15 @@ import {
   adminRepublishWeek,
   adminDeleteWeek,
   adminRegenerateWeek,
-  adminReassign,
   adminRemove,
   adminAdd,
 } from '../../../actions/week-admin-actions.ts';
 import {
   markAttendance,
   placeSubstitute,
+  changeShiftPoints,
 } from '../../../actions/shift-actions.ts';
+import { POINT_MULTIPLIERS, formatPoints } from '../../../../lib/types.ts';
 
 export interface Person {
   id: string;
@@ -241,12 +242,10 @@ export function SlotEditor({
   isPast: boolean;
 }) {
   const { pending, msg, bad, run } = useAction();
-  const [panel, setPanel] = useState<{ id: string; kind: 'replace' | 'sub' } | null>(
-    null,
-  );
+  const [panel, setPanel] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [anyYear, setAnyYear] = useState(false);
-  const [bounty, setBounty] = useState(1);
+  const [bounty, setBounty] = useState<number>(1);
 
   const openSeats = slot.size - slot.assignments.length;
   const wantYear = slot.meal === 'lunch' ? 'junior' : 'sophomore';
@@ -310,113 +309,81 @@ export function SlotEditor({
             </div>
           )}
 
+          {/* What the shift is worth, always available. Who serves it and
+              what it pays are two separate decisions; bundling them meant the
+              only way to award extra was to re-pick the same person. */}
+          <div className="slot-points">
+            <span className="slot-points-label">Worth</span>
+            {POINT_MULTIPLIERS.map((m) => (
+              <button
+                key={m}
+                className={`btn sm${a.multiplier === m ? ' gold' : ''}`}
+                disabled={pending}
+                onClick={() => run(() => changeShiftPoints(a.id, m))}
+              >
+                {formatPoints(m)}×
+              </button>
+            ))}
+            <span className="slot-points-hint">
+              {a.status === 'no-show'
+                ? 'no-show — nothing awarded'
+                : `${formatPoints(a.multiplier)} point${a.multiplier === 1 ? '' : 's'} to ${
+                    a.coveredByName ?? a.memberName
+                  }`}
+            </span>
+          </div>
+
           <div className="slot-person-actions">
             <button
               className="btn sm"
               disabled={pending}
-              onClick={() =>
-                setPanel(
-                  panel?.id === a.id && panel.kind === 'replace'
-                    ? null
-                    : { id: a.id, kind: 'replace' },
-                )
-              }
+              onClick={() => setPanel(panel === a.id ? null : a.id)}
             >
-              Replace
-            </button>
-            <button
-              className="btn sm"
-              disabled={pending}
-              onClick={() =>
-                setPanel(
-                  panel?.id === a.id && panel.kind === 'sub'
-                    ? null
-                    : { id: a.id, kind: 'sub' },
-                )
-              }
-            >
-              {a.coveredByName ? 'Change sub' : 'Add sub'}
+              {a.coveredByName ? 'Change who is serving' : 'Someone else is serving'}
             </button>
             <button
               className="btn sm danger"
               disabled={pending}
               onClick={() => run(() => adminRemove(a.id))}
             >
-              Remove
+              Remove from shift
             </button>
           </div>
 
-          {panel?.id === a.id && (
+          {panel === a.id && (
             <div className="slot-edit-panel">
-              {panel.kind === 'replace' ? (
-                <>
-                  <div className="panel-explain">
-                    <strong>Replace</strong> swaps who is on this shift outright.{' '}
-                    {a.memberName} keeps their place in the rotation and owes
-                    nothing.
-                  </div>
-                  <label className="any-year">
-                    <input
-                      type="checkbox"
-                      checked={anyYear}
-                      onChange={(e) => setAnyYear(e.target.checked)}
-                    />
-                    Allow any class year (normally {wantYear}s only)
-                  </label>
-                  <PersonPicker
-                    roster={eligible}
-                    disabled={pending}
-                    placeholder={`Replace ${a.memberName} with…`}
-                    onPick={(id) =>
-                      run(async () => {
-                        const r = await adminReassign(a.id, id, anyYear);
-                        if (r.ok) setPanel(null);
-                        return r;
-                      })
+              <div className="panel-explain">
+                Whoever you pick takes this shift and earns the points.{' '}
+                {a.memberName} earns nothing for it and keeps their place in the
+                rotation, so they come back up sooner.
+              </div>
+              <div className="bounty-row">
+                <span className="bounty-label">Worth</span>
+                {POINT_MULTIPLIERS.map((m) => (
+                  <button
+                    key={m}
+                    className={`btn sm${bounty === m ? ' gold' : ''}`}
+                    onClick={() => setBounty(m)}
+                  >
+                    {formatPoints(m)}×
+                  </button>
+                ))}
+              </div>
+              <PersonPicker
+                roster={roster}
+                disabled={pending}
+                placeholder="Who is actually serving this?"
+                onPick={(id) =>
+                  run(async () => {
+                    const r = await placeSubstitute(a.id, id, bounty);
+                    if (r.ok) {
+                      setPanel(null);
+                      setBounty(1);
                     }
-                  />
-                </>
-              ) : (
-                <>
-                  <div className="panel-explain">
-                    <strong>Sub</strong> means somebody covers for{' '}
-                    {a.memberName}. Only the sub earns the point, and{' '}
-                    {a.memberName} still owes their normal turn.
-                  </div>
-                  <div className="bounty-row">
-                    <span className="bounty-label">Award</span>
-                    {[1, 2, 3].map((m) => (
-                      <button
-                        key={m}
-                        className={`btn sm${bounty === m ? ' gold' : ''}`}
-                        onClick={() => setBounty(m)}
-                      >
-                        {m}×
-                      </button>
-                    ))}
-                    <span className="bounty-hint">
-                      {bounty === 1
-                        ? 'Normal credit'
-                        : `Bounty — ${bounty} points for stepping up`}
-                    </span>
-                  </div>
-                  <PersonPicker
-                    roster={roster}
-                    disabled={pending}
-                    placeholder="Who is covering?"
-                    onPick={(id) =>
-                      run(async () => {
-                        const r = await placeSubstitute(a.id, id, bounty);
-                        if (r.ok) {
-                          setPanel(null);
-                          setBounty(1);
-                        }
-                        return r;
-                      })
-                    }
-                  />
-                </>
-              )}
+                    return r;
+                  })
+                }
+              />
             </div>
           )}
         </div>

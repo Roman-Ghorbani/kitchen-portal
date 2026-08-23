@@ -24,7 +24,7 @@ import {
   events,
 } from '../db/schema.ts';
 import { settleDelta, type SettleInput } from './settlement.ts';
-import type { AssignmentStatus } from './types.ts';
+import { isValidMultiplier, formatPoints, type AssignmentStatus } from './types.ts';
 
 export interface ShiftResult {
   ok: boolean;
@@ -300,8 +300,8 @@ export async function assignSubstitute(
   multiplier: number,
   adminName: string,
 ): Promise<ShiftResult> {
-  if (![1, 2, 3].includes(multiplier)) {
-    return { ok: false, message: 'Bounty must be 1x, 2x, or 3x.' };
+  if (!isValidMultiplier(multiplier)) {
+    return { ok: false, message: 'Points must be 1x, 1.5x, 2x, or 3x.' };
   }
 
   const ctx = await loadAssignmentContext(assignmentId);
@@ -336,7 +336,7 @@ export async function assignSubstitute(
     summary:
       `${adminName} put ${sub.name} on ${ctx.slot.meal} for ${ctx.slot.date} ` +
       `in place of ${originalName}` +
-      (multiplier > 1 ? ` at ${multiplier}x points` : ''),
+      (multiplier > 1 ? ` at ${formatPoints(multiplier)}x points` : ''),
     payload: {
       date: ctx.slot.date,
       meal: ctx.slot.meal,
@@ -350,7 +350,7 @@ export async function assignSubstitute(
     ok: true,
     message:
       `${sub.name} is on ${ctx.slot.meal} for ${ctx.slot.date}` +
-      (multiplier > 1 ? `, earning ${multiplier} points.` : '.'),
+      (multiplier > 1 ? `, earning ${formatPoints(multiplier)} points.` : '.'),
   };
 }
 
@@ -540,4 +540,63 @@ export async function recomputeLastServed(memberId: string): Promise<void> {
     )
     WHERE m.id = ${memberId}
   `);
+}
+
+/**
+ * Changes what a shift is worth, without changing who is on it.
+ *
+ * Separate from putting somebody new on a shift because those are two
+ * different decisions: who is serving, and what it is worth. Bundling them
+ * meant the only way to award extra points was to re-pick the same person.
+ */
+export async function setShiftPoints(
+  assignmentId: string,
+  multiplier: number,
+  adminName: string,
+): Promise<ShiftResult> {
+  if (!isValidMultiplier(multiplier)) {
+    return { ok: false, message: 'Points must be 1x, 1.5x, 2x, or 3x.' };
+  }
+
+  const ctx = await loadAssignmentContext(assignmentId);
+  if (!ctx) return { ok: false, message: 'That shift no longer exists.' };
+
+  if (ctx.assignment.multiplier === multiplier) {
+    return { ok: true, message: 'Already worth that.' };
+  }
+
+  const previous = ctx.assignment.multiplier;
+
+  await db
+    .update(assignmentsTable)
+    .set({ multiplier })
+    .where(eq(assignmentsTable.id, assignmentId));
+
+  // Re-settle so the difference is applied rather than the whole amount again.
+  await settleAssignment(assignmentId);
+
+  const serving = ctx.assignment.coveredByMemberId ?? ctx.assignment.memberId;
+  const who = await memberName(serving);
+
+  await db.insert(events).values({
+    action: 'shift.points_changed',
+    entityType: 'assignment',
+    entityId: assignmentId,
+    actorName: adminName,
+    summary:
+      `${adminName} set ${ctx.slot.meal} on ${ctx.slot.date} to ` +
+      `${formatPoints(multiplier)}x for ${who} (was ${formatPoints(previous)}x)`,
+    payload: {
+      date: ctx.slot.date,
+      meal: ctx.slot.meal,
+      from: previous,
+      to: multiplier,
+      memberId: serving,
+    },
+  });
+
+  return {
+    ok: true,
+    message: `${who} now earns ${formatPoints(multiplier)} point${multiplier === 1 ? '' : 's'} for this shift.`,
+  };
 }

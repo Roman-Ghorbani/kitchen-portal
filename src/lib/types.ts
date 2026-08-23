@@ -106,3 +106,21 @@ export interface WeekSchedule {
   weekStart: string;
   slots: Slot[];
 }
+
+/**
+ * What a shift can be worth. Every value is a multiple of 0.5 so the sums stay
+ * exact in floating point, and 3 is the ceiling because beyond that a single
+ * pickup distorts the rotation for over a month.
+ */
+export const POINT_MULTIPLIERS = [1, 1.5, 2, 3] as const;
+
+export type PointMultiplier = (typeof POINT_MULTIPLIERS)[number];
+
+export function isValidMultiplier(n: number): boolean {
+  return (POINT_MULTIPLIERS as readonly number[]).includes(n);
+}
+
+/** Renders a points value without trailing zeros: 1, 1.5, 2, 3. */
+export function formatPoints(n: number): string {
+  return Number.isInteger(n) ? String(n) : n.toFixed(1);
+}
