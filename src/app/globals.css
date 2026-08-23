@@ -4499,7 +4499,7 @@ body {
 }
 
 @media (max-width: 820px) {
-  html, body {
+  body:has(.shell) {
     height: 100%;
     overflow: hidden;
   }

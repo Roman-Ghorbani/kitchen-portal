@@ -1,12 +1,14 @@
 .signin-shell {
-  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 24px 16px 64px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: 24px 16px 48px;
-  gap: 22px;
+  justify-content: flex-start;
+  gap: 18px;
   background: var(--bg);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .signin-brand {

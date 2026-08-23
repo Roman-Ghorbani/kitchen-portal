@@ -175,7 +175,16 @@ export function SignInForm({ roster }: { roster: PickerMember[] }) {
         </div>
       </div>
 
-      <h2>Find your name</h2>
+      <div className="signin-header-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+        <h2>Find your name</h2>
+        <button
+          className="btn gold sm"
+          style={{ fontSize: 11.5, padding: '4px 10px', whiteSpace: 'nowrap' }}
+          onClick={() => setAdminMode(true)}
+        >
+          🔑 Manager Sign In
+        </button>
+      </div>
       <p className="hint">{roster.length} brothers on the duty roster.</p>
 
       <input
