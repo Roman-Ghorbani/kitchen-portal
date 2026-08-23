@@ -36,9 +36,7 @@ export default async function SignInPage() {
   return (
     <main className="signin-shell">
       <div className="signin-brand">
-        <div className="brand-mark">
-          <img src="/icon.svg" alt="ZBT Logo" className="brand-logo-img" />
-        </div>
+        <div className="brand-mark">ZBT</div>
         <div>
           <div className="signin-title">Kitchen Duty</div>
           <div className="signin-sub">Fall 2026</div>

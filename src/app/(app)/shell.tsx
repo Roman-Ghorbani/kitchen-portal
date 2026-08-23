@@ -44,9 +44,7 @@ export function AppShell({
     <div className="shell">
       <nav className="sidebar">
         <div className="brand">
-          <div className="brand-mark">
-            <img src="/icon.svg" alt="ZBT Logo" className="brand-logo-img" />
-          </div>
+          <div className="brand-mark">ZBT</div>
           <div className="brand-text">
             <div className="t1">Kitchen Duty</div>
             <div className="t2">Fall 2026</div>
