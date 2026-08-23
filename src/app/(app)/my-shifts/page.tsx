@@ -137,7 +137,7 @@ export default async function MyShiftsPage() {
 
           {next.status === 'flagged' && (
             <div className="next-flagged">
-              You flagged this shift — open for anyone to pick up.
+              Conflict message submitted to Roman. Open for replacement.
             </div>
           )}
 

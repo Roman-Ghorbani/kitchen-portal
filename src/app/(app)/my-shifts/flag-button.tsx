@@ -44,31 +44,35 @@ export function FlagButton({
   return (
     <div className="flag-wrap">
       {!open ? (
-        <button className="btn sm" onClick={() => setOpen(true)}>
-          Flag a conflict
+        <button className="btn sm danger" onClick={() => setOpen(true)}>
+          Report Conflict / Can&apos;t Make It
         </button>
       ) : (
         <div className="flag-form">
           <input
             className="field"
-            placeholder="Reason (optional) — e.g. exam that night"
+            placeholder="Reason why you can't make it (e.g. Midterm exam)"
             value={reason}
             autoFocus
             onChange={(e) => setReason(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && submit()}
           />
-          <div className="flag-actions">
-            <button className="btn sm" onClick={() => setOpen(false)}>
+          <div className="flag-actions" style={{ marginTop: 8 }}>
+            <button className="btn sm" type="button" onClick={() => setOpen(false)}>
               Cancel
             </button>
-            <button className="btn primary sm" onClick={submit} disabled={pending}>
+            <button
+              className="btn danger sm"
+              type="button"
+              onClick={submit}
+              disabled={pending || !reason.trim()}
+            >
               {pending && <span className="spinner" />}
-              {pending ? 'Flagging…' : 'Flag it'}
+              {pending ? 'Sending…' : 'Submit Conflict to Roman'}
             </button>
           </div>
           <div className="note" style={{ marginTop: 8 }}>
-            This opens your slot to the whole house. It does not cancel your
-            obligation — if nobody picks it up, it goes to Roman to resolve.
+            Submits your conflict message to Roman. Your shift is opened for replacement while Roman reviews it.
           </div>
         </div>
       )}
