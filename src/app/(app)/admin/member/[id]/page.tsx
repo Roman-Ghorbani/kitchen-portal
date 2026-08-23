@@ -6,6 +6,7 @@ import { getMemberDossier } from '../../../../../lib/member-dossier.ts';
 import { parseISO } from '../../../../../lib/dates.ts';
 import { formatPoints } from '../../../../../lib/types.ts';
 import { AppShell } from '../../../shell.tsx';
+import { AdminAvailabilityEditor } from './admin-availability.tsx';
 
 export const dynamic = 'force-dynamic';
 
@@ -91,25 +92,18 @@ export default async function MemberDossierPage({
       )}
 
       <h2 className="section-title">
-        Standing availability
+        Standing availability &amp; conflicts
         <span className="section-count mono">{conflicts.length}</span>
       </h2>
-      <div className="card card-pad">
-        {conflicts.length === 0 ? (
-          <span style={{ fontSize: 13, color: 'var(--ink-400)' }}>
-            No standing conflicts set — available every service day.
-          </span>
-        ) : (
-          <div className="dossier-conflicts">
-            {conflicts.map((c) => (
-              <span key={c.dayIndex} className="tag bad">
-                {DAYS[c.dayIndex]}
-                {c.note ? ` — ${c.note}` : ''}
-              </span>
-            ))}
-          </div>
-        )}
-      </div>
+
+      <AdminAvailabilityEditor
+        memberId={member.id}
+        memberName={member.name}
+        initialConflicts={conflicts.map((c) => ({
+          dayIndex: c.dayIndex,
+          note: c.note,
+        }))}
+      />
 
       {/* The answer to "nobody told me". Notice given is stated per shift. */}
       <h2 className="section-title">
