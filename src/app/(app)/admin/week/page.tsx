@@ -3,9 +3,9 @@ import { redirect } from 'next/navigation';
 import { asc, eq } from 'drizzle-orm';
 
 import { db } from '../../../../db/index.ts';
-import { members } from '../../../../db/schema.ts';
+import { members, standingConflicts } from '../../../../db/schema.ts';
 import { getSession } from '../../../../lib/session.ts';
-import { getLiveWeeks } from '../../../../lib/week-service.ts';
+import { getLiveWeeks, getActiveSemester } from '../../../../lib/week-service.ts';
 import { getWeekForManagement } from '../../../../lib/week-admin.ts';
 import { parseISO, weekDates } from '../../../../lib/dates.ts';
 import { AppShell } from '../../shell.tsx';
@@ -71,11 +71,26 @@ export default async function ManageWeekPage({
   const managed = await getWeekForManagement(target.id);
   if (!managed) redirect('/admin/week');
 
-  const rosterRows = await db
+  const [semester, rosterRows] = await Promise.all([
+    getActiveSemester(),
+    db
+      .select()
+      .from(members)
+      .where(eq(members.active, true))
+      .orderBy(asc(members.name)),
+  ]);
+
+  const conflictRows = await db
     .select()
-    .from(members)
-    .where(eq(members.active, true))
-    .orderBy(asc(members.name));
+    .from(standingConflicts)
+    .where(eq(standingConflicts.semesterId, semester.id));
+
+  const conflictsByMember = new Map<string, number[]>();
+  for (const c of conflictRows) {
+    const list = conflictsByMember.get(c.memberId) ?? [];
+    list.push(c.dayIndex);
+    conflictsByMember.set(c.memberId, list);
+  }
 
   const roster: Person[] = rosterRows.map((r) => ({
     id: r.id,
@@ -83,6 +98,9 @@ export default async function ManageWeekPage({
     classYear: r.classYear,
     points: r.points,
     exempt: r.exempt,
+    makeupDebt: r.makeupDebt,
+    lastServedDate: r.lastServedDate,
+    standingConflicts: conflictsByMember.get(r.id) ?? [],
   }));
 
   const today = new Date().toISOString().slice(0, 10);

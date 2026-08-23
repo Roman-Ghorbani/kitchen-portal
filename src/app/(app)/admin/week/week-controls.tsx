@@ -20,6 +20,7 @@ import {
   offerForOpenSeat,
 } from '../../../actions/shift-actions.ts';
 import { POINT_MULTIPLIERS, formatPoints } from '../../../../lib/types.ts';
+import { dayIndex } from '../../../../lib/dates.ts';
 
 export interface Person {
   id: string;
@@ -27,6 +28,9 @@ export interface Person {
   classYear: string;
   points: number;
   exempt: boolean;
+  makeupDebt?: number;
+  lastServedDate?: string | null;
+  standingConflicts?: number[];
 }
 
 export interface SlotView {
@@ -185,24 +189,70 @@ export function WeekControls({
 /* Shift-level controls                                                */
 /* ------------------------------------------------------------------ */
 
-function PersonPicker({
+function engineCompare(
+  a: Person,
+  b: Person,
+  wantYear?: 'junior' | 'sophomore' | null,
+  slotDayIdx?: number,
+): number {
+  if (wantYear) {
+    const aMatch = a.classYear === wantYear ? 0 : 1;
+    const bMatch = b.classYear === wantYear ? 0 : 1;
+    if (aMatch !== bMatch) return aMatch - bMatch;
+  }
+
+  if (a.exempt !== b.exempt) return a.exempt ? 1 : -1;
+
+  if (slotDayIdx !== undefined && slotDayIdx >= 0) {
+    const aConf = (a.standingConflicts ?? []).includes(slotDayIdx) ? 1 : 0;
+    const bConf = (b.standingConflicts ?? []).includes(slotDayIdx) ? 1 : 0;
+    if (aConf !== bConf) return aConf - bConf;
+  }
+
+  const aDebt = a.makeupDebt ?? 0;
+  const bDebt = b.makeupDebt ?? 0;
+  if (aDebt !== bDebt) return bDebt - aDebt;
+
+  if (a.points !== b.points) return a.points - b.points;
+
+  const al = a.lastServedDate ?? null;
+  const bl = b.lastServedDate ?? null;
+  if (al === null && bl !== null) return -1;
+  if (bl === null && al !== null) return 1;
+  if (al !== null && bl !== null && al !== bl) return al < bl ? -1 : 1;
+
+  return a.name.localeCompare(b.name);
+}
+
+export function PersonPicker({
   roster,
+  slotDate,
+  slotMeal,
   onPick,
   disabled,
   placeholder,
 }: {
   roster: Person[];
+  slotDate?: string;
+  slotMeal?: 'lunch' | 'dinner';
   onPick: (id: string) => void;
   disabled: boolean;
   placeholder: string;
 }) {
   const [q, setQ] = useState('');
 
+  const slotDayIdx = slotDate ? dayIndex(slotDate) : -1;
+  const wantYear = slotMeal ? (slotMeal === 'lunch' ? 'junior' : 'sophomore') : null;
+
+  const sortedRoster = useMemo(() => {
+    return [...roster].sort((a, b) => engineCompare(a, b, wantYear, slotDayIdx));
+  }, [roster, wantYear, slotDayIdx]);
+
   const matches = useMemo(() => {
     const s = q.trim().toLowerCase();
-    if (!s) return [];
-    return roster.filter((m) => m.name.toLowerCase().includes(s)).slice(0, 6);
-  }, [q, roster]);
+    if (!s) return sortedRoster.slice(0, 8);
+    return sortedRoster.filter((m) => m.name.toLowerCase().includes(s)).slice(0, 8);
+  }, [q, sortedRoster]);
 
   return (
     <div className="picker">
@@ -215,24 +265,63 @@ function PersonPicker({
       />
       {matches.length > 0 && (
         <div className="picker-results">
-          {matches.map((m) => (
-            <button
-              key={m.id}
-              className="picker-row"
-              disabled={disabled}
-              onClick={() => {
-                onPick(m.id);
-                setQ('');
+          {!q && (
+            <div
+              className="picker-section-title"
+              style={{
+                fontSize: 11,
+                fontWeight: 700,
+                color: 'var(--gold-500)',
+                padding: '6px 10px 2px',
+                textTransform: 'uppercase',
+                letterSpacing: 0.5,
               }}
             >
-              <span className="picker-name">{m.name}</span>
-              <span className={`tag ${m.classYear === 'junior' ? 'jun' : 'soph'}`}>
-                {m.classYear === 'junior' ? 'lunch' : 'dinner'}
-              </span>
-              <span className="roster-pts mono">{m.points}</span>
-              {m.exempt && <span className="tag locked">exempt</span>}
-            </button>
-          ))}
+              ⭐ Engine Suggestions (Next Up to Serve)
+            </div>
+          )}
+          {matches.map((m, idx) => {
+            const hasConflict =
+              slotDayIdx >= 0 && (m.standingConflicts ?? []).includes(slotDayIdx);
+            const hasDebt = (m.makeupDebt ?? 0) > 0;
+            const isTopPick = !q && idx === 0 && !m.exempt && !hasConflict;
+
+            return (
+              <button
+                key={m.id}
+                className="picker-row"
+                disabled={disabled}
+                onClick={() => {
+                  onPick(m.id);
+                  setQ('');
+                }}
+              >
+                <span className="picker-name">{m.name}</span>
+                {isTopPick && (
+                  <span className="tag ok" style={{ fontSize: 10 }}>
+                    ⭐ #1 Engine Pick
+                  </span>
+                )}
+                {hasDebt && (
+                  <span className="tag bad" style={{ fontSize: 10 }}>
+                    🔥 {m.makeupDebt} Make-up Owed
+                  </span>
+                )}
+                {hasConflict && (
+                  <span className="tag bad" style={{ fontSize: 10 }}>
+                    ⚠️ Standing Conflict
+                  </span>
+                )}
+                <span
+                  className={`tag ${m.classYear === 'junior' ? 'jun' : 'soph'}`}
+                >
+                  {m.classYear === 'junior' ? 'lunch' : 'dinner'}
+                </span>
+                <span className="roster-pts mono">{formatPoints(m.points)} pts</span>
+                {m.exempt && <span className="tag locked">exempt</span>}
+              </button>
+            );
+          })}
         </div>
       )}
     </div>
@@ -458,6 +547,8 @@ export function SlotEditor({
               </div>
               <PersonPicker
                 roster={roster}
+                slotDate={slot.date}
+                slotMeal={slot.meal}
                 disabled={pending}
                 placeholder="Who is actually serving this?"
                 onPick={(id) =>
@@ -520,6 +611,8 @@ export function SlotEditor({
               </label>
               <PersonPicker
                 roster={eligible}
+                slotDate={slot.date}
+                slotMeal={slot.meal}
                 disabled={pending}
                 placeholder="Who should be on this shift?"
                 onPick={(id) =>
