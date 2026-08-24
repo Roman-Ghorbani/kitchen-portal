@@ -106,6 +106,13 @@ export default async function MyShiftsPage() {
 
       <CalendarSubscriptionCard memberId={session.sub} />
 
+      <div className="alert info" style={{ marginBottom: 20 }}>
+        <span className="alert-title">💡 Missing a Specific Shift? No Google Form Needed!</span>
+        <span className="alert-body">
+          You don't need a Google Form to submit an excuse anymore! If you have a one-off conflict for an upcoming shift below, simply tap <strong>🚩 Flag Conflict</strong> on that shift card to state your reason and open it for coverage.
+        </span>
+      </div>
+
       {/* ---------------- Section 1: Upcoming Shifts ---------------- */}
       <h2 className="section-title">
         Upcoming Shifts

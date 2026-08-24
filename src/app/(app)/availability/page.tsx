@@ -41,6 +41,12 @@ export default async function AvailabilityPage() {
       title="Weekly Availability"
       subtitle={`${member.name} · ${meal === 'lunch' ? 'Lunch' : 'Dinner'} duty`}
     >
+      <div className="alert info" style={{ marginBottom: 16 }}>
+        <span className="alert-title">💡 Replaces the Old Google Excuse Form</span>
+        <span className="alert-body">
+          You no longer need to fill out a Google Form for class or standing conflicts! Simply select any day below to block it for the semester.
+        </span>
+      </div>
       <div className="card card-pad">
         <AvailabilityForm initial={initial} mealLabel={meal} />
       </div>
