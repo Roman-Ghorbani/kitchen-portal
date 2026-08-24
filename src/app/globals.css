@@ -421,14 +421,15 @@ button {
 }
 
 .btn.danger {
-  background: var(--red-600);
-  color: #ffffff;
-  border-color: var(--red-600);
+  background: #dc2626 !important;
+  color: #ffffff !important;
+  border-color: #dc2626 !important;
 }
 
 .btn.danger:hover {
-  background: #99372a;
-  border-color: #99372a;
+  background: #b91c1c !important;
+  border-color: #b91c1c !important;
+  color: #ffffff !important;
 }
 
 .btn:disabled {
@@ -2528,15 +2529,7 @@ button {
   flex-wrap: wrap;
 }
 
-.btn.danger {
-  color: var(--red-600);
-  border-color: var(--line);
-}
-
-.btn.danger:hover {
-  border-color: var(--red-600);
-  color: var(--red-600);
-}
+/* .btn.danger overridden centrally above */
 
 .manage-day {
   margin-bottom: 20px;
@@ -3275,15 +3268,7 @@ body {
   border-radius: 9px;
 }
 
-.btn.danger {
-  color: var(--red-600);
-  border-color: var(--line-strong);
-}
-
-.btn.danger:hover {
-  background: var(--red-100);
-  border-color: var(--red-600);
-}
+/* .btn.danger overridden centrally above */
 
 /* ---- tags ---------------------------------------------------------- */
 

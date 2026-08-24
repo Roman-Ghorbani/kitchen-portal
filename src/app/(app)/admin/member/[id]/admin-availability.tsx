@@ -75,7 +75,7 @@ export function AdminAvailabilityEditor({
         className="admin-avail-grid"
         style={{ display: 'flex', flexDirection: 'column', gap: 8 }}
       >
-        {DAYS.slice(0, 6).map((day) => {
+        {DAYS.map((day) => {
           const isBlocked = conflictMap.has(day.index);
           const currentNote = conflictMap.get(day.index);
           const isEditing = editingDay === day.index;
