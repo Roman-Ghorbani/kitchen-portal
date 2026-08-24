@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ZBT Kitchen TV Display</title>
+  <style>
+    :root {
+      --bg: #090d16;
+      --card-bg: #131b2e;
+      --card-border: #1e293b;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent-blue: #38bdf8;
+      --accent-gold: #fbbf24;
+      --accent-green: #34d399;
+      --accent-red: #f87171;
+      --font-main: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-main);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    /* HEADER */
+    header {
+      background: #0f172a;
+      border-bottom: 2px solid #1e293b;
+      padding: 0.8rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .brand-title {
+      font-size: 2rem;
+      font-weight: 800;
+      letter-spacing: 1px;
+      color: var(--accent-gold);
+    }
+    .brand-subtitle {
+      font-size: 1rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+    .header-right {
+      text-align: right;
+    }
+    .date-display {
+      font-size: 1.1rem;
+      color: var(--text-muted);
+    }
+    .clock-display {
+      font-size: 2.2rem;
+      font-weight: 800;
+      color: var(--accent-blue);
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* MAIN GRID */
+    main {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr 1fr;
+      gap: 1.5rem;
+      padding: 1.5rem 2rem;
+      flex-grow: 1;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 1.25rem;
+      padding: 1.5rem;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--card-border);
+      padding-bottom: 0.75rem;
+      margin-bottom: 1rem;
+    }
+    .card-title {
+      font-size: 1.4rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .card-badge {
+      font-size: 0.8rem;
+      background: #1e293b;
+      color: var(--accent-blue);
+      padding: 0.2rem 0.6rem;
+      border-radius: 1rem;
+      font-weight: 600;
+    }
+
+    /* KITCHEN DUTY CARD */
+    .meal-section {
+      margin-bottom: 1.25rem;
+      background: #0f172a;
+      border-radius: 0.75rem;
+      padding: 1rem;
+      border-left: 4px solid var(--accent-blue);
+    }
+    .meal-section.dinner {
+      border-left-color: var(--accent-gold);
+    }
+    .meal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
+    }
+    .meal-name {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .meal-time {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+    .crew-list {
+      list-style: none;
+    }
+    .crew-item {
+      font-size: 1.25rem;
+      font-weight: 600;
+      padding: 0.3rem 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .flag-badge {
+      font-size: 0.75rem;
+      background: rgba(248, 113, 113, 0.2);
+      color: var(--accent-red);
+      padding: 0.15rem 0.5rem;
+      border-radius: 0.4rem;
+      font-weight: 700;
+    }
+    .covered-badge {
+      font-size: 0.75rem;
+      background: rgba(52, 211, 153, 0.2);
+      color: var(--accent-green);
+      padding: 0.15rem 0.5rem;
+      border-radius: 0.4rem;
+      font-weight: 700;
+    }
+
+    /* WEATHER CARD */
+    .weather-current {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.25rem;
+      background: #0f172a;
+      padding: 1.25rem;
+      border-radius: 0.75rem;
+    }
+    .temp-main {
+      font-size: 3.5rem;
+      font-weight: 800;
+      color: var(--text);
+      line-height: 1;
+    }
+    .weather-meta {
+      text-align: right;
+    }
+    .weather-desc {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--accent-blue);
+    }
+    .weather-highlow {
+      font-size: 0.95rem;
+      color: var(--text-muted);
+      margin-top: 0.2rem;
+    }
+    .hourly-forecast {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.5rem;
+      margin-top: auto;
+    }
+    .hourly-item {
+      background: #0f172a;
+      padding: 0.75rem 0.5rem;
+      border-radius: 0.5rem;
+      text-align: center;
+    }
+    .hourly-time { font-size: 0.8rem; color: var(--text-muted); }
+    .hourly-icon { font-size: 1.5rem; margin: 0.2rem 0; }
+    .hourly-temp { font-size: 1rem; font-weight: 700; }
+
+    /* ANNOUNCEMENTS CARD */
+    .announce-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.8rem;
+    }
+    .announce-item {
+      background: #0f172a;
+      padding: 1rem;
+      border-radius: 0.75rem;
+      border-left: 3px solid var(--accent-gold);
+    }
+    .announce-title {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 0.3rem;
+      color: var(--accent-gold);
+    }
+    .announce-body {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    /* SCROLLING TICKER BAR */
+    .ticker-bar {
+      background: #0f172a;
+      border-top: 2px solid #1e293b;
+      height: 3.2rem;
+      display: flex;
+      align-items: center;
+      overflow: hidden;
+      position: relative;
+    }
+    .ticker-label {
+      background: var(--accent-blue);
+      color: #0f172a;
+      font-weight: 800;
+      padding: 0 1.25rem;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      z-index: 10;
+      font-size: 0.9rem;
+      letter-spacing: 0.5px;
+      white-space: nowrap;
+    }
+    .ticker-wrap {
+      width: 100%;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+    .ticker-move {
+      display: inline-block;
+      white-space: nowrap;
+      padding-left: 100%;
+      animation: ticker 35s linear infinite;
+    }
+    .ticker-item {
+      display: inline-block;
+      padding: 0 2rem;
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .ticker-item span {
+      color: var(--accent-gold);
+    }
+
+    @keyframes ticker {
+      0% { transform: translate3d(0, 0, 0); }
+      100% { transform: translate3d(-100%, 0, 0); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header>
+    <div class="brand">
+      <div>
+        <div class="brand-title">ZBT KITCHEN & HOUSE TV</div>
+        <div class="brand-subtitle">ZETA BETA TAU — CHAPTER HOUSE</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="date-display" id="date-display">Monday, August 24</div>
+      <div class="clock-display" id="clock-display">12:00:00 PM</div>
+    </div>
+  </header>
+
+  <!-- MAIN DASHBOARD GRID -->
+  <main>
+
+    <!-- COLUMN 1: KITCHEN DUTY BOARD -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">🍽️ Kitchen Duty</div>
+        <div class="card-badge" id="duty-status-badge">Live API</div>
+      </div>
+
+      <!-- Lunch Block -->
+      <div class="meal-section">
+        <div class="meal-header">
+          <span class="meal-name">Lunch Cleanup (Juniors)</span>
+          <span class="meal-time">2:30 PM – 3:00 PM</span>
+        </div>
+        <ul class="crew-list" id="lunch-crew">
+          <li class="crew-item">Loading lunch crew...</li>
+        </ul>
+      </div>
+
+      <!-- Dinner Block -->
+      <div class="meal-section dinner">
+        <div class="meal-header">
+          <span class="meal-name">Dinner Cleanup (Sophomores)</span>
+          <span class="meal-time">7:30 PM – 9:00 PM</span>
+        </div>
+        <ul class="crew-list" id="dinner-crew">
+          <li class="crew-item">Loading dinner crew...</li>
+        </ul>
+      </div>
+
+      <!-- Open Shifts / Bounties -->
+      <div style="margin-top: auto; background: #0f172a; padding: 0.8rem; border-radius: 0.5rem; font-size: 0.9rem;" id="open-shifts-box">
+        ⚡ <strong>Open Shifts:</strong> Checking for open seats...
+      </div>
+    </div>
+
+    <!-- COLUMN 2: DETAILED WEATHER -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">⛅ Weather Forecast</div>
+        <div class="card-badge">Chapter House</div>
+      </div>
+
+      <div class="weather-current">
+        <div>
+          <div class="temp-main" id="weather-temp">--°</div>
+          <div style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0.2rem;">Feels like <span id="weather-feels">--°</span></div>
+        </div>
+        <div class="weather-meta">
+          <div class="weather-desc" id="weather-condition">Loading...</div>
+          <div class="weather-highlow">H: <span id="weather-high">--°</span> | L: <span id="weather-low">--°</span></div>
+          <div style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0.2rem;">Precip: <span id="weather-precip">0%</span></div>
+        </div>
+      </div>
+
+      <div style="font-size: 0.9rem; font-weight: 700; color: var(--text-muted); margin-bottom: 0.5rem;">NEXT 4 HOURS</div>
+      <div class="hourly-forecast" id="hourly-forecast">
+        <div class="hourly-item"><div class="hourly-time">--</div><div class="hourly-icon">🌤️</div><div class="hourly-temp">--°</div></div>
+        <div class="hourly-item"><div class="hourly-time">--</div><div class="hourly-icon">🌤️</div><div class="hourly-temp">--°</div></div>
+        <div class="hourly-item"><div class="hourly-time">--</div><div class="hourly-icon">🌤️</div><div class="hourly-temp">--°</div></div>
+        <div class="hourly-item"><div class="hourly-time">--</div><div class="hourly-icon">🌤️</div><div class="hourly-temp">--°</div></div>
+      </div>
+    </div>
+
+    <!-- COLUMN 3: ANNOUNCEMENTS & HOUSE INFO -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">📢 House Announcements</div>
+        <div class="card-badge">ZBT Info</div>
+      </div>
+
+      <ul class="announce-list">
+        <li class="announce-item">
+          <div class="announce-title">📌 Chapter Meeting</div>
+          <div class="announce-body">Sunday at 7:00 PM in the Chapter Room. Full attendance required.</div>
+        </li>
+        <li class="announce-item">
+          <div class="announce-title">🍽️ In-Person Late Plates</div>
+          <div class="announce-body">Late plate requests are taken in person in the kitchen before meal prep ends.</div>
+        </li>
+        <li class="announce-item">
+          <div class="announce-title">🧹 Kitchen Courtesy</div>
+          <div class="announce-body">Clean up your dishes after eating. Duty crews start at 2:30 PM & 7:30 PM.</div>
+        </li>
+      </ul>
+    </div>
+
+  </main>
+
+  <!-- BOTTOM SCROLLING TICKER -->
+  <div class="ticker-bar">
+    <div class="ticker-label">ZBT NEWS TICKER</div>
+    <div class="ticker-wrap">
+      <div class="ticker-move" id="ticker-content">
+        <div class="ticker-item">📢 <span>Chapter Meeting:</span> Sunday at 7:00 PM in Chapter Room</div>
+        <div class="ticker-item">🍽️ <span>Duty Alert:</span> Check open shifts in app for 2x point bounties</div>
+        <div class="ticker-item">🌤️ <span>Weather Update:</span> Check local forecast for rain alerts</div>
+        <div class="ticker-item">🧹 <span>House Rule:</span> Keep the kitchen and common room clean!</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- CLOCK & DATE ---
+    function updateClock() {
+      const now = new Date();
+      document.getElementById('clock-display').textContent = now.toLocaleTimeString('en-US', {
+        timeZone: 'America/New_York',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      });
+      document.getElementById('date-display').textContent = now.toLocaleDateString('en-US', {
+        timeZone: 'America/New_York',
+        weekday: 'long',
+        month: 'long',
+        day: 'numeric'
+      });
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // --- KITCHEN DUTY API ---
+    const KITCHEN_API = 'https://kitchen.zbtaa.online/api/tv/schedule';
+
+    async function loadKitchenDuty() {
+      try {
+        const res = await fetch(KITCHEN_API);
+        const data = await res.json();
+        if (!data.success) return;
+
+        // Render Lunch Crew
+        const lunch = data.today.lunch;
+        const lunchCrewEl = document.getElementById('lunch-crew');
+        if (lunch && lunch.assignments.length > 0) {
+          lunchCrewEl.innerHTML = lunch.assignments.map(a => `
+            <li class="crew-item">
+              <span>${a.name}</span>
+              ${a.isFlagged ? '<span class="flag-badge">Flagged</span>' : ''}
+              ${a.isCovered ? '<span class="covered-badge">Covered</span>' : ''}
+            </li>
+          `).join('');
+        } else {
+          lunchCrewEl.innerHTML = '<li class="crew-item" style="color: var(--text-muted);">No lunch duty scheduled</li>';
+        }
+
+        // Render Dinner Crew
+        const dinner = data.today.dinner;
+        const dinnerCrewEl = document.getElementById('dinner-crew');
+        if (dinner && dinner.assignments.length > 0) {
+          dinnerCrewEl.innerHTML = dinner.assignments.map(a => `
+            <li class="crew-item">
+              <span>${a.name}</span>
+              ${a.isFlagged ? '<span class="flag-badge">Flagged</span>' : ''}
+              ${a.isCovered ? '<span class="covered-badge">Covered</span>' : ''}
+            </li>
+          `).join('');
+        } else {
+          dinnerCrewEl.innerHTML = '<li class="crew-item" style="color: var(--text-muted);">No dinner duty scheduled</li>';
+        }
+
+        // Open Shifts
+        const openBox = document.getElementById('open-shifts-box');
+        if (data.openShifts && data.openShifts.length > 0) {
+          openBox.innerHTML = `⚡ <strong style="color: var(--accent-gold);">${data.openShifts.length} Open Shift(s) Need Cover!</strong> Check app to claim.`;
+        } else {
+          openBox.innerHTML = `✅ <strong>All Shifts Staffed:</strong> No open coverage flags right now.`;
+        }
+      } catch (err) {
+        console.error('Failed to load duty API:', err);
+      }
+    }
+
+    // --- DETAILED WEATHER API (Open-Meteo) ---
+    async function loadWeather() {
+      try {
+        const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=42.36&longitude=-71.09&current_weather=true&hourly=temperature_2m,precipitation_probability&daily=temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&timezone=America%2FNew_York');
+        const data = await res.json();
+        
+        if (data.current_weather) {
+          const temp = Math.round(data.current_weather.temperature);
+          document.getElementById('weather-temp').textContent = `${temp}°`;
+          document.getElementById('weather-feels').textContent = `${temp}°`;
+          document.getElementById('weather-high').textContent = `${Math.round(data.daily.temperature_2m_max[0])}°`;
+          document.getElementById('weather-low').textContent = `${Math.round(data.daily.temperature_2m_min[0])}°`;
+          document.getElementById('weather-precip').textContent = `${data.hourly.precipitation_probability[0]}%`;
+
+          const code = data.current_weather.weathercode;
+          let cond = 'Clear Sky ☀️';
+          if (code >= 1 && code <= 3) cond = 'Partly Cloudy ⛅';
+          else if (code >= 45 && code <= 48) cond = 'Foggy 🌫️';
+          else if (code >= 51 && code <= 67) cond = 'Rainy 🌧️';
+          else if (code >= 71) cond = 'Snowy ❄️';
+          document.getElementById('weather-condition').textContent = cond;
+
+          // Render 4-hour forecast
+          const hourlyEl = document.getElementById('hourly-forecast');
+          const currentHour = new Date().getHours();
+          let itemsHtml = '';
+          for (let i = 1; i <= 4; i++) {
+            const hIndex = (currentHour + i) % 24;
+            const hTemp = Math.round(data.hourly.temperature_2m[hIndex]);
+            const timeLabel = `${((currentHour + i) % 12) || 12}${currentHour + i >= 12 ? 'pm' : 'am'}`;
+            itemsHtml += `
+              <div class="hourly-item">
+                <div class="hourly-time">${timeLabel}</div>
+                <div class="hourly-icon">🌤️</div>
+                <div class="hourly-temp">${hTemp}°</div>
+              </div>
+            `;
+          }
+          hourlyEl.innerHTML = itemsHtml;
+        }
+      } catch (err) {
+        console.error('Weather fetch error:', err);
+      }
+    }
+
+    // Initial Load & Timers
+    loadKitchenDuty();
+    loadWeather();
+    setInterval(loadKitchenDuty, 120000); // Duty API every 2 minutes
+    setInterval(loadWeather, 600000);      // Weather every 10 minutes
+  </script>
+</body>
+</html>
