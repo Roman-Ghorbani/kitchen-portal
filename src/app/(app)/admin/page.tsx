@@ -10,7 +10,7 @@ import {
   getActiveSemester,
   getScheduleHorizon,
 } from '../../../lib/week-service.ts';
-import { mondayOf, addDays, parseISO, todayInEastern } from '../../../lib/dates.ts';
+import { mondayOf, addDays, parseISO, todayInEastern, formatEasternTimestamp } from '../../../lib/dates.ts';
 import { AppShell } from '../shell.tsx';
 import { CreateWeekButton } from './create-week.tsx';
 import { HorizonNote } from '../horizon-note.tsx';
@@ -190,7 +190,7 @@ export default async function AdminPage() {
           recentEvents.map((e) => (
             <div key={e.id} className="log-row">
               <span className="log-when mono">
-                {e.createdAt.toISOString().slice(0, 16).replace('T', ' ')}
+                {formatEasternTimestamp(e.createdAt)}
               </span>
               <span className="log-what">{e.summary}</span>
             </div>

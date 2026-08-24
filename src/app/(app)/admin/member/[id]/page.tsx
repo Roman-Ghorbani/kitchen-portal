@@ -3,7 +3,7 @@ import { redirect, notFound } from 'next/navigation';
 
 import { getSession } from '../../../../../lib/session.ts';
 import { getMemberDossier } from '../../../../../lib/member-dossier.ts';
-import { parseISO } from '../../../../../lib/dates.ts';
+import { parseISO, formatEasternTimestamp } from '../../../../../lib/dates.ts';
 import { formatPoints } from '../../../../../lib/types.ts';
 import { AppShell } from '../../../shell.tsx';
 import { AdminAvailabilityEditor } from './admin-availability.tsx';
@@ -24,13 +24,7 @@ function shiftDate(iso: string): string {
 }
 
 function stamp(d: Date | null): string {
-  if (!d) return '—';
-  return d.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  });
+  return formatEasternTimestamp(d);
 }
 
 export default async function MemberDossierPage({

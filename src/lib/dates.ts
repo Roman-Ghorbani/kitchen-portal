@@ -16,6 +16,27 @@ export function toISO(date: Date): string {
 }
 
 /**
+ * Formats a Date or timestamp into human-readable US Eastern Time (America/New_York).
+ * e.g. "Aug 23, 9:23 PM"
+ */
+export function formatEasternTimestamp(
+  d: Date | number | string | null,
+  includeYear: boolean = false,
+): string {
+  if (!d) return '—';
+  const date = typeof d === 'number' || typeof d === 'string' ? new Date(d) : d;
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    month: 'short',
+    day: 'numeric',
+    ...(includeYear ? { year: 'numeric' } : {}),
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  }).format(date);
+}
+
+/**
  * Returns today's ISO date string (YYYY-MM-DD) in US Eastern Time (America/New_York).
  * The ZBT house is in Eastern Time, so calendar days roll over at Eastern midnight.
  */
