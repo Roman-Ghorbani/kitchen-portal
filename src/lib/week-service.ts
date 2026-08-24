@@ -100,6 +100,7 @@ export interface GenerateOptions {
   isBootstrap?: boolean;
   locksAt?: Date;
   disabledDays?: number[];
+  customMealDays?: MealDayConfig;
 }
 
 /**
@@ -178,8 +179,11 @@ export async function generateAndSaveWeek(
     );
   }
 
-  const customMealDays = JSON.parse(JSON.stringify(semester.mealDays)) as MealDayConfig;
-  if (options.disabledDays && options.disabledDays.length > 0) {
+  const customMealDays = options.customMealDays
+    ? options.customMealDays
+    : (JSON.parse(JSON.stringify(semester.mealDays)) as MealDayConfig);
+
+  if (!options.customMealDays && options.disabledDays && options.disabledDays.length > 0) {
     for (const d of options.disabledDays) {
       if (d >= 0 && d < 7) {
         customMealDays.lunch[d] = false;

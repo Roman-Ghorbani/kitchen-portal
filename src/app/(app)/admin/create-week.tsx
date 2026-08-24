@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { adminCreateWeek } from '../../actions/week-admin-actions.ts';
+import type { Meal, MealDayConfig } from '../../../lib/types.ts';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -18,15 +19,10 @@ export function CreateWeekButton({
 }) {
   const [open, setOpen] = useState(false);
   const [date, setDate] = useState(suggested);
-  const [activeDays, setActiveDays] = useState<boolean[]>([
-    true,
-    true,
-    true,
-    true,
-    true,
-    true,
-    true,
-  ]);
+  const [mealDays, setMealDays] = useState<MealDayConfig>({
+    lunch: [true, true, true, true, true, false, true],
+    dinner: [true, true, true, true, true, true, true],
+  });
   const [message, setMessage] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -35,19 +31,20 @@ export function CreateWeekButton({
   const clash = existing.includes(date);
   const isMonday = new Date(`${date}T00:00:00Z`).getUTCDay() === 1;
 
-  function toggleDay(idx: number) {
-    const next = [...activeDays];
-    next[idx] = !next[idx];
-    setActiveDays(next);
+  function toggleMeal(idx: number, meal: Meal) {
+    setMealDays((prev: MealDayConfig) => {
+      const nextList = [...prev[meal]];
+      nextList[idx] = !nextList[idx];
+      return {
+        ...prev,
+        [meal]: nextList,
+      };
+    });
   }
 
   function create() {
-    const disabledDays = activeDays
-      .map((active, idx) => (active ? null : idx))
-      .filter((x): x is number => x !== null);
-
     startTransition(async () => {
-      const res = await adminCreateWeek(date, disabledDays);
+      const res = await adminCreateWeek(date, undefined, mealDays);
       setMessage(res.message);
       setFailed(!res.ok);
       if (res.ok) setOpen(false);
@@ -103,36 +100,80 @@ export function CreateWeekButton({
         </button>
       </div>
 
-      <div className="create-week-days-config" style={{ marginTop: 12 }}>
-        <div className="note" style={{ marginBottom: 6, fontWeight: 600 }}>
-          Active Kitchen Service Days for this week:
+      <div className="create-week-days-config" style={{ marginTop: 14 }}>
+        <div
+          className="note"
+          style={{ marginBottom: 10, fontWeight: 600, fontSize: 13 }}
+        >
+          Active Kitchen Service Days & Meals for this week:
         </div>
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))',
+            gap: 10,
+          }}
+        >
           {DAYS.map((dayName, idx) => (
-            <label
+            <div
               key={dayName}
               style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 5,
-                fontSize: 13,
-                cursor: 'pointer',
-                userSelect: 'none',
-                background: activeDays[idx] ? 'rgba(217, 178, 105, 0.15)' : 'var(--card)',
-                border:
-                  '1px solid ' +
-                  (activeDays[idx] ? 'var(--gold-500)' : 'var(--line)'),
-                padding: '4px 8px',
-                borderRadius: 6,
+                background: 'var(--navy-50)',
+                border: '1px solid var(--navy-100)',
+                borderRadius: 8,
+                padding: '8px 10px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 6,
               }}
             >
-              <input
-                type="checkbox"
-                checked={activeDays[idx]}
-                onChange={() => toggleDay(idx)}
-              />
-              {dayName}
-            </label>
+              <span
+                style={{
+                  fontWeight: 700,
+                  fontSize: 13,
+                  color: 'var(--gold-500)',
+                  borderBottom: '1px solid var(--line)',
+                  paddingBottom: 4,
+                }}
+              >
+                {dayName}
+              </span>
+              <label
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  fontSize: 12,
+                  cursor: 'pointer',
+                  userSelect: 'none',
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={mealDays.lunch[idx]}
+                  onChange={() => toggleMeal(idx, 'lunch')}
+                />
+                ☀️ Lunch
+              </label>
+              <label
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  fontSize: 12,
+                  cursor: 'pointer',
+                  userSelect: 'none',
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={mealDays.dinner[idx]}
+                  onChange={() => toggleMeal(idx, 'dinner')}
+                />
+                🌙 Dinner
+              </label>
+            </div>
           ))}
         </div>
       </div>

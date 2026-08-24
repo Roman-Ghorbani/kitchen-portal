@@ -44,15 +44,19 @@ export async function adminDeleteWeek(weekId: string): Promise<AdminResult> {
   return res;
 }
 
+import type { MealDayConfig } from '../../lib/types.ts';
+
 /** Draws and posts a new week. */
 export async function adminCreateWeek(
   weekStart: string,
   disabledDays?: number[],
+  customMealDays?: MealDayConfig,
 ): Promise<AdminResult> {
   await requireAdmin();
   try {
     const { assignmentCount, result } = await generateAndSaveWeek(weekStart, {
       disabledDays,
+      customMealDays,
     });
     refresh();
     return {
