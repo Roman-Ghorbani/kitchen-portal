@@ -45,6 +45,18 @@ node --env-file=.env.local --experimental-strip-types src/db/seed.ts
 | `CRON_SECRET` | yes in production | Protects the automated Sunday transition. Without it the endpoint refuses to run rather than sitting open. |
 | `NEXT_PUBLIC_APP_URL` | for Slack | Public URL, used in Slack message links. |
 | `SLACK_WEBHOOK_URL` | optional | Incoming webhook for `#kitchen-duty`. Everything works without it. |
+| `TV_API_KEY` | optional | Secures `/api/tv/schedule` endpoint. If omitted, the TV schedule endpoint is public. |
+
+---
+
+## Kitchen TV Display API
+
+KitchenTracker exposes a dedicated, CORS-enabled API for TV displays and dashboard integrations such as [ZBTAA/kitchen-tv](https://github.com/ZBTAA/kitchen-tv).
+
+- **Endpoint**: `GET /api/tv/schedule` (or `/api/tv`)
+- **Format**: JSON containing `today`, `tomorrow`, `currentWeek`, and `openShifts`.
+- **CORS**: `Access-Control-Allow-Origin: *` enabled.
+- **Integration Guide & Boilerplate**: See [docs/KITCHEN_TV_INTEGRATION.md](docs/KITCHEN_TV_INTEGRATION.md).
 
 ---
 
