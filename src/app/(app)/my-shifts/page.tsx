@@ -9,6 +9,7 @@ import { formatPoints } from '../../../lib/types.ts';
 import { AppShell } from '../shell.tsx';
 import { HorizonNote } from '../horizon-note.tsx';
 import { FlagButton } from './flag-button.tsx';
+import { CalendarSubscriptionCard } from './calendar-subscription.tsx';
 
 export const dynamic = 'force-dynamic';
 
@@ -102,6 +103,8 @@ export default async function MyShiftsPage() {
           </span>
         </div>
       )}
+
+      <CalendarSubscriptionCard memberId={session.sub} />
 
       {/* ---------------- Section 1: Upcoming Shifts ---------------- */}
       <h2 className="section-title">
