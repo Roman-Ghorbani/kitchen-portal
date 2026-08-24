@@ -1,12 +1,14 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { asc, eq } from 'drizzle-orm';
+import { asc, eq, and, gte } from 'drizzle-orm';
 
 import { db } from '../../../../db/index.ts';
-import { members, standingConflicts } from '../../../../db/schema.ts';
+import { members, standingConflicts, assignments as assignmentsTable, slots as slotsTable, weeks as weeksTable } from '../../../../db/schema.ts';
 import { getSession } from '../../../../lib/session.ts';
 import { getActiveSemester } from '../../../../lib/week-service.ts';
+import { todayInEastern } from '../../../../lib/dates.ts';
 import { AppShell } from '../../shell.tsx';
+import { UnpreparedMembersSection, type MemberPreparedness } from './unprepared-members.tsx';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,7 +29,9 @@ export default async function AdminStatsPage() {
 
   const semester = await getActiveSemester();
 
-  const [roster, conflictRows] = await Promise.all([
+  const today = todayInEastern();
+
+  const [roster, conflictRows, upcomingAssignments] = await Promise.all([
     db
       .select()
       .from(members)
@@ -37,7 +41,45 @@ export default async function AdminStatsPage() {
       .select()
       .from(standingConflicts)
       .where(eq(standingConflicts.semesterId, semester.id)),
+    db
+      .select({
+        memberId: assignmentsTable.memberId,
+        date: slotsTable.date,
+      })
+      .from(assignmentsTable)
+      .innerJoin(slotsTable, eq(assignmentsTable.slotId, slotsTable.id))
+      .innerJoin(weeksTable, eq(slotsTable.weekId, weeksTable.id))
+      .where(
+        and(
+          eq(weeksTable.semesterId, semester.id),
+          gte(slotsTable.date, today),
+        ),
+      ),
   ]);
+
+  const shiftCounts = new Map<string, number>();
+  for (const a of upcomingAssignments) {
+    shiftCounts.set(a.memberId, (shiftCounts.get(a.memberId) ?? 0) + 1);
+  }
+
+  const standingConflictsCount = new Map<string, number>();
+  for (const c of conflictRows) {
+    standingConflictsCount.set(c.memberId, (standingConflictsCount.get(c.memberId) ?? 0) + 1);
+  }
+
+  const memberPreparednessData: MemberPreparedness[] = roster.map((m) => {
+    const upcomingCount = shiftCounts.get(m.id) ?? 0;
+    return {
+      id: m.id,
+      name: m.name,
+      classYear: m.classYear,
+      exempt: m.exempt,
+      hasPin: m.pinHash !== null,
+      standingConflictsCount: standingConflictsCount.get(m.id) ?? 0,
+      isScheduled: upcomingCount > 0,
+      upcomingShiftsCount: upcomingCount,
+    };
+  });
 
   const juniors = roster.filter((m) => m.classYear === 'junior');
   const sophomores = roster.filter((m) => m.classYear === 'sophomore');
@@ -95,8 +137,9 @@ export default async function AdminStatsPage() {
       session={session}
       active="/admin/stats"
       title="Stats & Eligibility"
-      subtitle="Duty pool capacity and daily eligibility breakdown"
+      subtitle="Duty pool capacity, member app readiness, and daily eligibility"
     >
+      <UnpreparedMembersSection members={memberPreparednessData} />
       <div className="dossier-stats" style={{ marginBottom: 24 }}>
         <div className="dossier-stat">
           <span className="dossier-stat-value mono">{juniors.length}</span>

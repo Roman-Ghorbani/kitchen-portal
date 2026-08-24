@@ -50,17 +50,21 @@ export default async function RosterPage() {
   const spread =
     points.length > 0 ? Math.max(...points) - Math.min(...points) : 0;
 
+  const signedInCount = active.filter((d) => d.hasPin).length;
+  const signedInPct = active.length > 0 ? Math.round((signedInCount / active.length) * 100) : 0;
+  const owingCount = active.filter((d) => d.makeupDebt > 0).length;
+
   return (
     <AppShell
       session={session}
       active="/admin/roster"
       title="Roster & Points"
-      subtitle={`${active.length} on duty · ${semester.name}`}
+      subtitle={`${active.length} active on duty · ${semester.name}`}
     >
       <div className="stat-grid">
         <div className="card card-pad stat-card">
           <div className="label">Point spread</div>
-          <div className="value mono">{spread}</div>
+          <div className="value mono">{spread} pts</div>
           <div className="foot">
             {spread <= 1
               ? 'even — nobody is behind'
@@ -68,23 +72,21 @@ export default async function RosterPage() {
           </div>
         </div>
         <div className="card card-pad stat-card">
-          <div className="label">Juniors</div>
-          <div className="value mono">
-            {active.filter((d) => d.classYear === 'junior').length}
-          </div>
-          <div className="foot">lunch duty</div>
+          <div className="label">Signed In Rate</div>
+          <div className="value mono">{signedInPct}%</div>
+          <div className="foot">{signedInCount} of {active.length} active brothers</div>
         </div>
         <div className="card card-pad stat-card">
-          <div className="label">Sophomores</div>
+          <div className="label">Duty Pool</div>
           <div className="value mono">
-            {active.filter((d) => d.classYear === 'sophomore').length}
+            {active.filter((d) => d.classYear === 'junior').length}J / {active.filter((d) => d.classYear === 'sophomore').length}S
           </div>
-          <div className="foot">dinner duty</div>
+          <div className="foot">Lunch vs Dinner crew</div>
         </div>
-        <div className="card card-pad stat-card">
-          <div className="label">Conflicts set</div>
-          <div className="value mono">{conflictCount.size}</div>
-          <div className="foot">have standing availability</div>
+        <div className={`card card-pad stat-card${owingCount > 0 ? ' bad' : ''}`}>
+          <div className="label">Owes Make-up</div>
+          <div className="value mono">{owingCount}</div>
+          <div className="foot">{owingCount === 0 ? 'nobody owes debt' : 'owing missed shift debt'}</div>
         </div>
       </div>
 
