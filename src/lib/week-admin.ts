@@ -24,7 +24,7 @@ import {
 } from '../db/schema.ts';
 import { unsettleAssignment, settleAssignment } from './shift-service.ts';
 import { YEAR_FOR_MEAL } from './types.ts';
-import { dayIndex } from './dates.ts';
+import { dayIndex, todayInEastern } from './dates.ts';
 
 export interface AdminResult {
   ok: boolean;
@@ -46,7 +46,7 @@ async function nameOf(id: string): Promise<string> {
 }
 
 function today(): string {
-  return new Date().toISOString().slice(0, 10);
+  return todayInEastern();
 }
 
 /* ------------------------------------------------------------------ */

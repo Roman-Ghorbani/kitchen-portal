@@ -21,7 +21,7 @@ import {
 } from '../../../../db/schema.ts';
 import { getActiveSemester } from '../../../../lib/week-service.ts';
 import { announceTomorrow, slackConfigured } from '../../../../lib/slack.ts';
-import { addDays } from '../../../../lib/dates.ts';
+import { addDays, todayInEastern } from '../../../../lib/dates.ts';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -48,7 +48,7 @@ export async function GET(request: Request): Promise<Response> {
 
   try {
     const semester = await getActiveSemester();
-    const tomorrow = addDays(new Date().toISOString().slice(0, 10), 1);
+    const tomorrow = addDays(todayInEastern(), 1);
 
     const weekRows = await db
       .select()

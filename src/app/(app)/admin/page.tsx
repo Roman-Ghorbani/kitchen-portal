@@ -10,7 +10,7 @@ import {
   getActiveSemester,
   getScheduleHorizon,
 } from '../../../lib/week-service.ts';
-import { mondayOf, addDays, parseISO } from '../../../lib/dates.ts';
+import { mondayOf, addDays, parseISO, todayInEastern } from '../../../lib/dates.ts';
 import { AppShell } from '../shell.tsx';
 import { CreateWeekButton } from './create-week.tsx';
 import { HorizonNote } from '../horizon-note.tsx';
@@ -46,7 +46,7 @@ export default async function AdminPage() {
   const withPin = roster.filter((m) => m.pinHash !== null);
   const owing = roster.filter((m) => m.makeupDebt > 0);
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayInEastern();
   const currentMonday = mondayOf(today);
   const posted = weekRows.map((w) => w.weekStart);
 

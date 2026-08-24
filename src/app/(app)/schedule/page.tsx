@@ -12,7 +12,7 @@ import { AppShell } from '../shell.tsx';
 import { WeekGrid } from './week-grid.tsx';
 import { CopyWeekButton } from './copy-week.tsx';
 import { HorizonNote } from '../horizon-note.tsx';
-import { parseISO, mondayOf, addDays } from '../../../lib/dates.ts';
+import { parseISO, mondayOf, addDays, todayInEastern } from '../../../lib/dates.ts';
 import { getMemberDossier } from '../../../lib/member-dossier.ts';
 import { CalendarSyncButton } from '../calendar-sync-button.tsx';
 
@@ -104,7 +104,7 @@ export default async function SchedulePage({
     );
   }
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayInEastern();
   const currentMonday = mondayOf(today);
 
   const defaultWeek =

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getMemberById, getMyShifts } from '../../../../lib/member-queries.ts';
+import { todayInEastern } from '../../../../lib/dates.ts';
 
 function formatLocalICSDate(dateIso: string, hour: number, minute: number): string {
   const cleanDate = dateIso.replace(/-/g, '');
@@ -52,7 +53,7 @@ export async function GET(
     'END:VTIMEZONE',
   ];
 
-  const todayIso = new Date().toISOString().slice(0, 10);
+  const todayIso = todayInEastern();
   const nowStamp = formatLocalICSDate(todayIso, 12, 0) + 'Z';
 
   for (const shift of shifts) {

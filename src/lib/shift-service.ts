@@ -27,6 +27,7 @@ import {
 } from '../db/schema.ts';
 import { settleDelta, type SettleInput } from './settlement.ts';
 import { isValidMultiplier, formatPoints, type AssignmentStatus } from './types.ts';
+import { todayInEastern } from './dates.ts';
 
 export interface ShiftResult {
   ok: boolean;
@@ -171,7 +172,7 @@ export async function volunteerToCover(
   const ctx = await loadAssignmentContext(assignmentId);
   if (!ctx) return { ok: false, message: 'That shift no longer exists.' };
 
-  const todayIso = new Date().toISOString().slice(0, 10);
+  const todayIso = todayInEastern();
   if (ctx.slot.date < todayIso) {
     return {
       ok: false,
@@ -440,7 +441,7 @@ export async function settleAssignment(assignmentId: string): Promise<void> {
 
 /** Settles every shift in a week whose date has passed. */
 export async function settleWeek(weekId: string): Promise<number> {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayInEastern();
 
   const rows = await db
     .select({ id: assignmentsTable.id, date: slotsTable.date })
@@ -745,7 +746,7 @@ export async function claimOpenSeat(
     .limit(1);
   if (!slot) return { ok: false, message: 'That shift no longer exists.' };
 
-  const todayIso = new Date().toISOString().slice(0, 10);
+  const todayIso = todayInEastern();
   if (slot.date < todayIso) {
     return {
       ok: false,

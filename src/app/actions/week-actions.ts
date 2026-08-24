@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 
 import { requireAdmin } from '../../lib/session.ts';
 import { generateAndSaveWeek } from '../../lib/week-service.ts';
-import { mondayOf, addDays } from '../../lib/dates.ts';
+import { mondayOf, addDays, todayInEastern } from '../../lib/dates.ts';
 
 export interface WeekActionResult {
   ok: boolean;
@@ -73,7 +73,7 @@ export async function postNextWeek(weekStart: string): Promise<WeekActionResult>
 }
 
 export async function suggestNextWeekStart(existing: string[]): Promise<string> {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayInEastern();
   if (existing.length === 0) return mondayOf(today);
   const latest = existing.slice().sort().at(-1)!;
   return addDays(latest, 7);

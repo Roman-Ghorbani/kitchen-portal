@@ -15,6 +15,20 @@ export function toISO(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
+/**
+ * Returns today's ISO date string (YYYY-MM-DD) in US Eastern Time (America/New_York).
+ * The ZBT house is in Eastern Time, so calendar days roll over at Eastern midnight.
+ */
+export function todayInEastern(date: Date = new Date()): string {
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/New_York',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+  return formatter.format(date);
+}
+
 export function addDays(iso: string, n: number): string {
   const d = parseISO(iso);
   d.setUTCDate(d.getUTCDate() + n);

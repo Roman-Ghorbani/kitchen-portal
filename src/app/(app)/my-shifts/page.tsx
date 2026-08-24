@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation';
 import { getSession } from '../../../lib/session.ts';
 import { getMyShifts, getMemberById } from '../../../lib/member-queries.ts';
 import { getScheduleHorizon } from '../../../lib/week-service.ts';
-import { parseISO, daysBetween } from '../../../lib/dates.ts';
+import { parseISO, daysBetween, todayInEastern } from '../../../lib/dates.ts';
 import { formatPoints } from '../../../lib/types.ts';
 import { AppShell } from '../shell.tsx';
 import { HorizonNote } from '../horizon-note.tsx';
@@ -58,7 +58,7 @@ export default async function MyShiftsPage() {
     getScheduleHorizon(),
   ]);
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayInEastern();
   const upcoming = shifts.filter((s) => s.date >= today);
   const past = shifts.filter((s) => s.date < today);
   const next = upcoming[0];

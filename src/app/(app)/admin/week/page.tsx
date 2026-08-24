@@ -7,7 +7,7 @@ import { members, standingConflicts } from '../../../../db/schema.ts';
 import { getSession } from '../../../../lib/session.ts';
 import { getLiveWeeks, getActiveSemester } from '../../../../lib/week-service.ts';
 import { getWeekForManagement } from '../../../../lib/week-admin.ts';
-import { parseISO, weekDates } from '../../../../lib/dates.ts';
+import { parseISO, weekDates, todayInEastern } from '../../../../lib/dates.ts';
 import { AppShell } from '../../shell.tsx';
 import { WeekControls } from './week-controls.tsx';
 import { ManageDays } from './manage-client.tsx';
@@ -103,7 +103,7 @@ export default async function ManageWeekPage({
     standingConflicts: conflictsByMember.get(r.id) ?? [],
   }));
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayInEastern();
   const hasStarted = managed.week.weekStart <= today;
 
   const lastDay = managed.slots.map((s) => s.date).sort().at(-1);

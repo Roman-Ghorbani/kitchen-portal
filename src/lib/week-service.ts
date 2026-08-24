@@ -26,7 +26,7 @@ import {
   type MealDayConfig,
   type DayIndex,
 } from './types.ts';
-import { weekDates, chapterLockFor, addDays } from './dates.ts';
+import { weekDates, chapterLockFor, addDays, todayInEastern } from './dates.ts';
 
 /* ------------------------------------------------------------------ */
 /* Reading the roster                                                  */
@@ -45,7 +45,7 @@ export async function loadSchedulingRoster(semesterId: string): Promise<Member[]
     .where(eq(standingConflicts.semesterId, semesterId));
 
   const byMember = new Map<string, DayIndex[]>();
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayInEastern();
 
   for (const c of conflicts) {
     // A temporary block stops applying once it expires.
