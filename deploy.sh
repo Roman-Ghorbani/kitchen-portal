@@ -99,7 +99,9 @@ set -euo pipefail
 cd $APP_DIR
 git fetch --all --quiet
 git reset --hard "origin/$BRANCH" --quiet
-npm ci --silent
+if git diff --name-only HEAD@{1} HEAD 2>/dev/null | grep -qE "package(-lock)?\.json"; then
+  npm ci --silent
+fi
 npm run db:migrate
 npm run build
 REMOTE
