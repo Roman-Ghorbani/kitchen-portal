@@ -104,11 +104,9 @@ if git diff --name-only HEAD@{1} HEAD 2>/dev/null | grep -qE "package(-lock)?\.j
 fi
 npm run db:migrate
 npm run build
+sudo systemctl restart kitchen
 REMOTE
-ok "built on the droplet"
-
-ssh "$DROPLET" "sudo systemctl restart kitchen"
-ok "restarted"
+ok "built and restarted on the droplet"
 
 # ---- 5. verify -----------------------------------------------------------
 step "Checking the site"
