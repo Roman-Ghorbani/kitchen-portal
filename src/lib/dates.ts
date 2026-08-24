@@ -50,6 +50,36 @@ export function todayInEastern(date: Date = new Date()): string {
   return formatter.format(date);
 }
 
+/**
+ * Returns the target Monday for default schedule views.
+ *
+ * Rules:
+ *  - Ordinarily, returns mondayOf(todayInEastern(now)).
+ *  - On Sunday at or after 9:00 PM Eastern Time (21:00 EDT/EST), Sunday duty is finished.
+ *    Brothers opening the app on Sunday night care about the upcoming week starting tomorrow
+ *    morning (Monday), so this automatically returns tomorrow's Monday.
+ */
+export function defaultScheduleMonday(now: Date = new Date()): string {
+  const todayIso = todayInEastern(now);
+  const currentMonday = mondayOf(todayIso);
+
+  if (dayIndex(todayIso) === 6) {
+    const easternHour = Number(
+      new Intl.DateTimeFormat('en-US', {
+        timeZone: 'America/New_York',
+        hour: 'numeric',
+        hour12: false,
+      }).format(now),
+    );
+
+    if (easternHour >= 21) {
+      return addDays(currentMonday, 7);
+    }
+  }
+
+  return currentMonday;
+}
+
 export function addDays(iso: string, n: number): string {
   const d = parseISO(iso);
   d.setUTCDate(d.getUTCDate() + n);

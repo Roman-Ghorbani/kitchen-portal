@@ -12,6 +12,7 @@ import {
   weekPostedAtChapter,
   lastChapterOnOrBefore,
   weekDueForPosting,
+  defaultScheduleMonday,
 } from '../dates.ts';
 
 describe('day indexing', () => {
@@ -145,5 +146,25 @@ describe('the lock deadline', () => {
 
     const lock = chapterLockFor(week);
     assert.equal(daysBetween(chapter, lock), 7);
+  });
+});
+
+describe('defaultScheduleMonday rollover', () => {
+  test('returns current Monday before 9pm on Sunday', () => {
+    // Sunday Aug 23 2026, 8:30 PM EDT (20:30 EDT = 00:30 UTC Aug 24)
+    const sunBefore9pm = new Date('2026-08-24T00:30:00Z');
+    assert.equal(defaultScheduleMonday(sunBefore9pm), '2026-08-17');
+  });
+
+  test('returns upcoming Monday at or after 9pm on Sunday', () => {
+    // Sunday Aug 23 2026, 9:15 PM EDT (21:15 EDT = 01:15 UTC Aug 24)
+    const sunAfter9pm = new Date('2026-08-24T01:15:00Z');
+    assert.equal(defaultScheduleMonday(sunAfter9pm), '2026-08-24');
+  });
+
+  test('returns Monday week start on Monday morning', () => {
+    // Monday Aug 24 2026, 8:00 AM EDT (12:00 UTC Aug 24)
+    const monMorning = new Date('2026-08-24T12:00:00Z');
+    assert.equal(defaultScheduleMonday(monMorning), '2026-08-24');
   });
 });
