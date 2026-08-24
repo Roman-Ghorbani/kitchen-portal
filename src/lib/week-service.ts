@@ -370,19 +370,15 @@ export async function getWeek(weekStart: string): Promise<DisplayWeek | null> {
     ),
   });
 
-  const standardWeekdays = new Set(weekDates(weekStart).slice(0, 5));
-
-  const days = weekDates(weekStart)
-    .map((date) => ({
-      date,
-      lunch: slotRows.find((s) => s.date === date && s.meal === 'lunch')
-        ? toDisplay(slotRows.find((s) => s.date === date && s.meal === 'lunch')!)
-        : null,
-      dinner: slotRows.find((s) => s.date === date && s.meal === 'dinner')
-        ? toDisplay(slotRows.find((s) => s.date === date && s.meal === 'dinner')!)
-        : null,
-    }))
-    .filter((d) => standardWeekdays.has(d.date) || d.lunch || d.dinner);
+  const days = weekDates(weekStart).map((date) => ({
+    date,
+    lunch: slotRows.find((s) => s.date === date && s.meal === 'lunch')
+      ? toDisplay(slotRows.find((s) => s.date === date && s.meal === 'lunch')!)
+      : null,
+    dinner: slotRows.find((s) => s.date === date && s.meal === 'dinner')
+      ? toDisplay(slotRows.find((s) => s.date === date && s.meal === 'dinner')!)
+      : null,
+  }));
 
   return {
     id: week.id,
