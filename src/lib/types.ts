@@ -120,7 +120,8 @@ export function isValidMultiplier(n: number): boolean {
   return (POINT_MULTIPLIERS as readonly number[]).includes(n);
 }
 
-/** Renders a points value without trailing zeros: 1, 1.5, 2, 3. */
+/** Renders a points value without trailing zeros: 0, 1, 1.5, 2, 3. */
 export function formatPoints(n: number): string {
+  if (n === 0) return '0';
   return Number.isInteger(n) ? String(n) : n.toFixed(1);
 }

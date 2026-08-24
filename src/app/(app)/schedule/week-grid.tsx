@@ -150,10 +150,13 @@ function SlotCell({
               <span className="wg-unfilled-label">
                 {slot.size - slot.assignments.length} seat
                 {slot.size - slot.assignments.length === 1 ? '' : 's'} open
-                {slot.coverBounty > 1 &&
-                  ` · ${formatPoints(slot.coverBounty)}× points`}
+                {slot.coverBounty <= 0
+                  ? ' · 🔒 Bounty Closed'
+                  : slot.coverBounty > 1
+                    ? ` · ${formatPoints(slot.coverBounty)}× points`
+                    : ''}
               </span>
-              {canCover && !isPast && (
+              {canCover && !isPast && slot.coverBounty > 0 && (
                 <ClaimSeatButton slotId={slot.id} bounty={slot.coverBounty} />
               )}
             </div>

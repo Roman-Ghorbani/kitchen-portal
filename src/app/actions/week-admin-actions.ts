@@ -86,9 +86,12 @@ export async function adminReassign(
   return res;
 }
 
-export async function adminRemove(assignmentId: string): Promise<AdminResult> {
+export async function adminRemove(
+  assignmentId: string,
+  closeBounty: boolean = true,
+): Promise<AdminResult> {
   const admin = await requireAdmin();
-  const res = await removeFromShift(assignmentId, admin.name);
+  const res = await removeFromShift(assignmentId, admin.name, closeBounty);
   if (res.ok) refresh();
   return res;
 }

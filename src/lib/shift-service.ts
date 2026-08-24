@@ -688,14 +688,14 @@ export async function openForCover(
   };
 }
 
-/** Sets what an unfilled seat on a shift pays. */
+/** Sets what an unfilled seat on a shift pays (0 closes the bounty). */
 export async function setSlotBounty(
   slotId: string,
   bounty: number,
   adminName: string,
 ): Promise<ShiftResult> {
-  if (!isValidMultiplier(bounty)) {
-    return { ok: false, message: 'Bounty must be 1x, 1.5x, 2x, or 3x.' };
+  if (bounty !== 0 && !isValidMultiplier(bounty)) {
+    return { ok: false, message: 'Bounty must be Closed (0), 1x, 1.5x, 2x, or 3x.' };
   }
 
   const [slot] = await db
@@ -710,20 +710,24 @@ export async function setSlotBounty(
     .set({ coverBounty: bounty })
     .where(eq(slotsTable.id, slotId));
 
+  const isClosed = bounty === 0;
+
   await db.insert(events).values({
-    action: 'slot.bounty_set',
+    action: isClosed ? 'slot.bounty_closed' : 'slot.bounty_set',
     entityType: 'slot',
     entityId: slotId,
     actorName: adminName,
-    summary:
-      `${adminName} offered ${formatPoints(bounty)}x for the open seat on ` +
-      `${slot.meal}, ${slot.date}`,
+    summary: isClosed
+      ? `${adminName} closed the bounty for open seats on ${slot.meal}, ${slot.date}`
+      : `${adminName} offered ${formatPoints(bounty)}x for the open seat on ${slot.meal}, ${slot.date}`,
     payload: { date: slot.date, meal: slot.meal, bounty },
   });
 
   return {
     ok: true,
-    message: `Open seats on that shift now pay ${formatPoints(bounty)}x.`,
+    message: isClosed
+      ? `Bounty closed. Open seats on this shift are locked from house claim.`
+      : `Open seats on that shift now pay ${formatPoints(bounty)}x.`,
   };
 }
 
@@ -745,6 +749,13 @@ export async function claimOpenSeat(
     .where(eq(slotsTable.id, slotId))
     .limit(1);
   if (!slot) return { ok: false, message: 'That shift no longer exists.' };
+
+  if (slot.coverBounty <= 0) {
+    return {
+      ok: false,
+      message: 'The bounty for this open shift is closed by the manager.',
+    };
+  }
 
   const todayIso = todayInEastern();
   if (slot.date < todayIso) {

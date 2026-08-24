@@ -468,11 +468,13 @@ export function SlotEditor({
               {a.status === 'flagged' ? 'Change the offer' : 'Ask for cover'}
             </button>
             <button
-              className="btn sm danger"
+              className="btn sm"
               disabled={pending}
-              onClick={() => run(() => adminRemove(a.id))}
+              style={{ color: 'var(--red-500)', borderColor: 'var(--red-500-20)' }}
+              onClick={() => run(() => adminRemove(a.id, true))}
+              title="Takes member off shift without debt penalty, and closes bounty so no uncontrolled open claim remains."
             >
-              Remove from shift
+              🛡️ Excuse &amp; Remove (No Debt)
             </button>
           </div>
 
@@ -574,8 +576,16 @@ export function SlotEditor({
       {openSeats > 0 && (
         <div className="slot-open-offer">
           <span className="slot-points-label">
-            {openSeats} open seat{openSeats === 1 ? '' : 's'} — offering
+            {openSeats} open seat{openSeats === 1 ? '' : 's'} —
           </span>
+          <button
+            className={`btn sm${slot.coverBounty <= 0 ? ' primary' : ''}`}
+            disabled={pending}
+            onClick={() => run(() => offerForOpenSeat(slot.slotId, 0))}
+            style={{ fontWeight: 600 }}
+          >
+            🔒 Close Bounty (0×)
+          </button>
           {POINT_MULTIPLIERS.map((m) => (
             <button
               key={m}
@@ -583,12 +593,13 @@ export function SlotEditor({
               disabled={pending}
               onClick={() => run(() => offerForOpenSeat(slot.slotId, m))}
             >
-              {formatPoints(m)}×
+              📢 Open {formatPoints(m)}×
             </button>
           ))}
           <span className="slot-points-hint">
-            Anyone in the house can claim an open seat, and this is what it
-            pays them.
+            {slot.coverBounty <= 0
+              ? 'Bounty is closed. Open seats are locked and hidden from house claim.'
+              : `Anyone in the house can claim open seats at ${formatPoints(slot.coverBounty)}x.`}
           </span>
         </div>
       )}

@@ -305,10 +305,11 @@ export async function reassignShift(
   };
 }
 
-/** Takes somebody off a shift, leaving the seat open. */
+/** Takes somebody off a shift without penalty, option to close bounty so no uncontrolled open bounty remains. */
 export async function removeFromShift(
   assignmentId: string,
   actorName: string,
+  closeBounty: boolean = true,
 ): Promise<AdminResult> {
   const ctx = await shiftContext(assignmentId);
   if (!ctx) return { ok: false, message: 'That shift no longer exists.' };
@@ -318,20 +319,33 @@ export async function removeFromShift(
   await unsettleAssignment(assignmentId);
   await db.delete(assignmentsTable).where(eq(assignmentsTable.id, assignmentId));
 
+  if (closeBounty) {
+    await db
+      .update(slotsTable)
+      .set({ coverBounty: 0 })
+      .where(eq(slotsTable.id, ctx.assignment.slotId));
+  }
+
   await db.insert(events).values({
     action: 'shift.removed',
     entityType: 'assignment',
     actorName,
-    summary: `${actorName} took ${who} off ${ctx.slot.meal} on ${ctx.slot.date}`,
+    summary:
+      `${actorName} took ${who} off ${ctx.slot.meal} on ${ctx.slot.date} without penalty` +
+      (closeBounty ? ' and closed the bounty' : ''),
     payload: {
       date: ctx.slot.date,
       meal: ctx.slot.meal,
       memberId: ctx.assignment.memberId,
       memberName: who,
+      closeBounty,
     },
   });
 
-  return { ok: true, message: `${who} removed. That seat is now open.` };
+  return {
+    ok: true,
+    message: `${who} removed from shift (no penalty/debt).${closeBounty ? ' Bounty closed.' : ' Seat is open.'}`,
+  };
 }
 
 /** Puts somebody onto a slot that has an open seat. */
