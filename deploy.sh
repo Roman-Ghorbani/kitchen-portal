@@ -27,6 +27,7 @@ set -euo pipefail
 DROPLET="${KITCHEN_HOST:-kitchen@203.0.113.10}"
 APP_DIR=/srv/kitchen
 SITE="${KITCHEN_URL:-https://kitchen.zbtaa.online}"
+SSH_CMD="ssh -o ControlMaster=auto -o ControlPath=~/.ssh/cm-%r@%h:%p -o ControlPersist=60s -o ConnectTimeout=10"
 # --------------------------------------------------------------------------
 
 BOLD=$'\e[1m'; DIM=$'\e[2m'; RED=$'\e[31m'; GREEN=$'\e[32m'; YELLOW=$'\e[33m'; OFF=$'\e[0m'
@@ -52,7 +53,7 @@ fi
 # ---- rollback ------------------------------------------------------------
 if [ "$ROLLBACK" = true ]; then
   step "Rolling back to the previous version"
-  ssh "$DROPLET" "cd $APP_DIR && git reset --hard HEAD@{1} && npm ci --silent && npm run build && sudo systemctl restart kitchen"
+  $SSH_CMD "$DROPLET" "cd $APP_DIR && git reset --hard HEAD@{1} && npm ci --silent && npm run build && sudo systemctl restart kitchen"
   sleep 4
   code=$(curl -s -o /dev/null -w '%{http_code}' "$SITE/schedule" || echo 000)
   [ "$code" = "200" ] && ok "rolled back, site is up" || die "rolled back but site returns $code"
@@ -88,13 +89,13 @@ ok "pushed $BRANCH ($(git rev-parse --short HEAD))"
 
 # ---- 3. back up the live database first ----------------------------------
 step "Backing up the live database"
-ssh "$DROPLET" "sudo /usr/local/bin/kitchen-backup" >/dev/null 2>&1 \
+$SSH_CMD "$DROPLET" "sudo /usr/local/bin/kitchen-backup" >/dev/null 2>&1 \
   && ok "snapshot taken" \
   || warn "backup step failed - continuing, but check the droplet"
 
 # ---- 4. deploy -----------------------------------------------------------
 step "Deploying to $DROPLET"
-ssh "$DROPLET" bash -s <<REMOTE
+$SSH_CMD "$DROPLET" bash -s <<REMOTE
 set -euo pipefail
 cd $APP_DIR
 git fetch --all --quiet
