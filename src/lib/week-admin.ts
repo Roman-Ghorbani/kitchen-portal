@@ -240,16 +240,6 @@ export async function reassignShift(
     return { ok: false, message: 'They are already on this shift.' };
   }
 
-  const wantYear = YEAR_FOR_MEAL[ctx.slot.meal];
-  if (next.classYear !== wantYear && !opts.allowAnyClassYear) {
-    return {
-      ok: false,
-      message:
-        `${next.name} is a ${next.classYear} and ${ctx.slot.meal} is for ` +
-        `${wantYear}s. Use "allow any class year" if you really mean it.`,
-    };
-  }
-
   const clash = await db
     .select({ id: assignmentsTable.id })
     .from(assignmentsTable)
@@ -305,11 +295,11 @@ export async function reassignShift(
   };
 }
 
-/** Takes somebody off a shift without penalty, option to close bounty so no uncontrolled open bounty remains. */
+/** Takes somebody off a shift without penalty, leaving the seat open for any brother to pick up. */
 export async function removeFromShift(
   assignmentId: string,
   actorName: string,
-  closeBounty: boolean = true,
+  closeBounty: boolean = false,
 ): Promise<AdminResult> {
   const ctx = await shiftContext(assignmentId);
   if (!ctx) return { ok: false, message: 'That shift no longer exists.' };
@@ -319,12 +309,10 @@ export async function removeFromShift(
   await unsettleAssignment(assignmentId);
   await db.delete(assignmentsTable).where(eq(assignmentsTable.id, assignmentId));
 
-  if (closeBounty) {
-    await db
-      .update(slotsTable)
-      .set({ coverBounty: 0 })
-      .where(eq(slotsTable.id, ctx.assignment.slotId));
-  }
+  await db
+    .update(slotsTable)
+    .set({ coverBounty: closeBounty ? 0 : 1 })
+    .where(eq(slotsTable.id, ctx.assignment.slotId));
 
   await db.insert(events).values({
     action: 'shift.removed',
@@ -332,7 +320,7 @@ export async function removeFromShift(
     actorName,
     summary:
       `${actorName} took ${who} off ${ctx.slot.meal} on ${ctx.slot.date} without penalty` +
-      (closeBounty ? ' and closed the bounty' : ''),
+      (closeBounty ? ' and closed the bounty' : ' (seat open for pickup)'),
     payload: {
       date: ctx.slot.date,
       meal: ctx.slot.meal,
@@ -344,7 +332,7 @@ export async function removeFromShift(
 
   return {
     ok: true,
-    message: `${who} removed from shift (no penalty/debt).${closeBounty ? ' Bounty closed.' : ' Seat is open.'}`,
+    message: `${who} removed from shift (no penalty). ${closeBounty ? 'Bounty closed.' : 'Seat is open for any brother to pick up.'}`,
   };
 }
 
@@ -384,16 +372,6 @@ export async function addToShift(
     return {
       ok: false,
       message: `This shift already has its ${slot.size}. Remove somebody first, or allow overfilling.`,
-    };
-  }
-
-  const wantYear = YEAR_FOR_MEAL[slot.meal];
-  if (person.classYear !== wantYear && !opts.allowAnyClassYear) {
-    return {
-      ok: false,
-      message:
-        `${person.name} is a ${person.classYear} and ${slot.meal} is for ` +
-        `${wantYear}s. Use "allow any class year" if you really mean it.`,
     };
   }
 

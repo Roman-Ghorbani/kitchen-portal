@@ -786,13 +786,15 @@ export async function claimOpenSeat(
     return { ok: false, message: 'That shift is already full.' };
   }
 
+  const effectiveMultiplier = slot.coverBounty > 0 ? slot.coverBounty : 1;
+
   // The seat count is evaluated by the database as part of the insert, so a
   // simultaneous claim cannot slip past a check made a moment earlier.
   const newId = randomUUID();
   const rows = db
     .all<{ id: string }>(sql`
       INSERT INTO assignments (id, slot_id, member_id, status, multiplier, is_makeup, rationale, created_at)
-      SELECT ${newId}, ${slotId}, ${memberId}, 'assigned', ${slot.coverBounty}, 0,
+      SELECT ${newId}, ${slotId}, ${memberId}, 'assigned', ${effectiveMultiplier}, 0,
              ${JSON.stringify({ claimedOpenSeat: true, at: new Date().toISOString() })},
              ${Math.floor(Date.now() / 1000)}
       WHERE (SELECT COUNT(*) FROM assignments WHERE slot_id = ${slotId}) < ${slot.size}

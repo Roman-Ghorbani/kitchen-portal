@@ -355,8 +355,7 @@ export function SlotEditor({
   const [reason, setReason] = useState('');
 
   const openSeats = slot.size - slot.assignments.length;
-  const wantYear = slot.meal === 'lunch' ? 'junior' : 'sophomore';
-  const eligible = roster.filter((m) => anyYear || m.classYear === wantYear);
+  const eligible = roster;
 
   return (
     <div className="slot-editor">
@@ -471,8 +470,8 @@ export function SlotEditor({
               className="btn sm"
               disabled={pending}
               style={{ color: 'var(--red-500)', borderColor: 'var(--red-500-20)' }}
-              onClick={() => run(() => adminRemove(a.id, true))}
-              title="Takes member off shift without debt penalty, and closes bounty so no uncontrolled open claim remains."
+              onClick={() => run(() => adminRemove(a.id, false))}
+              title="Takes member off shift without debt penalty, leaving seat open for any brother to pick up."
             >
               🛡️ Excuse &amp; Remove (No Debt)
             </button>
@@ -612,14 +611,6 @@ export function SlotEditor({
             </button>
           ) : (
             <div className="slot-edit-panel">
-              <label className="any-year">
-                <input
-                  type="checkbox"
-                  checked={anyYear}
-                  onChange={(e) => setAnyYear(e.target.checked)}
-                />
-                Allow any class year (normally {wantYear}s only)
-              </label>
               <PersonPicker
                 roster={eligible}
                 slotDate={slot.date}
