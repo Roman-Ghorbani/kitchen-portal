@@ -57,6 +57,12 @@ export function NavIcon({ name }: { name: string }) {
           <path d="M17 5.2a2.7 2.7 0 010 5.4M18.5 14.4c2.3.5 3.7 2.3 3.7 4.6" />
         </svg>
       );
+    case 'stats':
+      return (
+        <svg {...common} aria-hidden="true">
+          <path d="M18 20V10M12 20V4M6 20v-6" />
+        </svg>
+      );
     case 'manage':
       return (
         <svg {...common} aria-hidden="true">

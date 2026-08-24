@@ -13,6 +13,7 @@ const BROTHER_NAV = [
 const ADMIN_NAV = [
   { href: '/admin', label: 'Dashboard', icon: 'dashboard' },
   { href: '/admin/roster', label: 'Roster', icon: 'roster' },
+  { href: '/admin/stats', label: 'Stats', icon: 'stats' },
   { href: '/schedule', label: 'Schedule', icon: 'schedule' },
   { href: '/admin/week', label: 'Manage week', icon: 'manage' },
   { href: '/admin/settings', label: 'Settings', icon: 'settings' },
