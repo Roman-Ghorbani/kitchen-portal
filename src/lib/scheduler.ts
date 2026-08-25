@@ -138,10 +138,15 @@ function isEligible(w: WorkingMember, slot: Slot): boolean {
   return true;
 }
 
-function comparePriority(a: WorkingMember, b: WorkingMember): number {
+function comparePriority(a: WorkingMember, b: WorkingMember, openSlots: Slot[]): number {
   // Make-up debt jumps the queue outright.
   if (a.debt !== b.debt) return b.debt - a.debt;
   if (a.points !== b.points) return a.points - b.points;
+
+  // Constraint scoring: members eligible for fewest open slots go first
+  const aEligible = openSlots.filter((s) => isEligible(a, s)).length;
+  const bEligible = openSlots.filter((s) => isEligible(b, s)).length;
+  if (aEligible !== bEligible) return aEligible - bEligible;
 
   // Longest since last served goes first; never-served sorts to the very front.
   const al = a.member.lastServedDate;
@@ -211,7 +216,7 @@ export function generateWeek(input: ScheduleInput): ScheduleResult {
       continue;
     }
 
-    targetCandidates.sort(comparePriority);
+    targetCandidates.sort((a, b) => comparePriority(a, b, open));
     const chosen = targetCandidates[0];
     const viaMakeup = chosen.assignedDates.length >= 1 && chosen.debt > 0;
 

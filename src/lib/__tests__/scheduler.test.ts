@@ -213,6 +213,33 @@ describe('priority ordering', () => {
     // Pool is exactly 2 so both serve, but the staler one is recorded first.
     assert.equal(mondayLunch.assignments[0].memberId, members[0].id);
   });
+
+  test('constrained members win tie-breakers over flexible members', () => {
+    // Create 3 juniors (need 5 seats filled across Mon-Fri lunch).
+    // All have 0 points.
+    // Junior 0 has NO conflicts (flexible, can work Mon-Fri).
+    // Junior 1 has conflicts Mon, Tue, Wed, Thu (can ONLY work Friday).
+    // Junior 2 has conflicts Mon, Tue, Wed, Fri (can ONLY work Thursday).
+    const members = makeRoster(3, 30);
+    members[0].standingConflicts = [];
+    members[1].standingConflicts = [0, 1, 2, 3]; // Only free Friday (index 4)
+    members[2].standingConflicts = [0, 1, 2, 4]; // Only free Thursday (index 3)
+
+    const result = generateWeek({ weekStart: WEEK, members });
+    
+    // We expect Junior 1 to get Friday, and Junior 2 to get Thursday.
+    // Junior 0 should pick up Monday, Tuesday, or Wednesday.
+    const thursdayLunch = result.week.slots.find(
+      (s) => s.meal === 'lunch' && dayIndex(s.date) === 3,
+    )!;
+    const fridayLunch = result.week.slots.find(
+      (s) => s.meal === 'lunch' && dayIndex(s.date) === 4,
+    )!;
+
+    // Both highly constrained members must be successfully assigned to their only available days
+    assert.equal(thursdayLunch.assignments[0].memberId, members[2].id);
+    assert.equal(fridayLunch.assignments[0].memberId, members[1].id);
+  });
 });
 
 describe('determinism and rotation', () => {
