@@ -1,12 +1,19 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export function CalendarSubscriptionCard({ memberId }: { memberId: string }) {
   const [copied, setCopied] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const [showGoogleModal, setShowGoogleModal] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
-  // Construct origin-relative or absolute URL
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setIsMobile(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent));
+    }
+  }, []);
+
   const baseUrl =
     typeof window !== 'undefined'
       ? window.location.origin
@@ -15,11 +22,8 @@ export function CalendarSubscriptionCard({ memberId }: { memberId: string }) {
   const httpUrl = `${baseUrl}${icsPath}`;
   const webcalUrl = httpUrl.replace(/^https?:/, 'webcal:');
 
-  // Outlook 1-click web subscription URL
   const outlookUrl = `https://outlook.office.com/calendar/0/addcalendar?url=${encodeURIComponent(httpUrl)}&name=ZBT%20Kitchen%20Duty`;
-
-  // Google Calendar web subscription URL
-  const googleUrl = `https://calendar.google.com/calendar/r/settings/addbyurl?cid=${encodeURIComponent(httpUrl)}`;
+  const googleDesktopUrl = `https://calendar.google.com/calendar/render?cid=${encodeURIComponent(httpUrl)}`;
 
   function copyLink() {
     if (navigator.clipboard) {
@@ -34,6 +38,14 @@ export function CalendarSubscriptionCard({ memberId }: { memberId: string }) {
     }
     setCopied(true);
     setTimeout(() => setCopied(false), 3000);
+  }
+
+  function handleGoogleClick(e: React.MouseEvent) {
+    if (isMobile) {
+      e.preventDefault();
+      copyLink();
+      setShowGoogleModal(true);
+    }
   }
 
   return (
@@ -72,15 +84,16 @@ export function CalendarSubscriptionCard({ memberId }: { memberId: string }) {
           <a
             href={webcalUrl}
             className="btn gold sm"
-            style={{ fontWeight: 600 }}
+            style={{ fontWeight: 700, padding: '8px 14px' }}
             title="1-tap subscription for iPhone, iPad, Mac & native phone calendar"
           >
             📲 Phone 1-Tap Sync
           </a>
           <a
-            href={googleUrl}
+            href={googleDesktopUrl}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={handleGoogleClick}
             className="btn sm"
             style={{ fontWeight: 600, background: '#4285F4', color: '#ffffff', borderColor: '#4285F4' }}
           >
@@ -115,10 +128,57 @@ export function CalendarSubscriptionCard({ memberId }: { memberId: string }) {
             onClick={() => setShowHelp(!showHelp)}
             style={{ fontSize: 12, color: 'var(--ink-400)' }}
           >
-            {showHelp ? 'Hide Mobile Tips' : '❓ Mobile Setup Tips'}
+            {showHelp ? 'Hide Mobile Tips' : '❓ Setup Tips'}
           </button>
         </div>
       </div>
+
+      {showGoogleModal && (
+        <div
+          style={{
+            marginTop: 14,
+            padding: 14,
+            borderRadius: 8,
+            background: 'var(--ink-800)',
+            border: '1px solid var(--gold-500-40)',
+            fontSize: 13,
+            color: 'var(--ink-100)',
+          }}
+        >
+          <div style={{ fontWeight: 700, color: 'var(--gold-500)', fontSize: 14, marginBottom: 6 }}>
+            ✓ Feed URL Copied to Clipboard!
+          </div>
+          <div style={{ color: 'var(--ink-300)', marginBottom: 10, lineHeight: 1.5 }}>
+            Google Calendar Mobile App requires adding web links via Google Calendar Web settings.
+            <br />
+            <strong>How to complete setup:</strong>
+            <ol style={{ paddingLeft: 18, margin: '6px 0' }}>
+              <li>Open Google Calendar in your browser (or computer).</li>
+              <li>Click <strong>"+" next to Other Calendars</strong> → select <strong>From URL</strong>.</li>
+              <li>Paste your copied link and tap Add!</li>
+            </ol>
+            <em>Or on iPhone, simply tap <strong>📲 Phone 1-Tap Sync</strong> above for instant 1-tap setup in Apple Calendar!</em>
+          </div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <a
+              href="https://calendar.google.com/calendar/r/settings/addbyurl"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn sm primary"
+              style={{ fontSize: 12 }}
+            >
+              🌐 Open Google Calendar Web Settings
+            </a>
+            <button
+              className="btn sm"
+              onClick={() => setShowGoogleModal(false)}
+              style={{ fontSize: 12 }}
+            >
+              Got it
+            </button>
+          </div>
+        </div>
+      )}
 
       {showHelp && (
         <div
@@ -132,17 +192,17 @@ export function CalendarSubscriptionCard({ memberId }: { memberId: string }) {
           }}
         >
           <div style={{ fontWeight: 700, color: 'var(--ink-100)', marginBottom: 4 }}>
-            📱 Mobile Calendar Setup Instructions:
+            📱 Mobile Calendar Setup Guide:
           </div>
           <ul style={{ paddingLeft: 18, margin: 0 }}>
             <li>
-              <strong>iPhone / iOS Users:</strong> Tap <strong>📲 Phone 1-Tap Sync</strong>. iOS will open Apple Calendar with a 1-tap "Subscribe" prompt.
+              <strong>iPhone / iOS Users:</strong> Tap <strong>📲 Phone 1-Tap Sync</strong>. iOS will open Apple Calendar with an instant 1-tap "Subscribe" prompt.
             </li>
             <li>
-              <strong>Google Calendar App Users:</strong> Tap <strong>📋 Copy Feed Link</strong>, then open Google Calendar in browser (or desktop) → click <em>"+" next to Other calendars</em> → select <em>From URL</em> → paste the link.
+              <strong>Google Calendar App Users:</strong> Tap <strong>📋 Copy Feed Link</strong>, then open Google Calendar in browser/desktop → click <em>"+" next to Other calendars</em> → select <em>From URL</em> → paste.
             </li>
             <li>
-              <strong>Android Phone Users:</strong> Tap <strong>📥 Download .ics</strong> or <strong>📲 Phone 1-Tap Sync</strong> to import shifts into your device calendar.
+              <strong>Android Users:</strong> Tap <strong>📲 Phone 1-Tap Sync</strong> or <strong>📥 Download .ics</strong> to import shifts into your device calendar.
             </li>
           </ul>
         </div>
