@@ -17,8 +17,8 @@ export function CalendarSubscriptionCard({ memberId }: { memberId: string }) {
   // Outlook 1-click web subscription URL
   const outlookUrl = `https://outlook.office.com/calendar/0/addcalendar?url=${encodeURIComponent(httpUrl)}&name=ZBT%20Kitchen%20Duty`;
 
-  // Google Calendar 1-click web subscription URL
-  const googleUrl = `https://calendar.google.com/calendar/render?cid=${encodeURIComponent(webcalUrl)}`;
+  // Google Calendar 1-click web subscription URL (requires https:// URL)
+  const googleUrl = `https://calendar.google.com/calendar/render?cid=${encodeURIComponent(httpUrl)}`;
 
   function copyLink() {
     navigator.clipboard.writeText(httpUrl);
@@ -54,17 +54,19 @@ export function CalendarSubscriptionCard({ memberId }: { memberId: string }) {
             📅 Sync Shifts to Your Phone or Web Calendar
           </div>
           <div style={{ fontSize: 12, color: 'var(--ink-400)', marginTop: 4 }}>
-            Shifts update live on Apple Calendar, Outlook, and Google Calendar.
+            Shifts update live on Google Calendar, Apple Calendar, and Outlook.
           </div>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <a
-            href={webcalUrl}
-            className="btn gold sm"
-            style={{ fontWeight: 600 }}
+            href={googleUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn sm"
+            style={{ fontWeight: 600, background: '#4285F4', color: '#ffffff', borderColor: '#4285F4' }}
           >
-            📲 Apple / Phone
+            🌐 Google Calendar
           </a>
           <a
             href={outlookUrl}
@@ -76,13 +78,19 @@ export function CalendarSubscriptionCard({ memberId }: { memberId: string }) {
             📧 Outlook
           </a>
           <a
-            href={googleUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn sm"
+            href={webcalUrl}
+            className="btn gold sm"
             style={{ fontWeight: 600 }}
           >
-            🌐 Google Calendar
+            📲 Apple / Phone
+          </a>
+          <a
+            href={httpUrl}
+            download={`kitchen-duty-${memberId}.ics`}
+            className="btn sm"
+            style={{ fontSize: 12 }}
+          >
+            📥 Download .ics
           </a>
           <button
             className="btn sm"

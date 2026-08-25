@@ -58,10 +58,22 @@ export function CalendarSyncButton({ memberId }: { memberId: string }) {
             rel="noopener noreferrer"
             onClick={() => setOpen(false)}
           >
-            <span className="cal-icon">📅</span>
+            <span className="cal-icon">🌐</span>
             <div>
               <div className="cal-title">Google Calendar</div>
               <div className="cal-sub">Adds to Google Calendar Web / App</div>
+            </div>
+          </a>
+          <a
+            className="cal-menu-item"
+            href={icsHttpsUrl}
+            download={`kitchen-duty-${memberId}.ics`}
+            onClick={() => setOpen(false)}
+          >
+            <span className="cal-icon">📥</span>
+            <div>
+              <div className="cal-title">Download .ics File</div>
+              <div className="cal-sub">Import into any calendar app</div>
             </div>
           </a>
         </div>
