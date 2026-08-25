@@ -117,8 +117,8 @@ export default async function SchedulePage({
   if (!week) redirect('/schedule');
 
   const isLocked = week.status === 'locked' || week.status === 'complete';
-  const meId = session?.role === 'brother' ? session.sub : '';
-  const canCover = session?.role === 'brother' && !isLocked;
+  const meId = session ? session.sub : '';
+  const canCover = Boolean(session) && week.status !== 'complete';
 
   const lastDay = week.days.at(-1)?.date;
   const openCount = week.days.reduce(
@@ -137,6 +137,12 @@ export default async function SchedulePage({
   );
 
   const dossier = meId ? await getMemberDossier(meId) : null;
+  const myMemberInfo = dossier
+    ? {
+        isExempt: dossier.member.exempt,
+        standingConflicts: dossier.conflicts.map((c) => c.dayIndex),
+      }
+    : null;
   const myNextShift = dossier?.shifts.find((s) => s.date >= today && s.status !== 'covered');
 
   return (
@@ -253,6 +259,7 @@ export default async function SchedulePage({
           canCover={canCover}
           isAdmin={session?.role === 'admin'}
           today={today}
+          myMemberInfo={myMemberInfo}
         />
       </div>
 

@@ -32,12 +32,16 @@ function PersonChip({
   canCover,
   isAdmin,
   isPast,
+  dayIndex,
+  myMemberInfo,
 }: {
   assignment: DisplaySlot['assignments'][number];
   meId: string;
   canCover: boolean;
   isAdmin: boolean;
   isPast: boolean;
+  dayIndex: number;
+  myMemberInfo?: { isExempt: boolean; standingConflicts: number[] } | null;
 }) {
   const a = assignment;
   const mine = a.memberId === meId || a.coveredByMemberId === meId;
@@ -67,10 +71,6 @@ function PersonChip({
         )}
       </span>
 
-      {/* What an assigned brother earns is between him and the kitchen
-          manager, so it shows only to him. A bounty on a shift that is OPEN is
-          the opposite: it is an offer, and an offer nobody can see cannot be
-          taken up. */}
       {seesLedger && !flagged && a.multiplier > 1 && (
         <span className="wg-mult mono">{formatPoints(a.multiplier)}×</span>
       )}
@@ -88,7 +88,12 @@ function PersonChip({
             </span>
           )}
           {canCover && !isPast && a.memberId !== meId && (
-            <CoverButton assignmentId={a.id} label="Pick up" />
+            <CoverButton
+              assignmentId={a.id}
+              label="Pick up"
+              dayIndex={dayIndex}
+              myMemberInfo={myMemberInfo}
+            />
           )}
         </span>
       )}
@@ -105,6 +110,7 @@ function SlotCell({
   isAdmin,
   isToday,
   isPast,
+  myMemberInfo,
 }: {
   slot: DisplaySlot | null;
   meal: 'lunch' | 'dinner';
@@ -114,6 +120,7 @@ function SlotCell({
   isAdmin: boolean;
   isToday: boolean;
   isPast: boolean;
+  myMemberInfo?: { isExempt: boolean; standingConflicts: number[] } | null;
 }) {
   const cls =
     `wg-cell ${meal}` +
@@ -143,6 +150,8 @@ function SlotCell({
               canCover={canCover}
               isAdmin={isAdmin}
               isPast={isPast}
+              dayIndex={index}
+              myMemberInfo={myMemberInfo}
             />
           ))}
           {slot.size - slot.assignments.length > 0 && (
@@ -157,7 +166,12 @@ function SlotCell({
                     : ''}
               </span>
               {canCover && !isPast && slot.coverBounty > 0 && (
-                <ClaimSeatButton slotId={slot.id} bounty={slot.coverBounty} />
+                <ClaimSeatButton
+                  slotId={slot.id}
+                  bounty={slot.coverBounty}
+                  dayIndex={index}
+                  myMemberInfo={myMemberInfo}
+                />
               )}
             </div>
           )}
@@ -167,28 +181,20 @@ function SlotCell({
   );
 }
 
-/**
- * A whole week at a glance.
- *
- * One set of markup, two layouts. On a wide screen days run across as columns
- * with lunch and dinner as rows. On a phone that is physically impossible -
- * six columns of readable names needs about 900px - so the same grid flips:
- * days become rows and the two meals become the columns. Every item carries
- * its day index as a custom property, and the stylesheet places it, so
- * nothing is rendered twice and there is no duplicate DOM to keep in sync.
- */
 export function WeekGrid({
   week,
   meId,
   canCover,
   isAdmin,
   today,
+  myMemberInfo,
 }: {
   week: DisplayWeek;
   meId: string;
   canCover: boolean;
   isAdmin: boolean;
   today: string;
+  myMemberInfo?: { isExempt: boolean; standingConflicts: number[] } | null;
 }) {
   const days = week.days;
 
@@ -235,6 +241,7 @@ export function WeekGrid({
           isAdmin={isAdmin}
           isToday={d.date === today}
           isPast={d.date < today}
+          myMemberInfo={myMemberInfo}
         />
       ))}
 
@@ -249,6 +256,7 @@ export function WeekGrid({
           isAdmin={isAdmin}
           isToday={d.date === today}
           isPast={d.date < today}
+          myMemberInfo={myMemberInfo}
         />
       ))}
     </div>
