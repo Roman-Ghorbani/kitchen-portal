@@ -12,7 +12,7 @@ export function CalendarSyncButton({ memberId }: { memberId: string }) {
 
   const icsHttpsUrl = `${origin}/api/calendar/${memberId}.ics`;
   const webcalUrl = `${origin.replace(/^https?:/, 'webcal:')}/api/calendar/${memberId}.ics`;
-  const googleCalUrl = `https://calendar.google.com/calendar/render?cid=${encodeURIComponent(icsHttpsUrl)}`;
+  const googleCalUrl = `https://calendar.google.com/calendar/r/settings/addbyurl?cid=${encodeURIComponent(icsHttpsUrl)}`;
   const outlookCalUrl = `https://outlook.office.com/calendar/0/addcalendar?url=${encodeURIComponent(icsHttpsUrl)}&name=ZBT%20Kitchen%20Duty`;
 
   return (
