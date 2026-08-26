@@ -533,10 +533,20 @@ export async function requestLatePlate(
     )
     .limit(1);
 
+  const today = todayInEastern(now);
+
   if (existing && OPEN_STATUSES.includes(existing.status as LatePlateStatus)) {
     return {
       ok: false,
       message: `You already have a ${meal} plate down for that day.`,
+    };
+  }
+
+  // If cancelled on the day-of, one cannot re-request that meal today.
+  if (date === today && existing && existing.status === 'cancelled') {
+    return {
+      ok: false,
+      message: 'You already cancelled your late plate for this meal today. Re-requesting the same meal on the day of service is not permitted.',
     };
   }
 
@@ -641,10 +651,15 @@ export async function cancelLatePlate(
     payload: { date: row.date, meal: row.meal, wasReady },
   });
 
+  const today = todayInEastern(now);
+  const isDayOf = row.date === today;
+
   return {
     ok: true,
     message: wasReady
-      ? 'Cancelled — the kitchen had already plated it, so let them know.'
+      ? `Cancelled — the kitchen had already plated it. ${isDayOf ? 'You cannot re-request this meal today.' : ''}`
+      : isDayOf
+      ? 'Cancelled. Since this was for today, you cannot request another plate for this meal today.'
       : 'Cancelled.',
   };
 }

@@ -4672,50 +4672,195 @@ body {
 }
 
 /* ------------------------------------------------------------------ */
-/* Late plates                                                         */
+/* Late plates: Guide Strip, Modern Cards, Status Tracker              */
 /* ------------------------------------------------------------------ */
 
-.lp-status-section {
+.lp-guide-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 20px;
+  background: var(--raised);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  padding: 10px 16px;
   margin-bottom: 20px;
+  font-size: 12.5px;
+  color: var(--ink-700);
 }
 
-.lp-status-grid {
+.lp-guide-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.lp-guide-icon {
+  font-size: 15px;
+}
+
+.lp-eyebrow {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--gold-400);
+  margin-bottom: 2px;
+}
+
+/* ---- Today Card & Grid ------------------------------------------- */
+
+.lp-today {
+  margin-bottom: 24px;
+}
+
+.lp-today-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.lp-today-title {
+  font-family: var(--font-display);
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--ink-900);
+  margin: 0;
+}
+
+.lp-meal-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 16px;
 }
 
-.lp-status-card {
+.lp-meal {
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--raised);
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: border-color 0.15s ease;
+}
+
+.lp-meal.prominent {
+  background: var(--card);
+  border-color: var(--line-strong);
+  padding: 18px 20px;
+}
+
+.lp-meal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.lp-meal-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lp-meal-icon {
+  font-size: 18px;
+}
+
+.lp-meal-name {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 700;
+  text-transform: capitalize;
+  color: var(--ink-900);
+}
+
+.lp-meal-times {
+  font-size: 12.5px;
+  color: var(--ink-400);
+}
+
+/* ---- Menu Showcase Box -------------------------------------------- */
+
+.lp-menu-box {
+  background: var(--sunken);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.lp-menu-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--gold-400);
+}
+
+.lp-menu-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.lp-menu-pill {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink-900);
+  background: var(--raised);
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  padding: 3px 8px;
+}
+
+.lp-menu-empty {
+  font-size: 12px;
+  color: var(--ink-400);
+  font-style: italic;
+}
+
+/* ---- Status Tracking Cards (Inside Meal Slot) --------------------- */
+
+.lp-status-tracker-card {
   border: 1.5px solid var(--line-strong);
   border-radius: var(--radius);
   background: var(--card);
   padding: 18px 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   display: flex;
   flex-direction: column;
   gap: 14px;
 }
 
-.lp-status-card.is-ready {
+.lp-status-tracker-card.is-waiting {
+  border-color: var(--gold-500);
+  box-shadow: 0 0 16px rgba(207, 168, 88, 0.12);
+}
+
+.lp-status-tracker-card.is-ready {
   border-color: #10b981;
-  background: #f0fdf4;
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.16);
 }
 
-.lp-status-card.is-waiting {
-  border-color: #f59e0b;
-  background: #fffbeb;
+.lp-status-tracker-card.is-declined {
+  border-color: var(--red-600);
 }
 
-.lp-status-card.is-declined {
-  border-color: #ef4444;
-  background: #fef2f2;
+.lp-status-tracker-card.is-cancelled {
+  border-color: var(--line);
+  opacity: 0.8;
 }
 
 .lp-status-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
   flex-wrap: wrap;
 }
 
@@ -4729,37 +4874,35 @@ body {
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  padding: 3px 8px;
-  border-radius: 6px;
-  background: var(--ink-900);
-  color: #fff;
+  letter-spacing: 0.07em;
+  color: var(--gold-400);
 }
 
 .lp-status-title {
   font-family: var(--font-display);
-  font-size: 16px;
+  font-size: 15.5px;
   font-weight: 700;
   color: var(--ink-900);
   margin: 0;
 }
 
+/* ---- Stepper Timeline --------------------------------------------- */
+
 .lp-tracker-steps {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: var(--raised);
+  background: var(--sunken);
   border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  padding: 12px 16px;
-  margin: 2px 0;
+  border-radius: 8px;
+  padding: 10px 14px;
 }
 
 .lp-step {
   display: flex;
   align-items: center;
   gap: 8px;
-  opacity: 0.5;
+  opacity: 0.45;
 }
 
 .lp-step.is-complete,
@@ -4771,8 +4914,8 @@ body {
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  background: var(--ink-200);
-  color: var(--ink-700);
+  background: var(--navy-800);
+  color: var(--ink-400);
   font-size: 11px;
   font-weight: 700;
   display: flex;
@@ -4783,24 +4926,19 @@ body {
 
 .lp-step.is-complete .lp-step-dot {
   background: #10b981;
-  color: #fff;
+  color: #ffffff;
 }
 
 .lp-step.is-current .lp-step-dot {
-  background: #f59e0b;
-  color: #fff;
-  animation: pulse-dot 2s infinite ease-in-out;
+  background: var(--gold-500);
+  color: #0b111e;
+  font-weight: 800;
+  box-shadow: 0 0 8px rgba(207, 168, 88, 0.4);
 }
 
 .lp-step.is-ready .lp-step-dot {
   background: #10b981;
-  color: #fff;
-  font-size: 13px;
-}
-
-@keyframes pulse-dot {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.1); }
+  color: #ffffff;
 }
 
 .lp-step-label {
@@ -4812,68 +4950,116 @@ body {
 
 .lp-step-time {
   font-size: 11px;
-  color: var(--ink-500);
+  color: var(--ink-400);
 }
 
 .lp-step-connector {
   flex: 1;
   height: 2px;
-  background: var(--line);
-  margin: 0 10px;
+  background: var(--line-strong);
+  margin: 0 8px;
 }
 
 .lp-step-connector.is-active {
   background: #10b981;
 }
 
+/* ---- Status Callouts ---------------------------------------------- */
+
 .lp-ready-banner {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  background: #dcfce7;
-  border: 1px solid #86efac;
+  align-items: flex-start;
+  gap: 10px;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.3);
   border-radius: 8px;
   padding: 10px 14px;
-  color: #166534;
-  font-size: 13px;
+  color: var(--ink-900);
 }
 
 .lp-ready-icon {
-  font-size: 22px;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.lp-ready-heading {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #34d399;
 }
 
 .lp-ready-sub {
-  font-size: 11.5px;
-  color: #15803d;
+  font-size: 12px;
+  color: var(--ink-700);
   margin-top: 2px;
 }
 
 .lp-declined-box {
-  background: #fee2e2;
-  border: 1px solid #fca5a5;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.3);
   border-radius: 8px;
   padding: 10px 14px;
-  color: #991b1b;
-  font-size: 13px;
 }
+
+.lp-declined-heading {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #f87171;
+}
+
+.lp-declined-reason {
+  font-size: 12px;
+  color: var(--ink-700);
+  margin-top: 2px;
+}
+
+.lp-cancelled-box,
+.lp-cancelled-notice {
+  background: var(--sunken);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.lp-cancelled-heading {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-600);
+}
+
+.lp-cancelled-sub,
+.lp-cancelled-notice {
+  font-size: 12px;
+  color: var(--ink-400);
+  margin-top: 2px;
+  line-height: 1.35;
+}
+
+.lp-cancel-warn {
+  font-size: 11px;
+  color: var(--amber-600);
+  line-height: 1.3;
+  margin-top: 3px;
+}
+
+/* ---- Status Details Grid ------------------------------------------ */
 
 .lp-status-details {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 10px;
-  font-size: 13px;
   border-top: 1px solid var(--line);
-  padding-top: 12px;
+  padding-top: 10px;
 }
 
 .lp-detail-item {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
 }
 
 .lp-detail-label {
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -4881,7 +5067,7 @@ body {
 }
 
 .lp-detail-value {
-  font-size: 13px;
+  font-size: 12.5px;
   color: var(--ink-800);
 }
 
@@ -4898,12 +5084,12 @@ body {
 .lp-flags-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 5px;
+  gap: 4px;
   margin-top: 2px;
 }
 
 .lp-chip {
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 600;
   padding: 2px 7px;
   border-radius: 5px;
@@ -4912,8 +5098,8 @@ body {
 }
 
 .lp-chip.allergen {
-  background: #fee2e2;
-  color: #b91c1c;
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
 }
 
 .lp-chip.dietary {
@@ -4934,74 +5120,6 @@ body {
   font-weight: 500;
 }
 
-.lp-today {
-  margin-bottom: 8px;
-}
-
-.lp-today-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.lp-today-title {
-  font-family: var(--font-display);
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--ink-900);
-  margin: 0;
-}
-
-.lp-today-date {
-  font-size: 13px;
-  color: var(--ink-400);
-  margin-top: 2px;
-}
-
-.lp-meal-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 14px;
-}
-
-.lp-meal {
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  background: var(--raised);
-  padding: 14px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.lp-meal.prominent {
-  background: var(--card);
-  border-color: var(--line-strong);
-  padding: 18px 20px;
-}
-
-.lp-meal-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.lp-meal-name {
-  font-family: var(--font-display);
-  font-size: 15px;
-  font-weight: 700;
-  text-transform: capitalize;
-  color: var(--ink-900);
-}
-
-.lp-meal-times {
-  font-size: 12px;
-  color: var(--ink-400);
-}
-
 .lp-closed {
   font-size: 12.5px;
   color: var(--ink-600);
@@ -5014,7 +5132,7 @@ body {
   font-size: 12.5px;
   font-weight: 600;
   color: var(--red-600);
-  background: var(--red-100);
+  background: rgba(239, 68, 68, 0.12);
   border-radius: 8px;
   padding: 8px 11px;
 }
@@ -5031,6 +5149,7 @@ body {
   align-items: flex-start;
   gap: 8px;
   margin-top: 2px;
+  width: 100%;
 }
 
 .lp-primary {
@@ -5050,7 +5169,7 @@ body {
 }
 
 .lp-note-toggle:hover {
-  color: var(--gold-600);
+  color: var(--gold-400);
 }
 
 .lp-note-field {

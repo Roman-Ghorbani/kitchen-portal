@@ -29,10 +29,12 @@ type Props =
       id: string;
       /** The kitchen has already made it. Cancelling still helps them. */
       alreadyReady: boolean;
+      /** Whether this is a day-of cancellation */
+      isDayOf?: boolean;
     };
 
 /**
- * One tap to ask, one tap to pull out.
+ * One tap to ask, one tap to cancel.
  *
  * His allergies come pre-ticked from his member record and are shown as a
  * single summary line, not sixteen checkboxes. That keeps the common case at
@@ -92,6 +94,11 @@ export function PlateButton(props: Props) {
           {pending && <span className="spinner" />}
           {pending ? 'Cancelling…' : "Cancel — I'll be there"}
         </button>
+        {props.isDayOf && (
+          <div className="lp-cancel-warn">
+            Note: If you cancel today, you cannot request another plate for this meal today.
+          </div>
+        )}
         {props.alreadyReady && (
           <div className="lp-msg">
             Already plated. Cancelling still tells the kitchen not to hold it.
@@ -100,7 +107,7 @@ export function PlateButton(props: Props) {
         {message && (
           <div
             className="lp-msg"
-            style={failed ? { color: 'var(--red-600)' } : undefined}
+            style={failed ? { color: 'var(--red-600)' } : { color: 'var(--gold-400)' }}
           >
             {message}
           </div>
