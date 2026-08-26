@@ -158,7 +158,7 @@ export default async function AdminLatePlatesPage() {
           </div>
 
           <div style={{ fontSize: 12.5, color: 'var(--ink-400)' }}>
-            Standing Cutoffs: Lunch <strong>{clock(standingCutoffs.lunch)}</strong> · Dinner <strong>{clock(standingCutoffs.dinner)}</strong>
+            Standing Cutoffs: Lunch <strong>{clock(standingCutoffs.lunch.cutoff)}</strong> · Dinner <strong>{clock(standingCutoffs.dinner.cutoff)}</strong>
           </div>
         </div>
 
