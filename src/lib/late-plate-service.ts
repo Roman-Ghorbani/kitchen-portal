@@ -25,6 +25,7 @@ import {
   latePlates,
   latePlateSettings,
   latePlateMealDefaults,
+  recurringLatePlates,
   members,
   events,
 } from '../db/schema.ts';
@@ -1110,3 +1111,139 @@ export async function myLatePlatesInRange(
       a.date === b.date ? a.meal.localeCompare(b.meal) : a.date < b.date ? -1 : 1,
     );
 }
+
+/* ------------------------------------------------------------------ */
+/* Recurring Late Plates (Standing Schedules)                          */
+/* ------------------------------------------------------------------ */
+
+export interface RecurringLatePlateRow {
+  id: string;
+  memberId: string;
+  dayOfWeek: number;
+  meal: Meal;
+  note: string | null;
+  active: boolean;
+  createdAt: Date;
+}
+
+export async function getMemberRecurringPlates(
+  memberId: string,
+): Promise<RecurringLatePlateRow[]> {
+  const rows = await db
+    .select()
+    .from(recurringLatePlates)
+    .where(and(eq(recurringLatePlates.memberId, memberId), eq(recurringLatePlates.active, true)))
+    .orderBy(recurringLatePlates.dayOfWeek, recurringLatePlates.meal);
+
+  return rows.map((r) => ({
+    id: r.id,
+    memberId: r.memberId,
+    dayOfWeek: r.dayOfWeek,
+    meal: r.meal as Meal,
+    note: r.note ?? null,
+    active: Boolean(r.active),
+    createdAt: r.createdAt,
+  }));
+}
+
+export async function setRecurringLatePlate(
+  memberId: string,
+  dayOfWeek: number,
+  meal: Meal,
+  note?: string,
+): Promise<LatePlateResult> {
+  const [member] = await db
+    .select({ name: members.name })
+    .from(members)
+    .where(eq(members.id, memberId))
+    .limit(1);
+
+  if (!member) return { ok: false, message: 'Member not found.' };
+
+  const trimmed = note?.trim().slice(0, MAX_NOTE) || null;
+
+  const [existing] = await db
+    .select()
+    .from(recurringLatePlates)
+    .where(
+      and(
+        eq(recurringLatePlates.memberId, memberId),
+        eq(recurringLatePlates.dayOfWeek, dayOfWeek),
+        eq(recurringLatePlates.meal, meal),
+      ),
+    )
+    .limit(1);
+
+  if (existing) {
+    await db
+      .update(recurringLatePlates)
+      .set({ note: trimmed, active: true })
+      .where(eq(recurringLatePlates.id, existing.id));
+  } else {
+    await db.insert(recurringLatePlates).values({
+      memberId,
+      dayOfWeek,
+      meal,
+      note: trimmed,
+      active: true,
+    });
+  }
+
+  const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  const dayName = dayNames[dayOfWeek] ?? `Day ${dayOfWeek}`;
+
+  await db.insert(events).values({
+    action: 'late-plate.recurring_saved',
+    entityType: 'recurring-late-plate',
+    actorMemberId: memberId,
+    actorName: member.name,
+    summary: `${member.name} scheduled a recurring weekly ${meal} late plate for every ${dayName}`,
+    payload: { dayOfWeek, meal, note: trimmed },
+  });
+
+  return {
+    ok: true,
+    message: `Recurring weekly ${meal} late plate scheduled for every ${dayName}.`,
+  };
+}
+
+export async function deleteRecurringLatePlate(
+  id: string,
+  memberId: string,
+): Promise<LatePlateResult> {
+  const [row] = await db
+    .select()
+    .from(recurringLatePlates)
+    .where(eq(recurringLatePlates.id, id))
+    .limit(1);
+
+  if (!row) return { ok: false, message: 'Recurring schedule not found.' };
+  if (row.memberId !== memberId) return { ok: false, message: 'Unauthorized.' };
+
+  await db.delete(recurringLatePlates).where(eq(recurringLatePlates.id, id));
+
+  const [member] = await db
+    .select({ name: members.name })
+    .from(members)
+    .where(eq(members.id, memberId))
+    .limit(1);
+
+  const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  const dayName = dayNames[row.dayOfWeek] ?? `Day ${row.dayOfWeek}`;
+
+  await db.insert(events).values({
+    action: 'late-plate.recurring_deleted',
+    entityType: 'recurring-late-plate',
+    entityId: id,
+    actorMemberId: memberId,
+    actorName: member?.name ?? null,
+    summary: `${member?.name ?? 'A brother'} removed recurring ${row.meal} late plate for every ${dayName}`,
+    payload: { dayOfWeek: row.dayOfWeek, meal: row.meal },
+  });
+
+  return {
+    ok: true,
+    message: `Recurring schedule for ${dayName} ${row.meal} removed.`,
+  };
+}
+

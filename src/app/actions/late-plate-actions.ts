@@ -109,3 +109,32 @@ export async function adminUpdateStatus(
   return res;
 }
 
+export async function addRecurringLatePlate(
+  dayOfWeek: number,
+  meal: Meal,
+  note?: string,
+): Promise<LatePlateResult> {
+  const session = await getSession();
+  if (!session || session.role !== 'brother') {
+    return { ok: false, message: 'Sign in first.' };
+  }
+
+  const { setRecurringLatePlate } = await import('../../lib/late-plate-service.ts');
+  const res = await setRecurringLatePlate(session.sub, dayOfWeek, meal, note);
+  if (res.ok) refresh();
+  return res;
+}
+
+export async function removeRecurringLatePlate(id: string): Promise<LatePlateResult> {
+  const session = await getSession();
+  if (!session || session.role !== 'brother') {
+    return { ok: false, message: 'Sign in first.' };
+  }
+
+  const { deleteRecurringLatePlate } = await import('../../lib/late-plate-service.ts');
+  const res = await deleteRecurringLatePlate(id, session.sub);
+  if (res.ok) refresh();
+  return res;
+}
+
+

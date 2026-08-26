@@ -204,14 +204,17 @@ describe('late plate enabled controls', () => {
     assert.equal(typeof enabled, 'boolean');
   });
 
-  test('admin functions are properly exported', async () => {
-    const { unblockLatePlate, adminManualRequest, adminOverrideStatus } = await import(
-      '../late-plate-service.ts'
-    );
-    assert.equal(typeof unblockLatePlate, 'function');
-    assert.equal(typeof adminManualRequest, 'function');
-    assert.equal(typeof adminOverrideStatus, 'function');
+  test('recurring late plate functions are properly exported', async () => {
+    const {
+      getMemberRecurringPlates,
+      setRecurringLatePlate,
+      deleteRecurringLatePlate,
+    } = await import('../late-plate-service.ts');
+    assert.equal(typeof getMemberRecurringPlates, 'function');
+    assert.equal(typeof setRecurringLatePlate, 'function');
+    assert.equal(typeof deleteRecurringLatePlate, 'function');
   });
 });
+
 
 

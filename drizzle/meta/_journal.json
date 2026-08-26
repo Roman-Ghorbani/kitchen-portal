@@ -36,6 +36,13 @@
       "when": 1787719892450,
       "tag": "0004_slippery_lockjaw",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1787722275497,
+      "tag": "0005_fresh_millenium_guard",
+      "breakpoints": true
     }
   ]
 }

@@ -1,8 +1,9 @@
 /**
- * Late plates, brother side.
+ * Late plates, brother side dashboard.
  *
- * Fast, intuitive, and engaging interface for brothers to browse upcoming menus,
- * request late plates, and track preparation status in real-time.
+ * Fast, intuitive, and engaging dashboard for brothers to browse upcoming menus,
+ * manage recurring weekly schedules, request late plates, and track preparation
+ * status in real-time.
  */
 
 import { redirect } from 'next/navigation';
@@ -19,6 +20,7 @@ import {
   mealWindowsForRange,
   myLatePlatesInRange,
   getMemberDietary,
+  getMemberRecurringPlates,
   SERVE_TIMES,
   MEALS,
   type MealWindow,
@@ -31,6 +33,7 @@ import type { Meal } from '../../../lib/types.ts';
 import { AppShell } from '../shell.tsx';
 import { PlateButton } from './plate-button.tsx';
 import { StatusTracker } from './status-tracker.tsx';
+import { RecurringSchedules } from './recurring-schedules.tsx';
 
 export const dynamic = 'force-dynamic';
 
@@ -65,10 +68,11 @@ export default async function LatePlatePage() {
   const today = todayInEastern();
   const dates = Array.from({ length: HORIZON_DAYS }, (_, i) => addDays(today, i));
 
-  const [windows, mine, dietary, menus, semester] = await Promise.all([
+  const [windows, mine, dietary, recurring, menus, semester] = await Promise.all([
     mealWindowsForRange(dates),
     myLatePlatesInRange(session.sub, dates[0], dates[dates.length - 1]),
     getMemberDietary(session.sub),
+    getMemberRecurringPlates(session.sub),
     // Fetch menus for all days in the horizon so every meal shows what's cooking
     Promise.all(dates.map((d) => getDayMenu(d))),
     getActiveSemester().catch(() => null),
@@ -91,12 +95,20 @@ export default async function LatePlatePage() {
 
   const later = dates.slice(1);
 
+  // Dashboard Stats Calculations
+  const todayActivePlate = mine.find(
+    (p) => p.date === today && (p.status === 'waiting' || p.status === 'ready'),
+  );
+  const weekActiveCount = mine.filter(
+    (p) => p.status === 'waiting' || p.status === 'ready',
+  ).length;
+
   return (
     <AppShell
       session={session}
       active="/late-plate"
-      title="Late Plate"
-      subtitle="Request the kitchen to set a plate aside in the student fridge"
+      title="Late Plate Dashboard"
+      subtitle="Browse menus, schedule recurring late plates, and track pickup in the student fridge"
     >
       {/* Testing Notice banner when Kitchen Manager has paused requesting */}
       {!latePlatesEnabled && (
@@ -111,6 +123,60 @@ export default async function LatePlatePage() {
           </div>
         </div>
       )}
+
+      {/* Brother Dashboard Stats Header */}
+      <div className="lp-dashboard-hero">
+        <div className="card card-pad lp-hero-stat">
+          <div className="lp-hero-stat-label">Today&apos;s Status</div>
+          <div className="lp-hero-stat-value">
+            {todayActivePlate ? (
+              <span style={{ color: todayActivePlate.status === 'ready' ? '#10b981' : 'var(--gold-400)' }}>
+                {todayActivePlate.meal === 'lunch' ? '☀️ Lunch' : '🌙 Dinner'}{' '}
+                {todayActivePlate.status === 'ready' ? 'Ready in Fridge' : 'In Queue'}
+              </span>
+            ) : (
+              <span style={{ color: 'var(--ink-400)', fontSize: 16 }}>No requests today</span>
+            )}
+          </div>
+          <div className="lp-hero-stat-sub">
+            {todayActivePlate
+              ? 'Stored in the student fridge upon service'
+              : 'Request below before service cutoff'}
+          </div>
+        </div>
+
+        <div className="card card-pad lp-hero-stat">
+          <div className="lp-hero-stat-label">Upcoming This Week</div>
+          <div className="lp-hero-stat-value">{weekActiveCount}</div>
+          <div className="lp-hero-stat-sub">Plates requested across next 7 days</div>
+        </div>
+
+        <div className="card card-pad lp-hero-stat">
+          <div className="lp-hero-stat-label">Recurring Schedules</div>
+          <div className="lp-hero-stat-value">{recurring.length}</div>
+          <div className="lp-hero-stat-sub">Weekly standing late plates</div>
+        </div>
+
+        <div className="card card-pad lp-hero-stat">
+          <div className="lp-hero-stat-label">Your Dietary Profile</div>
+          <div className="lp-hero-stat-value" style={{ fontSize: 14, fontWeight: 600 }}>
+            {dietary.flags.length > 0 ? (
+              <span style={{ color: 'var(--ink-900)' }}>
+                ⚠️ {dietary.flags.join(', ')}
+              </span>
+            ) : (
+              <span style={{ color: 'var(--ink-400)' }}>No allergies recorded</span>
+            )}
+          </div>
+          <div className="lp-hero-stat-sub">Automatically attached to requests</div>
+        </div>
+      </div>
+
+      {/* Standing Recurring Weekly Late Plates */}
+      <RecurringSchedules
+        schedules={recurring}
+        disabled={!latePlatesEnabled}
+      />
 
       {/* Today's Meal Section */}
       <div className="lp-today card card-pad">
@@ -127,7 +193,12 @@ export default async function LatePlatePage() {
           <div className="lp-meal-grid">
             {todayWindows.map(({ meal, window, request }) => {
               // If requested or active or declined, show the rich StatusTracker directly in place
-              if (request && (request.status === 'waiting' || request.status === 'ready' || request.status === 'declined')) {
+              if (
+                request &&
+                (request.status === 'waiting' ||
+                  request.status === 'ready' ||
+                  request.status === 'declined')
+              ) {
                 return (
                   <StatusTracker
                     key={meal}
@@ -159,7 +230,7 @@ export default async function LatePlatePage() {
       </div>
 
       {/* Rest of the week */}
-      <div className="section-title">Upcoming this week</div>
+      <div className="section-title" style={{ marginTop: 24 }}>Upcoming this week</div>
 
       <div className="lp-days">
         {later.map((date) => {
@@ -229,7 +300,6 @@ function MealCell({
 }) {
   const items = menu?.[meal].items ?? [];
   const isCancelledToday = isToday && request?.status === 'cancelled';
-  const isCancelledInAdvance = !isToday && request?.status === 'cancelled';
   const active =
     request && (request.status === 'waiting' || request.status === 'ready');
 

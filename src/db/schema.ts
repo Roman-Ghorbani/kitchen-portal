@@ -464,3 +464,32 @@ export const latePlateMealDefaults = sqliteTable(
   },
   (t) => [uniqueIndex('late_plate_meal_defaults_meal_unique').on(t.meal)],
 );
+
+/**
+ * Standing recurring weekly late plates scheduled by brothers.
+ * (e.g. Every Tuesday Dinner, Every Thursday Lunch).
+ */
+export const recurringLatePlates = sqliteTable(
+  'recurring_late_plates',
+  {
+    id: pk(),
+    memberId: text('member_id')
+      .notNull()
+      .references(() => members.id, { onDelete: 'cascade' }),
+    /** Day of week: 0 = Monday, 1 = Tuesday, 2 = Wednesday, 3 = Thursday, 4 = Friday, 5 = Saturday, 6 = Sunday */
+    dayOfWeek: integer('day_of_week').notNull(),
+    meal: text('meal', { enum: MEALS }).notNull(),
+    note: text('note'),
+    active: integer('active', { mode: 'boolean' }).notNull().default(true),
+    createdAt: created(),
+  },
+  (t) => [
+    uniqueIndex('recurring_late_plates_member_day_meal_unique').on(
+      t.memberId,
+      t.dayOfWeek,
+      t.meal,
+    ),
+    index('recurring_late_plates_member_idx').on(t.memberId),
+  ],
+);
+
