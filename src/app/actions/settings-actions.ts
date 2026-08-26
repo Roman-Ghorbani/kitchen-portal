@@ -78,3 +78,38 @@ export async function toggleMealDay(
       'Already-posted weeks are unchanged.',
   };
 }
+
+/**
+ * Turns brother late-plate requesting on or off.
+ *
+ * Used by the kitchen manager when testing the feature live or pausing requests.
+ */
+export async function toggleLatePlates(enabled: boolean): Promise<SettingsResult> {
+  const admin = await requireAdmin();
+  const semester = await getActiveSemester();
+
+  await db
+    .update(semesters)
+    .set({ latePlatesEnabled: enabled })
+    .where(eq(semesters.id, semester.id));
+
+  await db.insert(events).values({
+    action: 'settings.late_plates_toggled',
+    entityType: 'semester',
+    entityId: semester.id,
+    actorName: admin.name,
+    summary: `${admin.name} ${enabled ? 'enabled' : 'paused'} late plate requests for brothers`,
+    payload: { enabled },
+  });
+
+  revalidatePath('/admin/settings');
+  revalidatePath('/late-plate');
+
+  return {
+    ok: true,
+    message: enabled
+      ? 'Late plate requests are now open for brothers.'
+      : 'Late plate requests are now paused. Brothers will see a notice on the page and request buttons will be disabled.',
+  };
+}
+

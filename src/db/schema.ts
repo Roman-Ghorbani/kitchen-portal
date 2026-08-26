@@ -44,7 +44,7 @@ const LATE_PLATE_STATUSES = [
   'waiting',   // requested; chef has not acted on it
   'ready',     // plated and on the shelf
   'declined',  // chef cannot make it; `reason` says why
-  'cancelled', // brother pulled out himself
+  'cancelled', // brother cancelled himself
 ] as const;
 
 const pk = () =>
@@ -65,6 +65,14 @@ export const semesters = sqliteTable('semesters', {
   startsOn: text('starts_on').notNull(),
   endsOn: text('ends_on').notNull(),
   active: integer('active', { mode: 'boolean' }).notNull().default(false),
+
+  /**
+   * Whether brothers are permitted to submit late plate requests.
+   * Kitchen managers can turn this off to pause the tool during testing.
+   */
+  latePlatesEnabled: integer('late_plates_enabled', { mode: 'boolean' })
+    .notNull()
+    .default(true),
 
   /**
    * Which day/meal combinations the house serves, as
@@ -338,7 +346,7 @@ export const events = sqliteTable(
 /**
  * One row per brother per meal. A request is not deleted when it is cancelled
  * or declined - the row stays and its status changes, so the chefs can see
- * that somebody pulled out rather than wondering whether they missed a name.
+ * that somebody cancelled rather than wondering whether they missed a name.
  */
 export const latePlates = sqliteTable(
   'late_plates',

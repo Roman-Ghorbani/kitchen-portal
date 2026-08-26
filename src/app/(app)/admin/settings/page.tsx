@@ -5,6 +5,7 @@ import { getActiveSemester } from '../../../../lib/week-service.ts';
 import type { MealDayConfig, Meal } from '../../../../lib/types.ts';
 import { AppShell } from '../../shell.tsx';
 import { MealGrid } from './meal-grid.tsx';
+import { LatePlateToggle } from './late-plate-toggle.tsx';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,6 +17,7 @@ export default async function SettingsPage() {
   const semester = await getActiveSemester();
   const mealDays = semester.mealDays as MealDayConfig;
   const slotSizes = semester.slotSizes as Record<Meal, number>;
+  const latePlatesEnabled = semester.latePlatesEnabled ?? true;
 
   return (
     <AppShell
@@ -33,6 +35,18 @@ export default async function SettingsPage() {
           slots, so nobody is ever assigned a shift that does not exist.
         </p>
         <MealGrid initial={mealDays} />
+      </div>
+
+      <div className="card card-pad" style={{ marginTop: 16 }}>
+        <h2 className="section-title" style={{ marginTop: 0 }}>
+          Late plate tool
+        </h2>
+        <p style={{ fontSize: 13, color: 'var(--ink-400)', marginTop: 0 }}>
+          Control brother access to the late plate request system. Keep paused
+          while testing live so brothers can see where the tool is without
+          submitting requests before the kitchen is ready.
+        </p>
+        <LatePlateToggle initialEnabled={latePlatesEnabled} />
       </div>
 
       <div className="card card-pad" style={{ marginTop: 16 }}>

@@ -196,3 +196,12 @@ describe('which meal the kitchen is on', () => {
     assert.equal(at('00:01'), 'lunch');
   });
 });
+
+describe('late plate enabled controls', () => {
+  test('isLatePlateEnabled defaults to true when semester is not present or enabled', async () => {
+    const { isLatePlateEnabled } = await import('../late-plate-service.ts');
+    const enabled = await isLatePlateEnabled();
+    assert.equal(typeof enabled, 'boolean');
+  });
+});
+

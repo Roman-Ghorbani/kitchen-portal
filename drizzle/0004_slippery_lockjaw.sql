@@ -1,0 +1,1 @@
+ALTER TABLE `semesters` ADD `late_plates_enabled` integer DEFAULT true NOT NULL;

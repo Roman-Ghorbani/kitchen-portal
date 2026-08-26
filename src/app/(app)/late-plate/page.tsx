@@ -32,9 +32,11 @@ import {
   type MemberDietary,
 } from '../../../lib/late-plate-service.ts';
 import { getDayMenu, type DayMenu } from '../../../lib/menu-service.ts';
+import { getActiveSemester } from '../../../lib/week-service.ts';
 import type { Meal } from '../../../lib/types.ts';
 import { AppShell } from '../shell.tsx';
 import { PlateButton } from './plate-button.tsx';
+import { StatusTracker } from './status-tracker.tsx';
 
 export const dynamic = 'force-dynamic';
 
@@ -69,16 +71,30 @@ export default async function LatePlatePage() {
   const today = todayInEastern();
   const dates = Array.from({ length: HORIZON_DAYS }, (_, i) => addDays(today, i));
 
-  const [windows, mine, dietary, menu] = await Promise.all([
+  const [windows, mine, dietary, menus, semester] = await Promise.all([
     mealWindowsForRange(dates),
     myLatePlatesInRange(session.sub, dates[0], dates[dates.length - 1]),
     getMemberDietary(session.sub),
-    // Never lets the page wait on it - see menu-service.ts.
-    getDayMenu(today),
+    // Fetch menus for all days in the horizon so every meal shows what's cooking
+    Promise.all(dates.map((d) => getDayMenu(d))),
+    getActiveSemester().catch(() => null),
   ]);
 
+  const latePlatesEnabled = semester?.latePlatesEnabled ?? true;
+  const menuByDate = new Map<string, DayMenu | null>(
+    dates.map((d, i) => [d, menus[i]]),
+  );
+
   const byKey = new Map(mine.map((r) => [`${r.date}:${r.meal}`, r]));
-  const live = mine.filter((r) => r.status === 'waiting' || r.status === 'ready');
+
+  // Live or recent requests for today specifically
+  const todayLiveRequests = mine.filter(
+    (r) =>
+      r.date === today &&
+      (r.status === 'waiting' || r.status === 'ready' || r.status === 'declined'),
+  );
+
+  const todayMenu = menuByDate.get(today) ?? null;
 
   const todayWindows = MEALS.map((meal) => ({
     meal,
@@ -93,27 +109,44 @@ export default async function LatePlatePage() {
       session={session}
       active="/late-plate"
       title="Late Plate"
-      subtitle="Ask the kitchen to set a plate aside"
+      subtitle="Request the kitchen to set a plate aside"
     >
-      {live.length > 0 && (
-        <div className="alert good">
+      {/* Testing Notice banner when Kitchen Manager has paused requesting */}
+      {!latePlatesEnabled && (
+        <div className="alert warn" style={{ marginBottom: 16 }}>
           <div className="alert-body">
             <div className="alert-title">
-              {live.length === 1
-                ? 'You have a plate down'
-                : `You have ${live.length} plates down`}
+              Late Plate Tool Testing Notice
             </div>
-            {live
-              .map(
-                (r) =>
-                  `${weekday(r.date)} ${r.meal}` +
-                  (r.status === 'ready' ? ' — ready for pickup' : ''),
-              )
-              .join(' · ')}
+            The late plate request tool is currently being tested live by the
+            kitchen manager. You can view the layout and menus below, but
+            requesting is temporarily disabled until it officially opens.
           </div>
         </div>
       )}
 
+      {/* Prominent Status Tracker for Today's Plate(s) */}
+      {todayLiveRequests.length > 0 && (
+        <div className="lp-status-section">
+          <div className="section-title" style={{ marginTop: 0 }}>
+            {todayLiveRequests.length === 1
+              ? "Today's Active Late Plate"
+              : "Today's Active Late Plates"}
+          </div>
+          <div className="lp-status-grid">
+            {todayLiveRequests.map((req) => (
+              <StatusTracker
+                key={req.id}
+                request={req}
+                window={windows.get(`${today}:${req.meal}`)}
+                menu={todayMenu}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Today's Meal Grid */}
       <div className="lp-today card card-pad">
         <div className="lp-today-head">
           <div>
@@ -135,7 +168,8 @@ export default async function LatePlatePage() {
                 window={window}
                 request={request}
                 dietary={dietary}
-                menu={menu}
+                menu={todayMenu}
+                latePlatesEnabled={latePlatesEnabled}
                 prominent
               />
             ))}
@@ -147,6 +181,7 @@ export default async function LatePlatePage() {
 
       <div className="lp-days">
         {later.map((date) => {
+          const dayMenu = menuByDate.get(date) ?? null;
           const cells = MEALS.map((meal) => ({
             meal,
             window: windows.get(`${date}:${meal}`)!,
@@ -169,6 +204,8 @@ export default async function LatePlatePage() {
                     window={window}
                     request={request}
                     dietary={dietary}
+                    menu={dayMenu}
+                    latePlatesEnabled={latePlatesEnabled}
                   />
                 ))}
               </div>
@@ -178,7 +215,7 @@ export default async function LatePlatePage() {
       </div>
 
       <div className="note">
-        A late plate is boxed and set aside during service. Ask before the
+        A late plate is boxed and set aside during service. Request before the
         cutoff and pick it up from the kitchen when you get back. Cutoffs are set
         by the chefs and can move — today lunch closes at{' '}
         {clock(windows.get(`${today}:lunch`)?.cutoff ?? '13:30')} and dinner at{' '}
@@ -197,14 +234,16 @@ function MealCell({
   request,
   dietary,
   menu = null,
+  latePlatesEnabled = true,
   prominent = false,
 }: {
   meal: Meal;
   window: MealWindow;
   request: LatePlateRow | null;
   dietary: MemberDietary;
-  /** Today's menu from the kitchen TV, when it could be reached. */
+  /** Menu from the kitchen TV Pi when available. */
   menu?: DayMenu | null;
+  latePlatesEnabled?: boolean;
   prominent?: boolean;
 }) {
   const items = menu?.[meal].items ?? [];
@@ -219,7 +258,7 @@ function MealCell({
       </div>
 
       <div className="lp-meal-times">
-        Serves {clock(SERVE_TIMES[meal])} · asks close {clock(window.cutoff)}
+        Serves {clock(SERVE_TIMES[meal])} · requests close {clock(window.cutoff)}
       </div>
 
       {items.length > 0 && (
@@ -239,6 +278,9 @@ function MealCell({
 
       {active ? (
         <>
+          <div className="lp-submitted-time">
+            Requested at {formatClockTime(request.requestedAt)}
+          </div>
           {request.flags.hasAny && (
             <div
               className={`lp-flags-back${request.flags.hasAllergen ? ' has-allergen' : ''}`}
@@ -265,6 +307,8 @@ function MealCell({
           meal={meal}
           defaultFlags={dietary.flags}
           defaultOther={dietary.other ?? ''}
+          disabled={!latePlatesEnabled}
+          disabledReason="Late plate requests are paused for testing."
         />
       ) : (
         <div className="lp-closed">{window.closedReason}</div>
@@ -285,4 +329,13 @@ function StatusTag({
   if (request?.status === 'declined') return <span className="tag bad">Declined</span>;
   if (!window.open) return <span className="tag locked">Closed</span>;
   return <span className="tag ok">Open</span>;
+}
+
+function formatClockTime(date: Date): string {
+  const hours = date.getHours();
+  const minutes = date.getMinutes();
+  const h = hours % 12 || 12;
+  const m = minutes.toString().padStart(2, '0');
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  return `${h}:${m} ${ampm}`;
 }

@@ -126,7 +126,7 @@ export async function GET(request: NextRequest) {
         requestedAt: p.requestedAt.toISOString(),
         resolvedAt: p.resolvedAt?.toISOString() ?? null,
         /**
-         * When he pulled out. Null unless cancelled - a chef reading the screen
+         * When cancelled. Null unless cancelled - a chef reading the screen
          * should not have to work out which timestamp means what.
          */
         cancelledAt:

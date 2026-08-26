@@ -46,8 +46,8 @@ export async function GET(request: NextRequest) {
     const nextMonday = addDays(currentMonday, 7);
 
     const [currentWeek, nextWeek, openShifts] = await Promise.all([
-      getWeek(currentMonday),
-      getWeek(nextMonday),
+      getWeek(currentMonday).catch(() => null),
+      getWeek(nextMonday).catch(() => null),
       getOpenShifts().catch(() => []),
     ]);
 

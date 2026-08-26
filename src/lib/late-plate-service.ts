@@ -14,7 +14,7 @@
  *
  *  2. Nothing is deleted. A cancelled or declined request keeps its row and
  *     changes status, because a name that silently vanishes from the chefs'
- *     list is worse than one marked "pulled out" - they cannot tell the
+ *     list is worse than one marked "cancelled" - they cannot tell the
  *     difference between a man who changed his mind and a bug.
  */
 
@@ -49,6 +49,14 @@ export type LatePlateStatus = 'waiting' | 'ready' | 'declined' | 'cancelled';
 
 /** Statuses that count as a live request holding a slot in the queue. */
 const OPEN_STATUSES: LatePlateStatus[] = ['waiting', 'ready'];
+
+/**
+ * Checks whether late plate requests are currently enabled across the house.
+ */
+export async function isLatePlateEnabled(): Promise<boolean> {
+  const semester = await getActiveSemester().catch(() => null);
+  return semester?.latePlatesEnabled ?? true;
+}
 
 /**
  * The cutoff a meal falls back to when nothing else has ever been set.
@@ -463,16 +471,27 @@ export async function requestLatePlate(
   const req: LatePlateRequest =
     typeof input === 'string' || input === null ? { note: input } : input;
 
-  const [member] = await db
-    .select({
-      name: members.name,
-      active: members.active,
-      dietaryFlags: members.dietaryFlags,
-      dietaryOther: members.dietaryOther,
-    })
-    .from(members)
-    .where(eq(members.id, memberId))
-    .limit(1);
+  const [semester, member] = await Promise.all([
+    getActiveSemester().catch(() => null),
+    db
+      .select({
+        name: members.name,
+        active: members.active,
+        dietaryFlags: members.dietaryFlags,
+        dietaryOther: members.dietaryOther,
+      })
+      .from(members)
+      .where(eq(members.id, memberId))
+      .limit(1)
+      .then((rows) => rows[0]),
+  ]);
+
+  if (semester && semester.latePlatesEnabled === false) {
+    return {
+      ok: false,
+      message: 'Late plate requests are temporarily paused while the system is being tested.',
+    };
+  }
 
   if (!member) return { ok: false, message: 'That member is not on the roster.' };
   if (!member.active) {

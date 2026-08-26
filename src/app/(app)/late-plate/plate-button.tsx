@@ -20,6 +20,9 @@ type Props =
       /** His standing flags, already ticked. */
       defaultFlags: string[];
       defaultOther: string;
+      /** Whether late plate requesting is paused by the kitchen manager */
+      disabled?: boolean;
+      disabledReason?: string;
     }
   | {
       mode: 'cancel';
@@ -106,28 +109,39 @@ export function PlateButton(props: Props) {
     );
   }
 
-  const { date, meal } = props;
+  const { date, meal, disabled = false, disabledReason } = props;
   const summary = summariseFlags(flags, other);
 
   function toggle(id: string) {
+    if (disabled) return;
     setFlags((current) =>
       current.includes(id) ? current.filter((f) => f !== id) : [...current, id],
     );
   }
 
-  const submit = () => run(() => requestPlate(date, meal, note, flags, other));
+  const submit = () => {
+    if (disabled) return;
+    run(() => requestPlate(date, meal, note, flags, other));
+  };
 
   return (
     <div className="lp-actions">
       <button
-        className="btn gold sm lp-primary"
+        className={`btn sm lp-primary ${disabled ? 'ghost' : 'gold'}`}
         type="button"
-        disabled={pending}
+        disabled={pending || disabled}
         onClick={submit}
+        title={disabled ? (disabledReason ?? 'Late plate requests are currently paused') : undefined}
       >
         {pending && <span className="spinner" />}
-        {pending ? 'Sending…' : 'Save me a plate'}
+        {pending ? 'Sending…' : disabled ? 'Requests Paused' : 'Save me a plate'}
       </button>
+
+      {disabled && (
+        <div className="lp-msg" style={{ fontSize: 11.5, color: 'var(--ink-400)' }}>
+          {disabledReason ?? 'Requests paused by kitchen manager for testing.'}
+        </div>
+      )}
 
       <button
         className={`lp-flag-summary${summary.hasAllergen ? ' has-allergen' : ''}`}

@@ -20,8 +20,8 @@ import { RememberToken } from './token-recovery.tsx';
  *     lunch is finished before starting dinner, but never competing for
  *     attention with work that is still outstanding.
  *
- *  3. **A cancelled plate is not actionable.** It shows with the time he pulled
- *     out and no buttons at all. The server refuses these too — this is the
+ *  3. **A cancelled plate is not actionable.** It shows with the time it was
+ *     cancelled and no buttons at all. The server refuses these too — this is the
  *     screen agreeing with the rule, not enforcing it.
  *
  * Polls the same public API the TV will use rather than going through a server
@@ -154,7 +154,7 @@ export function KitchenQueue({
   const load = useCallback(async () => {
     try {
       // all=1 so cancelled and declined plates are visible here. A brother who
-      // pulled out silently vanishing from this screen is exactly the bug the
+      // cancelled silently vanishing from this screen is exactly the bug the
       // chefs would never report and never trust the tool again after.
       const res = await fetch(
         `/api/late-plates?date=${date}&all=1&device=${encodeURIComponent(device)}`,
@@ -437,7 +437,7 @@ export function KitchenQueue({
                   <div className="kq-card-actions">
                     {plate.status === 'cancelled' ? (
                       // No buttons at all. The server refuses these too.
-                      <span className="kq-locked-note">He pulled out</span>
+                      <span className="kq-locked-note">Cancelled</span>
                     ) : (
                       <button
                         className="kq-btn undo"
