@@ -393,7 +393,183 @@ export async function listLatePlates(
           ),
     );
 
-  return rows.map(toRow).sort((a, b) => a.requestedAt.getTime() - b.requestedAt.getTime());
+  return rows
+    .map(toRow)
+    .sort((a, b) => a.requestedAt.getTime() - b.requestedAt.getTime());
+}
+
+/* ------------------------------------------------------------------ */
+/* Admin Management & Analytics                                        */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Lifts the re-request restriction for a brother who cancelled a plate.
+ * Removes the cancelled row so they (or an admin) can submit a fresh request.
+ */
+export async function unblockLatePlate(
+  latePlateId: string,
+  adminName: string,
+): Promise<LatePlateResult> {
+  const [row] = await db
+    .select({
+      id: latePlates.id,
+      memberId: latePlates.memberId,
+      date: latePlates.date,
+      meal: latePlates.meal,
+      name: members.name,
+    })
+    .from(latePlates)
+    .innerJoin(members, eq(members.id, latePlates.memberId))
+    .where(eq(latePlates.id, latePlateId))
+    .limit(1);
+
+  if (!row) {
+    return { ok: false, message: 'Request not found.' };
+  }
+
+  await db.delete(latePlates).where(eq(latePlates.id, latePlateId));
+
+  await db.insert(events).values({
+    action: 'late-plate.unblocked',
+    entityType: 'late-plate',
+    entityId: latePlateId,
+    actorName: adminName,
+    summary: `${adminName} unblocked late plate re-requesting for ${row.name} (${row.date} ${row.meal})`,
+    payload: { memberId: row.memberId, date: row.date, meal: row.meal },
+  });
+
+  return {
+    ok: true,
+    message: `Re-requesting unblocked for ${row.name} on ${row.date} (${row.meal}).`,
+  };
+}
+
+/**
+ * Allows a kitchen manager to manually request a late plate for any brother,
+ * bypassing cutoffs and closed meal gates.
+ */
+export async function adminManualRequest(
+  adminName: string,
+  memberId: string,
+  date: string,
+  meal: Meal,
+  input: LatePlateRequest = {},
+): Promise<LatePlateResult> {
+  const [member] = await db
+    .select({
+      name: members.name,
+      active: members.active,
+      dietaryFlags: members.dietaryFlags,
+      dietaryOther: members.dietaryOther,
+    })
+    .from(members)
+    .where(eq(members.id, memberId))
+    .limit(1);
+
+  if (!member) return { ok: false, message: 'Member not found on roster.' };
+
+  const trimmed = input.note?.trim().slice(0, MAX_NOTE) || null;
+  const flags =
+    input.flags === undefined || input.flags === null
+      ? normaliseFlags(member.dietaryFlags ?? [])
+      : normaliseFlags(input.flags);
+  const flagsOther =
+    input.flagsOther === undefined
+      ? (member.dietaryOther ?? null)
+      : input.flagsOther?.trim().slice(0, MAX_NOTE) || null;
+
+  const [existing] = await db
+    .select()
+    .from(latePlates)
+    .where(
+      and(
+        eq(latePlates.memberId, memberId),
+        eq(latePlates.date, date),
+        eq(latePlates.meal, meal),
+      ),
+    )
+    .limit(1);
+
+  const values = {
+    status: 'waiting' as const,
+    note: trimmed,
+    reason: null,
+    flags,
+    flagsOther,
+    acknowledgedAt: null,
+    acknowledgedBy: null,
+    requestedAt: new Date(),
+    resolvedAt: null,
+  };
+
+  if (existing) {
+    await db.update(latePlates).set(values).where(eq(latePlates.id, existing.id));
+  } else {
+    await db.insert(latePlates).values({ memberId, date, meal, ...values });
+  }
+
+  await db.insert(events).values({
+    action: 'late-plate.admin_manual_requested',
+    entityType: 'late-plate',
+    entityId: existing?.id ?? null,
+    actorName: adminName,
+    summary: `${adminName} manually placed a ${meal} late plate for ${member.name} (${date})`,
+    payload: { date, meal, note: trimmed, flags, flagsOther },
+  });
+
+  return {
+    ok: true,
+    message: `Late plate placed for ${member.name} (${date} ${meal}).`,
+  };
+}
+
+/**
+ * Admin override of a plate's status (e.g. mark Ready, Decline with reason, or Reset to Waiting).
+ */
+export async function adminOverrideStatus(
+  adminName: string,
+  id: string,
+  status: LatePlateStatus,
+  reason?: string,
+): Promise<LatePlateResult> {
+  const [row] = await db
+    .select({
+      id: latePlates.id,
+      name: members.name,
+      meal: latePlates.meal,
+      date: latePlates.date,
+    })
+    .from(latePlates)
+    .innerJoin(members, eq(members.id, latePlates.memberId))
+    .where(eq(latePlates.id, id))
+    .limit(1);
+
+  if (!row) return { ok: false, message: 'Request not found.' };
+
+  await db
+    .update(latePlates)
+    .set({
+      status,
+      reason: status === 'declined' ? (reason?.trim() || 'Declined by manager') : null,
+      resolvedAt: status === 'waiting' ? null : new Date(),
+      acknowledgedAt: status === 'ready' ? new Date() : undefined,
+      acknowledgedBy: status === 'ready' ? adminName : undefined,
+    })
+    .where(eq(latePlates.id, id));
+
+  await db.insert(events).values({
+    action: 'late-plate.admin_status_override',
+    entityType: 'late-plate',
+    entityId: id,
+    actorName: adminName,
+    summary: `${adminName} changed ${row.name}'s ${row.meal} plate on ${row.date} to ${status}`,
+    payload: { status, reason },
+  });
+
+  return {
+    ok: true,
+    message: `Updated status for ${row.name}'s plate to ${status}.`,
+  };
 }
 
 /** Shapes a joined row, folding the two flag columns into one summary. */

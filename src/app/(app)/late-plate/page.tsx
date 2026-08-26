@@ -112,22 +112,6 @@ export default async function LatePlatePage() {
         </div>
       )}
 
-      {/* Quick House Rule Banner */}
-      <div className="lp-guide-strip">
-        <div className="lp-guide-item">
-          <span className="lp-guide-icon">🧊</span>
-          <span>Plates are boxed and placed in the <strong>Student Fridge</strong></span>
-        </div>
-        <div className="lp-guide-item">
-          <span className="lp-guide-icon">⏰</span>
-          <span>Submit before cutoff (Lunch {clock(windows.get(`${today}:lunch`)?.cutoff ?? '13:30')}, Dinner {clock(windows.get(`${today}:dinner`)?.cutoff ?? '16:00')})</span>
-        </div>
-        <div className="lp-guide-item">
-          <span className="lp-guide-icon">⚠️</span>
-          <span>Cancelling on the day-of means you cannot re-request that meal today</span>
-        </div>
-      </div>
-
       {/* Today's Meal Section */}
       <div className="lp-today card card-pad">
         <div className="lp-today-head">

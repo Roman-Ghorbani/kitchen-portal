@@ -6218,3 +6218,110 @@ body {
   text-underline-offset: 3px;
   cursor: pointer;
 }
+
+/* ------------------------------------------------------------------ */
+/* Admin Late Plates Dashboard & Monitoring Styles                     */
+/* ------------------------------------------------------------------ */
+
+.lp-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.lp-metric-card {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.lp-metric-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-400);
+}
+
+.lp-metric-value {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--ink-900);
+}
+
+.lp-metric-sub {
+  font-size: 12px;
+  color: var(--ink-400);
+  margin-top: 2px;
+}
+
+.lp-admin-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+
+.lp-admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  text-align: left;
+}
+
+.lp-admin-table th {
+  background: var(--raised);
+  padding: 10px 14px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-400);
+  border-bottom: 1px solid var(--line-strong);
+}
+
+.lp-admin-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink-800);
+}
+
+.lp-admin-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.lp-admin-table tbody tr:hover {
+  background: var(--raised);
+}
+
+.lp-meal-chip {
+  padding: 3px 8px;
+  border-radius: 5px;
+  font-size: 11.5px;
+  font-weight: 600;
+  text-transform: capitalize;
+  background: var(--sunken);
+  color: var(--ink-900);
+  border: 1px solid var(--line);
+}
+
+.lp-flags-mini {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 2px;
+}
+
+.lp-admin-actions-cell {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.lp-manual-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+

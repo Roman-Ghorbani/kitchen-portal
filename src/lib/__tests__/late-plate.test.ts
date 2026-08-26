@@ -203,5 +203,15 @@ describe('late plate enabled controls', () => {
     const enabled = await isLatePlateEnabled();
     assert.equal(typeof enabled, 'boolean');
   });
+
+  test('admin functions are properly exported', async () => {
+    const { unblockLatePlate, adminManualRequest, adminOverrideStatus } = await import(
+      '../late-plate-service.ts'
+    );
+    assert.equal(typeof unblockLatePlate, 'function');
+    assert.equal(typeof adminManualRequest, 'function');
+    assert.equal(typeof adminOverrideStatus, 'function');
+  });
 });
+
 

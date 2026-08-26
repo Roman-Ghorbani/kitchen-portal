@@ -62,6 +62,8 @@ export function PlateButton(props: Props) {
     props.mode === 'request' ? props.defaultOther : '',
   );
 
+  const [showCancelModal, setShowCancelModal] = useState(false);
+
   function run(fn: () => Promise<{ ok: boolean; message: string }>) {
     startTransition(async () => {
       const res = await fn();
@@ -71,25 +73,28 @@ export function PlateButton(props: Props) {
         setNoteOpen(false);
         setNote('');
         setFlagsOpen(false);
+        setShowCancelModal(false);
         router.refresh();
       }
     });
   }
 
   if (props.mode === 'cancel') {
-    /**
-     * Never blocked by the cutoff. A late cancellation is the most useful kind:
-     * it is the difference between a chef making a plate nobody collects and a
-     * chef not making it. If it is already plated, say so rather than hiding
-     * the button.
-     */
+    const handleCancelClick = () => {
+      if (props.isDayOf) {
+        setShowCancelModal(true);
+      } else {
+        run(() => cancelPlate(props.id));
+      }
+    };
+
     return (
       <div className="lp-actions">
         <button
           className="btn sm danger"
           type="button"
           disabled={pending}
-          onClick={() => run(() => cancelPlate(props.id))}
+          onClick={handleCancelClick}
         >
           {pending && <span className="spinner" />}
           {pending ? 'Cancelling…' : "Cancel — I'll be there"}
@@ -110,6 +115,45 @@ export function PlateButton(props: Props) {
             style={failed ? { color: 'var(--red-600)' } : { color: 'var(--gold-400)' }}
           >
             {message}
+          </div>
+        )}
+
+        {/* Day-of Cancellation Warning Popup Modal */}
+        {showCancelModal && (
+          <div className="claim-confirm-modal-overlay">
+            <div className="claim-confirm-modal card card-pad" style={{ maxWidth: 460 }}>
+              <div className="confirm-header">
+                <span className="warning-icon">⚠️</span>
+                <strong style={{ fontSize: 16 }}>Cancel Today&apos;s Late Plate?</strong>
+              </div>
+              <div className="confirm-body">
+                <p style={{ marginTop: 8, fontSize: 13.5, lineHeight: 1.45 }}>
+                  If you cancel this late plate, <strong>you will not be able to request another late plate for this same meal today</strong>.
+                </p>
+                <p style={{ fontSize: 13, color: 'var(--ink-400)', marginTop: 6, lineHeight: 1.4 }}>
+                  The chefs prepare late plates based on finalized counts. Are you sure you want to cancel and eat during regular service instead?
+                </p>
+              </div>
+              <div className="confirm-actions" style={{ marginTop: 16, display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                <button
+                  className="btn sm"
+                  type="button"
+                  onClick={() => setShowCancelModal(false)}
+                  disabled={pending}
+                >
+                  Keep My Plate
+                </button>
+                <button
+                  className="btn sm danger"
+                  type="button"
+                  onClick={() => run(() => cancelPlate(props.id))}
+                  disabled={pending}
+                >
+                  {pending && <span className="spinner" />}
+                  {pending ? 'Cancelling…' : 'Yes, Cancel Plate'}
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>

@@ -48,3 +48,64 @@ export async function cancelPlate(id: string): Promise<LatePlateResult> {
   if (res.ok) refresh();
   return res;
 }
+
+export async function adminUnblockPlate(id: string): Promise<LatePlateResult> {
+  const session = await getSession();
+  if (!session || session.role !== 'admin') {
+    return { ok: false, message: 'Admin access required.' };
+  }
+
+  const { unblockLatePlate } = await import('../../lib/late-plate-service.ts');
+  const res = await unblockLatePlate(id, session.name);
+  if (res.ok) {
+    refresh();
+    revalidatePath('/admin/late-plates');
+  }
+  return res;
+}
+
+export async function adminPlacePlate(
+  memberId: string,
+  date: string,
+  meal: Meal,
+  note: string,
+  flags: string[],
+  flagsOther: string,
+): Promise<LatePlateResult> {
+  const session = await getSession();
+  if (!session || session.role !== 'admin') {
+    return { ok: false, message: 'Admin access required.' };
+  }
+
+  const { adminManualRequest } = await import('../../lib/late-plate-service.ts');
+  const res = await adminManualRequest(session.name, memberId, date, meal, {
+    note,
+    flags,
+    flagsOther,
+  });
+  if (res.ok) {
+    refresh();
+    revalidatePath('/admin/late-plates');
+  }
+  return res;
+}
+
+export async function adminUpdateStatus(
+  id: string,
+  status: 'waiting' | 'ready' | 'declined' | 'cancelled',
+  reason?: string,
+): Promise<LatePlateResult> {
+  const session = await getSession();
+  if (!session || session.role !== 'admin') {
+    return { ok: false, message: 'Admin access required.' };
+  }
+
+  const { adminOverrideStatus } = await import('../../lib/late-plate-service.ts');
+  const res = await adminOverrideStatus(session.name, id, status, reason);
+  if (res.ok) {
+    refresh();
+    revalidatePath('/admin/late-plates');
+  }
+  return res;
+}
+
