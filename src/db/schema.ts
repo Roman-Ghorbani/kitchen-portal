@@ -40,6 +40,12 @@ const ASSIGNMENT_STATUSES = [
   'excused', // waived by the manager, no debt
 ] as const;
 const CONFLICT_SCOPES = ['semester', 'temporary'] as const;
+const LATE_PLATE_STATUSES = [
+  'waiting',   // requested; chef has not acted on it
+  'ready',     // plated and on the shelf
+  'declined',  // chef cannot make it; `reason` says why
+  'cancelled', // brother pulled out himself
+] as const;
 
 const pk = () =>
   text('id')
@@ -111,6 +117,19 @@ export const members = sqliteTable(
      * the actual person rather than printing a name nobody is notified by.
      */
     slackUserId: text('slack_user_id'),
+
+    /**
+     * Standing allergens and dietary restrictions, as ids from
+     * lib/dietary.ts. Remembered so a man with a peanut allergy does not have
+     * to retick it every time he asks for a late plate - the tick he forgets
+     * is the one that reaches a plate.
+     *
+     * Nullable rather than defaulted to '[]' so the migration can add it to a
+     * roster that already exists; null and [] mean the same thing.
+     */
+    dietaryFlags: text('dietary_flags', { mode: 'json' }).$type<string[]>(),
+    /** Free text for whatever the catalogue does not cover. */
+    dietaryOther: text('dietary_other'),
 
     /** Off the roster (graduated, moved out) without deleting their history. */
     active: integer('active', { mode: 'boolean' }).notNull().default(true),
@@ -310,4 +329,130 @@ export const events = sqliteTable(
     index('events_actor_idx').on(t.actorMemberId),
     index('events_created_idx').on(t.createdAt),
   ],
+);
+
+/* ------------------------------------------------------------------ */
+/* Late plates                                                         */
+/* ------------------------------------------------------------------ */
+
+/**
+ * One row per brother per meal. A request is not deleted when it is cancelled
+ * or declined - the row stays and its status changes, so the chefs can see
+ * that somebody pulled out rather than wondering whether they missed a name.
+ */
+export const latePlates = sqliteTable(
+  'late_plates',
+  {
+    id: pk(),
+    memberId: text('member_id')
+      .notNull()
+      .references(() => members.id, { onDelete: 'cascade' }),
+
+    /** ISO date of the meal, on the house's wall clock, not the requester's. */
+    date: text('date').notNull(),
+    meal: text('meal', { enum: MEALS }).notNull(),
+
+    status: text('status', { enum: LATE_PLATE_STATUSES })
+      .notNull()
+      .default('waiting'),
+
+    /** The brother's own note - "no onions", "grabbing it around 9". */
+    note: text('note'),
+    /** The chef's reason when declining. Their words, shown back to the brother. */
+    reason: text('reason'),
+
+    /**
+     * The requester's allergens and restrictions as they stood when he asked.
+     *
+     * A snapshot, not a join to the member row. If he drops an allergy in
+     * October, the plate the chefs made in September still says what they were
+     * told at the time - which is the only version worth having in a record
+     * anybody might later argue about.
+     */
+    flags: text('flags', { mode: 'json' }).$type<string[]>(),
+    flagsOther: text('flags_other'),
+
+    /**
+     * Set when a chef confirmed they had read the flags. The server refuses to
+     * mark a flagged plate ready without this, so the acknowledgement cannot be
+     * skipped by a tablet that has not been updated - or by curl.
+     */
+    acknowledgedAt: integer('acknowledged_at', { mode: 'timestamp' }),
+    acknowledgedBy: text('acknowledged_by'),
+
+    requestedAt: integer('requested_at', { mode: 'timestamp' })
+      .notNull()
+      .$defaultFn(() => new Date()),
+    /** When it stopped being 'waiting' - marked ready, declined, or cancelled. */
+    resolvedAt: integer('resolved_at', { mode: 'timestamp' }),
+
+    createdAt: created(),
+  },
+  (t) => [
+    /**
+     * One plate per man per meal. A cancelled request is reactivated in place
+     * rather than inserted again, which is what keeps this constraint honest.
+     */
+    uniqueIndex('late_plates_member_meal_unique').on(t.memberId, t.date, t.meal),
+    index('late_plates_date_idx').on(t.date, t.meal),
+  ],
+);
+
+/**
+ * Per-meal overrides of the house default cutoff.
+ *
+ * Rows exist only where a chef has changed something. An absent row means the
+ * defaults in late-plate-service.ts apply, so the table stays empty in the
+ * ordinary case instead of accumulating a row for every meal of the semester.
+ */
+export const latePlateSettings = sqliteTable(
+  'late_plate_settings',
+  {
+    id: pk(),
+    date: text('date').notNull(),
+    meal: text('meal', { enum: MEALS }).notNull(),
+
+    /** "HH:MM" on the house clock. Null means fall back to the house default. */
+    cutoff: text('cutoff'),
+    /** Chef has shut this meal to late plates entirely, cutoff or not. */
+    closed: integer('closed', { mode: 'boolean' }).notNull().default(false),
+
+    updatedAt: integer('updated_at', { mode: 'timestamp' })
+      .notNull()
+      .$defaultFn(() => new Date()),
+
+    createdAt: created(),
+  },
+  (t) => [uniqueIndex('late_plate_settings_date_meal_unique').on(t.date, t.meal)],
+);
+
+/**
+ * The cutoff each meal falls back to when nobody has set one for that day.
+ *
+ * This is what makes a chef's change stick. `late_plate_settings` holds one
+ * day's decision; this holds the standing one, so a cutoff moved on Tuesday is
+ * still in force on Wednesday without anybody setting it again.
+ *
+ * Deliberately holds only the cutoff. Closing a meal is a decision about
+ * tonight - "kitchen closed for the night" - and carrying that forward would
+ * silently refuse tomorrow's requests, which is the kind of failure nobody
+ * would think to look for.
+ */
+export const latePlateMealDefaults = sqliteTable(
+  'late_plate_meal_defaults',
+  {
+    id: pk(),
+    meal: text('meal', { enum: MEALS }).notNull(),
+    /** "HH:MM" on the house clock. */
+    cutoff: text('cutoff').notNull(),
+
+    updatedAt: integer('updated_at', { mode: 'timestamp' })
+      .notNull()
+      .$defaultFn(() => new Date()),
+    /** Who last moved it, for the "since Tuesday" conversation. */
+    updatedBy: text('updated_by'),
+
+    createdAt: created(),
+  },
+  (t) => [uniqueIndex('late_plate_meal_defaults_meal_unique').on(t.meal)],
 );

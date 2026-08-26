@@ -4670,3 +4670,1173 @@ body {
   color: #a3aec3;
   margin-top: 2px;
 }
+
+/* ------------------------------------------------------------------ */
+/* Late plates                                                         */
+/* ------------------------------------------------------------------ */
+
+.lp-today {
+  margin-bottom: 8px;
+}
+
+.lp-today-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.lp-today-title {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--ink-900);
+  margin: 0;
+}
+
+.lp-today-date {
+  font-size: 13px;
+  color: var(--ink-400);
+  margin-top: 2px;
+}
+
+.lp-meal-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+.lp-meal {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--raised);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lp-meal.prominent {
+  background: var(--card);
+  border-color: var(--line-strong);
+  padding: 18px 20px;
+}
+
+.lp-meal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.lp-meal-name {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+  text-transform: capitalize;
+  color: var(--ink-900);
+}
+
+.lp-meal-times {
+  font-size: 12px;
+  color: var(--ink-400);
+}
+
+.lp-closed {
+  font-size: 12.5px;
+  color: var(--ink-600);
+  background: var(--sunken);
+  border-radius: 8px;
+  padding: 8px 11px;
+}
+
+.lp-declined {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--red-600);
+  background: var(--red-100);
+  border-radius: 8px;
+  padding: 8px 11px;
+}
+
+.lp-note-back {
+  font-size: 12.5px;
+  color: var(--ink-600);
+  font-style: italic;
+}
+
+.lp-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.lp-primary {
+  width: 100%;
+}
+
+.lp-note-toggle {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-400);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.lp-note-toggle:hover {
+  color: var(--gold-600);
+}
+
+.lp-note-field {
+  width: 100%;
+  font-size: 13.5px;
+  padding: 9px 12px;
+}
+
+.lp-msg {
+  font-size: 12.5px;
+  color: var(--ink-600);
+}
+
+.lp-days {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.lp-day-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.lp-day-name {
+  font-family: var(--font-display);
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--ink-900);
+}
+
+.lp-day-date {
+  font-size: 12.5px;
+  color: var(--ink-400);
+}
+
+@media (max-width: 640px) {
+  .lp-meal-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---- late plates: allergens and restrictions ----------------------- */
+
+.lp-flag-summary {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--ink-600);
+}
+
+.lp-flag-summary.has-allergen .lp-flag-list {
+  color: var(--red-600);
+  font-weight: 700;
+}
+
+.lp-flag-list {
+  font-weight: 600;
+}
+
+.lp-flag-edit {
+  color: var(--ink-400);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  font-weight: 600;
+}
+
+.lp-flag-summary:hover .lp-flag-edit {
+  color: var(--gold-600);
+}
+
+.lp-flag-panel {
+  width: 100%;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lp-flag-group-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-400);
+  margin-top: 4px;
+}
+
+.lp-flag-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 4px 12px;
+}
+
+.lp-flag-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--ink-900);
+  padding: 4px 0;
+  cursor: pointer;
+}
+
+.lp-flag-check input {
+  margin-top: 2px;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--gold-500);
+  flex: none;
+}
+
+.lp-flag-check em {
+  display: block;
+  font-style: normal;
+  font-size: 11px;
+  color: var(--ink-400);
+}
+
+.lp-flag-foot {
+  font-size: 11.5px;
+  color: var(--ink-400);
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+}
+
+.lp-flags-back {
+  font-size: 12.5px;
+  color: var(--ink-700);
+  background: var(--sunken);
+  border-radius: 8px;
+  padding: 8px 11px;
+}
+
+.lp-flags-back.has-allergen {
+  background: var(--red-100);
+  color: var(--red-600);
+  font-weight: 600;
+}
+
+.lp-flags-label {
+  display: block;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  opacity: 0.75;
+  margin-bottom: 2px;
+}
+
+/* ------------------------------------------------------------------ */
+/* Kitchen queue - the chefs' own screen                               */
+/* ------------------------------------------------------------------ */
+
+/*
+ * Sized for a greasy finger on a wall-mounted tablet: nothing tappable is
+ * under 44px, and the type is bigger than anywhere else in the app because
+ * this is read at arm's length across a counter.
+ */
+
+.kq-shell {
+  min-height: 100vh;
+  background: var(--bg);
+  padding: 20px clamp(16px, 4vw, 40px) 60px;
+}
+
+.kq-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding-bottom: 16px;
+  border-bottom: 2px solid var(--line-strong);
+  margin-bottom: 20px;
+}
+
+.kq-head h1 {
+  font-family: var(--font-display);
+  font-size: clamp(24px, 4vw, 34px);
+  font-weight: 700;
+  color: var(--ink-900);
+  margin: 0;
+}
+
+.kq-date {
+  font-size: 15px;
+  color: var(--ink-400);
+  margin-top: 4px;
+}
+
+.kq-counts {
+  display: flex;
+  gap: 10px;
+}
+
+.kq-count {
+  background: var(--card);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  padding: 8px 14px;
+  font-size: 13px;
+  color: var(--ink-600);
+}
+
+.kq-count strong {
+  font-size: 20px;
+  color: var(--ink-900);
+  margin-right: 5px;
+}
+
+.kq-count.done strong {
+  color: var(--green-600);
+}
+
+.kq-error {
+  background: var(--amber-100);
+  color: var(--amber-600);
+  border-radius: var(--radius-sm);
+  padding: 12px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+.kq-empty {
+  color: var(--ink-400);
+  font-size: 17px;
+  padding: 48px 0;
+  text-align: center;
+}
+
+.kq-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 14px;
+}
+
+.kq-card {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 14px;
+  background: var(--card);
+  border: 1px solid var(--line-strong);
+  border-left: 5px solid var(--line-strong);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+}
+
+.kq-card.has-allergen {
+  border-left-color: var(--red-600);
+}
+
+.kq-card.is-ready {
+  border-left-color: var(--green-600);
+  background: var(--raised);
+}
+
+.kq-card-main {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.kq-name {
+  font-family: var(--font-display);
+  font-size: 21px;
+  font-weight: 700;
+  color: var(--ink-900);
+  line-height: 1.15;
+}
+
+.kq-meal {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--ink-400);
+}
+
+.kq-allergens,
+.kq-dietary {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 7px;
+  font-size: 14.5px;
+  font-weight: 600;
+}
+
+.kq-allergens {
+  color: var(--red-600);
+}
+
+.kq-dietary {
+  color: var(--ink-700);
+}
+
+.kq-badge {
+  font-size: 10.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 3px 8px;
+  border-radius: 20px;
+}
+
+.kq-badge.allergen {
+  background: var(--red-600);
+  color: #fff;
+}
+
+.kq-badge.dietary {
+  background: var(--navy-100);
+  color: var(--navy-700);
+}
+
+.kq-note {
+  font-size: 13.5px;
+  color: var(--ink-600);
+  font-style: italic;
+}
+
+.kq-ack {
+  font-size: 12px;
+  color: var(--green-600);
+  font-weight: 600;
+}
+
+.kq-card-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: none;
+  justify-content: center;
+}
+
+.kq-btn {
+  min-height: 46px;
+  min-width: 120px;
+  padding: 12px 18px;
+  border-radius: 10px;
+  border: 2px solid transparent;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.kq-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.kq-btn.ready {
+  background: var(--green-600);
+  color: #fff;
+}
+
+.kq-btn.decline {
+  background: var(--card);
+  color: var(--red-600);
+  border-color: var(--red-600);
+}
+
+.kq-btn.undo,
+.kq-btn.ghost {
+  background: var(--card);
+  color: var(--ink-600);
+  border-color: var(--line-strong);
+}
+
+.kq-modal-scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(13, 22, 38, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 50;
+}
+
+.kq-modal {
+  background: var(--card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: 26px 28px;
+  width: min(520px, 100%);
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.kq-modal h2 {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--ink-900);
+  margin: 0 0 6px;
+}
+
+.kq-modal-lead {
+  font-size: 14.5px;
+  color: var(--ink-600);
+  margin: 0 0 16px;
+}
+
+.kq-modal-block {
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+  margin-bottom: 12px;
+}
+
+.kq-modal-block.allergen {
+  background: var(--red-100);
+}
+
+.kq-modal-block.dietary {
+  background: var(--navy-50);
+}
+
+.kq-modal-label {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  margin-bottom: 6px;
+}
+
+.kq-modal-block.allergen .kq-modal-label {
+  color: var(--red-600);
+}
+
+.kq-modal-block.dietary .kq-modal-label {
+  color: var(--navy-700);
+}
+
+.kq-modal-block ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.kq-modal-block li {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--ink-900);
+  line-height: 1.5;
+}
+
+.kq-modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  margin-top: 18px;
+}
+
+.kq-reasons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.kq-reason {
+  border: 1.5px solid var(--line-strong);
+  background: var(--card);
+  border-radius: 20px;
+  padding: 9px 15px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink-700);
+  cursor: pointer;
+}
+
+.kq-reason.picked {
+  border-color: var(--gold-500);
+  background: var(--gold-100);
+  color: var(--gold-600);
+}
+
+.kq-reason-field {
+  width: 100%;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 15px;
+  background: var(--card);
+}
+
+.kq-locked {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.kq-locked-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  padding: 32px 34px;
+  max-width: 460px;
+  text-align: center;
+}
+
+.kq-locked-card h1 {
+  font-family: var(--font-display);
+  font-size: 22px;
+  margin: 0 0 12px;
+  color: var(--ink-900);
+}
+
+.kq-locked-card p {
+  font-size: 14.5px;
+  color: var(--ink-600);
+  margin: 0 0 8px;
+}
+
+.kq-locked-sub {
+  color: var(--ink-400) !important;
+  font-size: 13px !important;
+}
+
+@media (max-width: 560px) {
+  .kq-card {
+    flex-direction: column;
+  }
+
+  .kq-card-actions {
+    flex-direction: row;
+  }
+
+  .kq-btn {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+.lp-menu {
+  font-size: 12.5px;
+  color: var(--ink-700);
+  background: var(--gold-100);
+  border-radius: 8px;
+  padding: 8px 11px;
+}
+
+.lp-menu-label {
+  display: block;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--gold-600);
+  margin-bottom: 2px;
+}
+
+/* ---- kitchen queue: meal switch, sections, cancelled plates -------- */
+
+.kq-switch {
+  display: flex;
+  gap: 6px;
+  background: var(--sunken);
+  border-radius: 12px;
+  padding: 5px;
+}
+
+.kq-switch-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 118px;
+  min-height: 48px;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  cursor: pointer;
+  color: var(--ink-400);
+}
+
+.kq-switch-btn.active {
+  background: var(--card);
+  box-shadow: var(--shadow-sm);
+  color: var(--ink-900);
+}
+
+.kq-switch-label {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 700;
+  text-transform: capitalize;
+  line-height: 1.1;
+}
+
+.kq-switch-count {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ink-400);
+}
+
+/* The one thing that must survive being on the meal you are not looking at. */
+.kq-switch-count.pending {
+  color: var(--red-600);
+  font-weight: 800;
+}
+
+.kq-section {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ink-400);
+  margin: 26px 0 12px;
+}
+
+.kq-section.as-toggle {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+}
+
+.kq-section-count {
+  background: var(--sunken);
+  color: var(--ink-600);
+  border-radius: 20px;
+  padding: 2px 9px;
+  font-size: 11.5px;
+  letter-spacing: 0;
+}
+
+.kq-section-chevron {
+  color: var(--ink-300);
+  letter-spacing: 0;
+}
+
+.kq-head-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.kq-asked {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-400);
+  white-space: nowrap;
+}
+
+/* Handled plates: present for checking lunch is finished, never competing
+   with work that is still outstanding. */
+.kq-list.is-handled .kq-card {
+  background: var(--raised);
+  opacity: 0.92;
+}
+
+.kq-card.small {
+  padding: 12px 15px;
+}
+
+.kq-card.small .kq-name {
+  font-size: 17px;
+}
+
+.kq-card.is-ready {
+  border-left-color: var(--green-600);
+}
+
+.kq-card.is-declined {
+  border-left-color: var(--amber-600);
+}
+
+.kq-card.is-cancelled {
+  border-left-color: var(--ink-300);
+}
+
+.kq-cancelled {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--ink-600);
+  background: var(--sunken);
+  border-radius: 8px;
+  padding: 7px 10px;
+}
+
+.kq-declined {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--amber-600);
+}
+
+.kq-readyline {
+  font-size: 12.5px;
+  color: var(--green-600);
+  font-weight: 600;
+}
+
+.kq-locked-note {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--ink-300);
+  align-self: center;
+  white-space: nowrap;
+}
+
+.kq-clear {
+  text-align: center;
+  padding: 44px 20px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.kq-clear-mark {
+  width: 46px;
+  height: 46px;
+  margin: 0 auto 14px;
+  border-radius: 50%;
+  background: var(--green-100);
+  color: var(--green-600);
+  font-size: 24px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.kq-clear-title {
+  font-family: var(--font-display);
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--ink-900);
+}
+
+.kq-clear-sub {
+  font-size: 14px;
+  color: var(--ink-400);
+  margin-top: 5px;
+}
+
+.kq-foot {
+  margin-top: 20px;
+  font-size: 13px;
+  color: var(--ink-400);
+  text-align: center;
+}
+
+@media (max-width: 560px) {
+  .kq-switch {
+    width: 100%;
+  }
+
+  .kq-switch-btn {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+/* ---- kitchen queue: meal bar, cutoff stepper, decline reasons ------ */
+
+.kq-mealbar {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.kq-mealbar-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.kq-mealbar-title {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+  text-transform: capitalize;
+  color: var(--ink-900);
+}
+
+.kq-mealbar-note {
+  font-size: 12.5px;
+  color: var(--ink-600);
+  background: var(--sunken);
+  border-radius: 8px;
+  padding: 8px 11px;
+}
+
+/* ---- the switch ---- */
+
+.kq-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  min-height: 44px;
+}
+
+.kq-toggle input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.kq-toggle-track {
+  width: 52px;
+  height: 30px;
+  border-radius: 20px;
+  background: var(--ink-300);
+  padding: 3px;
+  display: block;
+  transition: background 0.15s var(--ease);
+  flex: none;
+}
+
+.kq-toggle-knob {
+  display: block;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.15s var(--ease);
+}
+
+.kq-toggle input:checked + .kq-toggle-track {
+  background: var(--green-600);
+}
+
+.kq-toggle input:checked + .kq-toggle-track .kq-toggle-knob {
+  transform: translateX(22px);
+}
+
+.kq-toggle input:focus-visible + .kq-toggle-track {
+  outline: 3px solid var(--gold-400);
+  outline-offset: 2px;
+}
+
+.kq-toggle input:disabled + .kq-toggle-track {
+  opacity: 0.5;
+}
+
+.kq-toggle-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-700);
+}
+
+/* ---- the cutoff button ---- */
+
+.kq-cutoff {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  width: 100%;
+  min-height: 56px;
+  padding: 12px 18px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--raised);
+  cursor: pointer;
+}
+
+.kq-cutoff:hover {
+  border-color: var(--gold-500);
+}
+
+.kq-cutoff-label {
+  font-size: 11.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--ink-400);
+}
+
+.kq-cutoff-value {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--navy-800);
+}
+
+/* ---- the stepper dialog ---- */
+
+.kq-modal-cutoff {
+  position: relative;
+  text-align: center;
+}
+
+.kq-modal-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: var(--sunken);
+  color: var(--ink-600);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.kq-modal-eyebrow {
+  font-size: 11.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ink-400);
+  margin-bottom: 6px;
+}
+
+.kq-stepper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin: 20px 0 12px;
+}
+
+.kq-stepper-value {
+  font-family: var(--font-display);
+  font-size: 34px;
+  font-weight: 700;
+  color: #fff;
+  background: var(--navy-900);
+  border-radius: 12px;
+  padding: 16px 26px;
+  min-width: 190px;
+}
+
+.kq-stepper-arrows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.kq-stepper-arrows button {
+  width: 52px;
+  height: 44px;
+  border-radius: 10px;
+  border: 1px solid var(--line-strong);
+  background: var(--raised);
+  font-size: 15px;
+  color: var(--ink-700);
+  cursor: pointer;
+}
+
+.kq-stepper-arrows button:active {
+  background: var(--sunken);
+}
+
+.kq-stepper-hint {
+  font-size: 12.5px;
+  color: var(--ink-400);
+  margin: 0 0 20px;
+}
+
+.kq-btn.save {
+  width: 100%;
+  background: var(--navy-700);
+  color: #fff;
+  min-height: 54px;
+  font-size: 16px;
+}
+
+/* ---- decline reasons ---- */
+
+.kq-reason-list {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin-bottom: 14px;
+}
+
+.kq-reason-row {
+  text-align: left;
+  min-height: 52px;
+  padding: 14px 18px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--card);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink-900);
+  cursor: pointer;
+}
+
+.kq-reason-row:hover {
+  border-color: var(--red-600);
+  background: var(--red-100);
+}
+
+.kq-reason-other {
+  display: flex;
+  gap: 9px;
+  align-items: stretch;
+}
+
+.kq-reason-other .kq-reason-field {
+  flex: 1;
+}
+
+.kq-nevermind {
+  background: none;
+  border: none;
+  padding: 12px 0 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-600);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}

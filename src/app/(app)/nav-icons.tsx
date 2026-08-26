@@ -1,9 +1,9 @@
 /**
  * Navigation icons.
  *
- * Inline SVG rather than an icon package: there are seven of them, they never
- * change, and a dependency that ships thousands of glyphs to render seven is
- * not worth the weight.
+ * Inline SVG rather than an icon package: there are a handful of them, they
+ * never change, and a dependency that ships thousands of glyphs to render this
+ * many is not worth the weight.
  */
 
 const common = {
@@ -24,6 +24,14 @@ export function NavIcon({ name }: { name: string }) {
         <svg {...common} aria-hidden="true">
           <path d="M9 11.5l2 2 4-4" />
           <path d="M12 3l8 3.5v5c0 4.6-3.2 7.9-8 8.5-4.8-.6-8-3.9-8-8.5v-5z" />
+        </svg>
+      );
+    case 'late-plate':
+      return (
+        <svg {...common} aria-hidden="true">
+          <path d="M4 20h16" />
+          <path d="M20 16.5c0-4.4-3.6-7.5-8-7.5s-8 3.1-8 7.5z" />
+          <path d="M12 6V3.5" />
         </svg>
       );
     case 'schedule':

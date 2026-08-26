@@ -158,3 +158,57 @@ export function lastChapterOnOrBefore(iso: string): string {
 export function weekDueForPosting(today: string): string {
   return weekPostedAtChapter(lastChapterOnOrBefore(today));
 }
+
+/* ------------------------------------------------------------------ */
+/* Clock time                                                          */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The house's wall clock.
+ *
+ * The chapter is in Indiana, which observes Eastern Time - so this is the same
+ * offset the rest of this file already assumes. It exists as a named constant
+ * because the late-plate cutoffs are compared against it minute by minute, and
+ * a timezone that only appears as a string literal scattered through the code
+ * is one nobody can change safely later.
+ */
+export const HOUSE_TIMEZONE = 'America/New_York';
+
+/** Minutes since local midnight, e.g. "16:30" -> 990. Null if malformed. */
+export function parseClock(hhmm: string): number | null {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(hhmm.trim());
+  if (!m) return null;
+  const hours = Number(m[1]);
+  const minutes = Number(m[2]);
+  if (hours > 23 || minutes > 59) return null;
+  return hours * 60 + minutes;
+}
+
+/** 990 -> "4:30 PM". For display only; storage stays 24-hour "HH:MM". */
+export function formatClock(minutesOfDay: number): string {
+  const h24 = Math.floor(minutesOfDay / 60) % 24;
+  const m = minutesOfDay % 60;
+  const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
+  return `${h12}:${String(m).padStart(2, '0')} ${h24 < 12 ? 'AM' : 'PM'}`;
+}
+
+/**
+ * Minutes since midnight right now, on the house's wall clock.
+ *
+ * Read from Intl rather than from the server's own clock, so a box running in
+ * UTC - which is what every host defaults to - still compares cutoffs against
+ * the time the chefs are actually looking at.
+ */
+export function houseClockMinutes(now: Date = new Date()): number {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: HOUSE_TIMEZONE,
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).formatToParts(now);
+
+  const hour = Number(parts.find((p) => p.type === 'hour')?.value ?? '0');
+  const minute = Number(parts.find((p) => p.type === 'minute')?.value ?? '0');
+  // Intl renders midnight as hour 24 in some ICU versions; normalise it.
+  return (hour % 24) * 60 + minute;
+}

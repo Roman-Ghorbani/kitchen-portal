@@ -8,6 +8,7 @@ const BROTHER_NAV = [
   { href: '/schedule', label: 'Schedule', icon: 'schedule' },
   { href: '/availability', label: 'Availability', icon: 'availability' },
   { href: '/my-shifts', label: 'My Shifts', icon: 'my-shifts' },
+  { href: '/late-plate', label: 'Late Plate', icon: 'late-plate' },
 ];
 
 const ADMIN_NAV = [
