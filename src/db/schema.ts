@@ -81,6 +81,16 @@ export const semesters = sqliteTable('semesters', {
     .default(true),
 
   /**
+   * Optional custom logo URL to show on the Late Plate dashboard.
+   */
+  logoUrl: text('logo_url'),
+
+  /**
+   * Optional custom announcement message to display as a banner on the late plate dashboard.
+   */
+  latePlateMessage: text('late_plate_message'),
+
+  /**
    * Which day/meal combinations the house serves, as
    * { lunch: boolean[7], dinner: boolean[7] } with index 0 = Monday.
    * Per-semester so it can change between Fall and Spring.

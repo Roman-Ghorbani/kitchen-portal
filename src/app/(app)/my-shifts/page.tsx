@@ -9,7 +9,6 @@ import { formatPoints } from '../../../lib/types.ts';
 import { AppShell } from '../shell.tsx';
 import { HorizonNote } from '../horizon-note.tsx';
 import { FlagButton } from './flag-button.tsx';
-import { CalendarSubscriptionCard } from './calendar-subscription.tsx';
 
 export const dynamic = 'force-dynamic';
 
@@ -103,8 +102,6 @@ export default async function MyShiftsPage() {
           </span>
         </div>
       )}
-
-      <CalendarSubscriptionCard memberId={session.sub} />
 
       <div className="alert info" style={{ marginBottom: 20 }}>
         <span className="alert-title">💡 Missing a Specific Shift? No Google Form Needed!</span>

@@ -6,6 +6,7 @@ import type { MealDayConfig, Meal } from '../../../../lib/types.ts';
 import { AppShell } from '../../shell.tsx';
 import { MealGrid } from './meal-grid.tsx';
 import { LatePlateToggle } from './late-plate-toggle.tsx';
+import { LatePlateSettingsForm } from './late-plate-settings-form.tsx';
 import { KioskLink } from './kiosk-link.tsx';
 
 export const dynamic = 'force-dynamic';
@@ -48,6 +49,13 @@ export default async function SettingsPage() {
           submitting requests before the kitchen is ready.
         </p>
         <LatePlateToggle initialEnabled={latePlatesEnabled} />
+        
+        <hr style={{ margin: '24px 0', borderColor: 'var(--line-strong)' }} />
+        
+        <LatePlateSettingsForm 
+          defaultMessage={semester.latePlateMessage} 
+          defaultLogo={semester.logoUrl} 
+        />
       </div>
 
       <div className="card card-pad" style={{ marginTop: 16 }}>

@@ -129,3 +129,30 @@ export async function generateKioskToken(): Promise<SettingsResult> {
   revalidatePath('/admin/settings');
   return { ok: true, message: 'Kiosk token regenerated.' };
 }
+
+export async function updateLatePlateSettings(message: string, logoUrl: string): Promise<SettingsResult> {
+  const admin = await requireAdmin();
+  const semester = await getActiveSemester();
+
+  const msg = message.trim() || null;
+  const logo = logoUrl.trim() || null;
+
+  await db
+    .update(semesters)
+    .set({ latePlateMessage: msg, logoUrl: logo })
+    .where(eq(semesters.id, semester.id));
+
+  await db.insert(events).values({
+    action: 'settings.late_plates_updated',
+    entityType: 'semester',
+    entityId: semester.id,
+    actorName: admin.name,
+    summary: `${admin.name} updated late plate banner/logo settings`,
+    payload: { message: msg, logoUrl: logo },
+  });
+
+  revalidatePath('/admin/settings');
+  revalidatePath('/late-plate');
+
+  return { ok: true, message: 'Settings saved successfully.' };
+}

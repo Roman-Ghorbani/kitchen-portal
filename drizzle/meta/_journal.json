@@ -57,6 +57,13 @@
       "when": 1787802914553,
       "tag": "0007_bumpy_infant_terrible",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1787843967145,
+      "tag": "0008_dizzy_firelord",
+      "breakpoints": true
     }
   ]
 }

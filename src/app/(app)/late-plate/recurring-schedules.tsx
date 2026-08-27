@@ -69,8 +69,10 @@ export function RecurringSchedules({
         <div>
           <div className="lp-eyebrow">Standing Schedules</div>
           <h2 className="lp-section-title">Recurring Weekly Late Plates</h2>
-          <div className="lp-section-desc">
-            Automatically request a late plate for regular weekly class conflicts or labs.
+          <div className="lp-section-desc" style={{ marginTop: 8 }}>
+            <strong>We strongly encourage you to request late plates manually each week.</strong>
+            <br />
+            Only use this feature if you have a known class or obligation that requires you to miss a meal <i>every single week</i>. Forgotten recurring plates waste chefs' time and result in thrown-away food.
           </div>
         </div>
 
@@ -208,7 +210,7 @@ export function RecurringSchedules({
             </div>
             <div className="confirm-body" style={{ marginTop: 10 }}>
               <p style={{ fontSize: 13.5, lineHeight: 1.5, color: 'var(--ink-900)' }}>
-                Are you sure you want to schedule a recurring late plate for every{' '}
+                Are you absolutely sure you need a recurring plate for every{' '}
                 <strong>
                   {selectedDayName} {meal}
                 </strong>
@@ -226,10 +228,7 @@ export function RecurringSchedules({
                   color: '#f87171',
                 }}
               >
-                <strong>Warning:</strong> If your schedule changes or you forget you
-                have this scheduled because of a repeated conflict, the chefs will
-                continue making your plate every single week and it will sit
-                uncollected in the student fridge.
+                <strong>STOP:</strong> If your schedule changes or you forget you have this scheduled, the chefs will continue making your plate every week and it will go to waste. <strong>Please consider requesting manually each week instead.</strong>
               </div>
             </div>
             <div
