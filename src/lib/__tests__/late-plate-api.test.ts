@@ -43,20 +43,20 @@ function withSession(
 describe('the device token', () => {
   test('is refused when no token is configured at all', async () => {
     delete process.env.LATE_PLATE_DEVICE_TOKEN;
-    assert.equal(hasDeviceToken(req(`/api/late-plates?device=${TOKEN}`)), false);
-    assert.equal(hasDeviceToken(req('/api/late-plates')), false);
+    assert.equal(await hasDeviceToken(req(`/api/late-plates?device=${TOKEN}`)), false);
+    assert.equal(await hasDeviceToken(req('/api/late-plates')), false);
   });
 
   test('is accepted from the query string, a header, or a bearer token', async () => {
     process.env.LATE_PLATE_DEVICE_TOKEN = TOKEN;
     try {
-      assert.equal(hasDeviceToken(req(`/api/late-plates?device=${TOKEN}`)), true);
+      assert.equal(await hasDeviceToken(req(`/api/late-plates?device=${TOKEN}`)), true);
       assert.equal(
-        hasDeviceToken(req('/api/late-plates', { 'x-api-key': TOKEN })),
+        await hasDeviceToken(req('/api/late-plates', { 'x-api-key': TOKEN })),
         true,
       );
       assert.equal(
-        hasDeviceToken(req('/api/late-plates', { authorization: `Bearer ${TOKEN}` })),
+        await hasDeviceToken(req('/api/late-plates', { authorization: `Bearer ${TOKEN}` })),
         true,
       );
     } finally {
@@ -67,12 +67,12 @@ describe('the device token', () => {
   test('rejects a wrong token, including one that is merely a prefix', async () => {
     process.env.LATE_PLATE_DEVICE_TOKEN = TOKEN;
     try {
-      assert.equal(hasDeviceToken(req('/api/late-plates?device=wrong')), false);
+      assert.equal(await hasDeviceToken(req('/api/late-plates?device=wrong')), false);
       assert.equal(
-        hasDeviceToken(req(`/api/late-plates?device=${TOKEN.slice(0, -1)}`)),
+        await hasDeviceToken(req(`/api/late-plates?device=${TOKEN.slice(0, -1)}`)),
         false,
       );
-      assert.equal(hasDeviceToken(req(`/api/late-plates?device=${TOKEN}x`)), false);
+      assert.equal(await hasDeviceToken(req(`/api/late-plates?device=${TOKEN}x`)), false);
     } finally {
       delete process.env.LATE_PLATE_DEVICE_TOKEN;
     }
