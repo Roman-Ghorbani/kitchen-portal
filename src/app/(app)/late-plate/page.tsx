@@ -34,7 +34,6 @@ import { AppShell } from '../shell.tsx';
 import { PlateButton } from './plate-button.tsx';
 import { StatusTracker } from './status-tracker.tsx';
 import { RecurringSchedules } from './recurring-schedules.tsx';
-import { LatePlateTabs } from './late-plate-tabs.tsx';
 import { InstallPrompt, InstallButton } from './install-prompt.tsx';
 
 export const dynamic = 'force-dynamic';
@@ -160,138 +159,135 @@ export default async function LatePlatePage() {
         </div>
       </div>
 
-      <LatePlateTabs 
-        mealsTab={
-          <>
-            {/* Today's Meal Section */}
-            <div className="lp-today card card-pad">
-              <div className="lp-today-head">
-                <div>
-                  <div className="lp-eyebrow">Service Schedule</div>
-                  <h2 className="lp-today-title">Today — {weekday(today)}, {shortDate(today)}</h2>
-                </div>
-              </div>
-
-              {todayWindows.length === 0 ? (
-                <div className="note">No meals served today.</div>
-              ) : (
-                <div className="lp-meal-grid">
-                  {todayWindows.map(({ meal, window, request }) => {
-                    if (
-                      request &&
-                      (request.status === 'waiting' ||
-                        request.status === 'ready' ||
-                        request.status === 'declined')
-                    ) {
-                      return (
-                        <StatusTracker
-                          key={meal}
-                          request={request}
-                          window={window}
-                          menu={todayMenu}
-                          isToday
-                        />
-                      );
-                    }
-
-                    return (
-                      <MealCell
-                        key={meal}
-                        meal={meal}
-                        window={window}
-                        request={request}
-                        dietary={dietary}
-                        menu={todayMenu}
-                        latePlatesEnabled={latePlatesEnabled}
-                        isToday
-                        prominent
-                      />
-                    );
-                  })}
-                </div>
-              )}
+      <div className="lp-feed">
+        {/* Today's Meal Section */}
+        <div className="lp-today card card-pad">
+          <div className="lp-today-head">
+            <div>
+              <div className="lp-eyebrow">Service Schedule</div>
+              <h2 className="lp-today-title">Today — {weekday(today)}, {shortDate(today)}</h2>
             </div>
+          </div>
 
-            {/* Rest of the week */}
-            <div className="section-title" style={{ marginTop: 24 }}>Upcoming this week</div>
-
-            <div className="lp-days">
-              {later.map((date) => {
-                const dayMenu = menuByDate.get(date) ?? null;
-                const cells = MEALS.map((meal) => ({
-                  meal,
-                  window: windows.get(`${date}:${meal}`)!,
-                  request: byKey.get(`${date}:${meal}`) ?? null,
-                })).filter((c) => c.window.served);
-
-                if (cells.length === 0) return null;
+          {todayWindows.length === 0 ? (
+            <div className="note">No meals served today.</div>
+          ) : (
+            <div className="lp-meal-grid">
+              {todayWindows.map(({ meal, window, request }) => {
+                if (
+                  request &&
+                  (request.status === 'waiting' ||
+                    request.status === 'ready' ||
+                    request.status === 'declined')
+                ) {
+                  return (
+                    <StatusTracker
+                      key={meal}
+                      request={request}
+                      window={window}
+                      menu={todayMenu}
+                      isToday
+                    />
+                  );
+                }
 
                 return (
-                  <div key={date} className="lp-day card card-pad">
-                    <div className="lp-day-head">
-                      <span className="lp-day-name">{weekday(date)}</span>
-                      <span className="lp-day-date">{shortDate(date)}</span>
-                    </div>
-                    <div className="lp-meal-grid">
-                      {cells.map(({ meal, window, request }) => (
-                        <MealCell
-                          key={meal}
-                          meal={meal}
-                          window={window}
-                          request={request}
-                          dietary={dietary}
-                          menu={dayMenu}
-                          latePlatesEnabled={latePlatesEnabled}
-                          isToday={false}
-                        />
-                      ))}
-                    </div>
-                  </div>
+                  <MealCell
+                    key={meal}
+                    meal={meal}
+                    window={window}
+                    request={request}
+                    dietary={dietary}
+                    menu={todayMenu}
+                    latePlatesEnabled={latePlatesEnabled}
+                    isToday
+                    prominent
+                  />
                 );
               })}
             </div>
-          </>
-        }
-        recurringTab={
-          <div style={{ marginTop: 4 }}>
-            <RecurringSchedules
-              schedules={recurring}
-              disabled={!latePlatesEnabled}
-            />
-          </div>
-        }
-        profileTab={
-          <div className="lp-profile-tab card card-pad" style={{ marginTop: 4 }}>
-            <div className="section-title">Your Dietary Profile</div>
-            <div style={{ margin: '12px 0 24px', fontSize: 15 }}>
-              {dietary.flags.length > 0 ? (
-                <span style={{ color: '#f87171', fontWeight: 600 }}>⚠️ {dietary.flags.join(', ')}</span>
-              ) : (
-                <span style={{ color: 'var(--ink-400)' }}>No allergies recorded</span>
-              )}
-              <div style={{ fontSize: 13, color: 'var(--ink-400)', marginTop: 4 }}>
-                These are automatically attached to all your late plate requests.
-              </div>
-            </div>
-             
-            <div className="section-title">How late plates work</div>
-            <div style={{ marginTop: 12, lineHeight: 1.5, fontSize: 14, color: 'var(--ink-900)' }}>
-              <ul style={{ paddingLeft: 20, margin: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <li>A late plate is boxed during service and placed in the student fridge.</li>
-                <li>You must request before the cutoff time.</li>
-                <li>You can pick it up whenever you return to the house.</li>
-                <li>Allergies and dietary restrictions travel with your request — the kitchen must confirm they have reviewed them before plating.</li>
-                <li>If you cancel a late plate on the day of service, you will not be able to re-request that same meal today.</li>
-              </ul>
-            </div>
+          )}
+        </div>
 
-            <div className="section-title" style={{ marginTop: 24 }}>App Installation</div>
-            <div style={{ marginTop: 12 }}>
-              <InstallButton />
+        {/* Rest of the week */}
+        <div className="section-title" style={{ marginTop: 32 }}>Upcoming this week</div>
+
+        <div className="lp-days">
+          {later.map((date) => {
+            const dayMenu = menuByDate.get(date) ?? null;
+            const cells = MEALS.map((meal) => ({
+              meal,
+              window: windows.get(`${date}:${meal}`)!,
+              request: byKey.get(`${date}:${meal}`) ?? null,
+            })).filter((c) => c.window.served);
+
+            if (cells.length === 0) return null;
+
+            return (
+              <div key={date} className="lp-day card card-pad">
+                <div className="lp-day-head">
+                  <span className="lp-day-name">{weekday(date)}</span>
+                  <span className="lp-day-date">{shortDate(date)}</span>
+                </div>
+                <div className="lp-meal-grid">
+                  {cells.map(({ meal, window, request }) => (
+                    <MealCell
+                      key={meal}
+                      meal={meal}
+                      window={window}
+                      request={request}
+                      dietary={dietary}
+                      menu={dayMenu}
+                      latePlatesEnabled={latePlatesEnabled}
+                      isToday={false}
+                    />
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Settings & Preferences Section at the bottom */}
+        <div className="section-title" style={{ marginTop: 40 }}>Settings & Preferences</div>
+        
+        <div style={{ marginTop: 16 }}>
+          <RecurringSchedules
+            schedules={recurring}
+            disabled={!latePlatesEnabled}
+          />
+        </div>
+
+        <div className="lp-profile-tab card card-pad" style={{ marginTop: 16 }}>
+          <div className="section-title">Your Dietary Profile</div>
+          <div style={{ margin: '12px 0 24px', fontSize: 15 }}>
+            {dietary.flags.length > 0 ? (
+              <span style={{ color: '#f87171', fontWeight: 600 }}>⚠️ {dietary.flags.join(', ')}</span>
+            ) : (
+              <span style={{ color: 'var(--ink-400)' }}>No allergies recorded</span>
+            )}
+            <div style={{ fontSize: 13, color: 'var(--ink-400)', marginTop: 4 }}>
+              These are automatically attached to all your late plate requests.
             </div>
           </div>
-        }
-      />
+            
+          <div className="section-title">How late plates work</div>
+          <div style={{ marginTop: 12, lineHeight: 1.5, fontSize: 14, color: 'var(--ink-900)' }}>
+            <ul style={{ paddingLeft: 20, margin: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <li>A late plate is boxed during service and placed in the student fridge.</li>
+              <li>You must request before the cutoff time.</li>
+              <li>You can pick it up whenever you return to the house.</li>
+              <li>Allergies and dietary restrictions travel with your request — the kitchen must confirm they have reviewed them before plating.</li>
+              <li>If you cancel a late plate on the day of service, you will not be able to re-request that same meal today.</li>
+            </ul>
+          </div>
+
+          <div className="section-title" style={{ marginTop: 24 }}>App Installation</div>
+          <div style={{ marginTop: 12 }}>
+            <InstallButton />
+          </div>
+        </div>
+      </div>
     </AppShell>
   );
 }

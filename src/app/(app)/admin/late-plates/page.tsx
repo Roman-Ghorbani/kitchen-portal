@@ -105,42 +105,25 @@ export default async function AdminLatePlatesPage() {
       title="Late Plates Management"
       subtitle="Monitor live kitchen requests, tablet usage, status overrides, and house analytics"
     >
-      {/* Metric Cards */}
-      <div className="lp-metric-grid">
-        <div className="card card-pad lp-metric-card">
-          <div className="lp-metric-label">Today&apos;s Requests</div>
-          <div className="lp-metric-value">{totalToday}</div>
-          <div className="lp-metric-sub">
-            {lunchToday} Lunch · {dinnerToday} Dinner
-          </div>
+      {/* Compact Daily Summary Banner */}
+      <div className="lp-admin-summary banner-info card" style={{ marginBottom: 20, display: 'flex', flexWrap: 'wrap', gap: '16px 32px', padding: 16 }}>
+        <div>
+          <div className="lp-eyebrow" style={{ color: 'var(--ink-400)' }}>Today's Requests</div>
+          <div style={{ fontSize: 24, fontWeight: 700 }}>{totalToday} <span style={{ fontSize: 14, fontWeight: 400, color: 'var(--ink-400)' }}>({lunchToday} L · {dinnerToday} D)</span></div>
         </div>
-
-        <div className="card card-pad lp-metric-card">
-          <div className="lp-metric-label">Waiting to Box</div>
-          <div className="lp-metric-value" style={{ color: waitingToday > 0 ? 'var(--gold-400)' : undefined }}>
-            {waitingToday}
-          </div>
-          <div className="lp-metric-sub">
-            {readyToday} Ready in Student Fridge
-          </div>
+        <div>
+          <div className="lp-eyebrow" style={{ color: 'var(--ink-400)' }}>Waiting to Box</div>
+          <div style={{ fontSize: 24, fontWeight: 700, color: waitingToday > 0 ? 'var(--gold-400)' : 'inherit' }}>{waitingToday} <span style={{ fontSize: 14, fontWeight: 400, color: 'var(--ink-400)' }}>({readyToday} Ready)</span></div>
         </div>
-
-        <div className="card card-pad lp-metric-card">
-          <div className="lp-metric-label">Dietary Flags Today</div>
-          <div className="lp-metric-value" style={{ color: flaggedToday > 0 ? '#f87171' : undefined }}>
-            {flaggedToday}
-          </div>
-          <div className="lp-metric-sub">Require chef verification</div>
+        <div>
+          <div className="lp-eyebrow" style={{ color: 'var(--ink-400)' }}>Dietary Flags</div>
+          <div style={{ fontSize: 24, fontWeight: 700, color: flaggedToday > 0 ? '#f87171' : 'inherit' }}>{flaggedToday}</div>
         </div>
-
-        <div className="card card-pad lp-metric-card">
-          <div className="lp-metric-label">Kitchen Tablet Screen</div>
-          <div className="lp-metric-value" style={{ fontSize: 18, display: 'flex', alignItems: 'center', gap: 6 }}>
+        <div style={{ marginLeft: 'auto' }}>
+          <div className="lp-eyebrow" style={{ color: 'var(--ink-400)' }}>Kitchen Tablet</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
             <span style={{ color: hasTabletToken ? '#10b981' : '#f87171' }}>●</span>
-            {hasTabletToken ? 'Active' : 'Unset Token'}
-          </div>
-          <div className="lp-metric-sub">
-            {latePlatesEnabled ? 'Tool is Live' : 'Tool Paused (Testing)'}
+            <span style={{ fontSize: 14, fontWeight: 500 }}>{hasTabletToken ? 'Active' : 'Unset'}</span>
           </div>
         </div>
       </div>

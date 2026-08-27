@@ -162,129 +162,119 @@ export function LatePlateAdminClient({
             No late plate requests matching the selected filters.
           </div>
         ) : (
-          <div className="lp-admin-table-wrap" style={{ marginTop: 16 }}>
-            <table className="lp-admin-table">
-              <thead>
-                <tr>
-                  <th>Member</th>
-                  <th>Meal</th>
-                  <th>Status</th>
-                  <th>Restrictions & Note</th>
-                  <th>Requested</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredPlates.map((p) => (
-                  <tr key={p.id} className={`lp-row-${p.status}`}>
-                    <td>
-                      <strong>{p.name}</strong>
-                    </td>
-                    <td>
+          <div className="lp-queue-list" style={{ marginTop: 16 }}>
+            {filteredPlates.map((p) => (
+              <div key={p.id} className={`lp-queue-card lp-row-${p.status}`}>
+                <div className="lp-queue-card-header">
+                  <div>
+                    <div className="lp-queue-card-title">{p.name}</div>
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                       <span className="lp-meal-chip">{p.meal}</span>
-                    </td>
-                    <td>
-                      {p.status === 'ready' ? (
-                        <span className="tag ok">Ready</span>
-                      ) : p.status === 'waiting' ? (
-                        <span className="tag jun">Waiting</span>
-                      ) : p.status === 'declined' ? (
-                        <span className="tag bad" title={p.reason ?? ''}>
-                          Declined
-                        </span>
-                      ) : (
-                        <span className="tag locked">Cancelled</span>
-                      )}
-                    </td>
-                    <td>
-                      {p.flags.hasAny && (
-                        <div className="lp-flags-mini">
-                          {p.flags.allergens.map((a) => (
-                            <span key={a} className="lp-chip allergen" style={{ fontSize: 10 }}>
-                              ⚠️ {a}
-                            </span>
-                          ))}
-                          {p.flags.dietary.map((d) => (
-                            <span key={d} className="lp-chip dietary" style={{ fontSize: 10 }}>
-                              {d}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                      {p.note && <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--ink-400)' }}>“{p.note}”</div>}
-                      {p.reason && p.status === 'declined' && (
-                        <div style={{ fontSize: 11.5, color: 'var(--red-600)' }}>Reason: {p.reason}</div>
-                      )}
-                    </td>
-                    <td style={{ fontSize: 12, color: 'var(--ink-400)', whiteSpace: 'nowrap' }}>
-                      {new Date(p.requestedAt).toLocaleTimeString('en-US', {
-                        hour: 'numeric',
-                        minute: '2-digit',
-                      })}
-                    </td>
-                    <td>
-                      <div className="lp-admin-actions-cell">
-                        {p.status === 'waiting' && (
-                          <>
-                            <button
-                              type="button"
-                              className="btn sm good"
-                              disabled={pending}
-                              onClick={() => runAction(() => adminUpdateStatus(p.id, 'ready'))}
-                              title="Mark Ready in Student Fridge"
-                            >
-                              Mark Ready
-                            </button>
-                            <button
-                              type="button"
-                              className="btn sm danger"
-                              disabled={pending}
-                              onClick={() => setDecliningId(p.id)}
-                            >
-                              Decline
-                            </button>
-                          </>
-                        )}
+                      <span style={{ fontSize: 12, color: 'var(--ink-400)' }}>
+                        {new Date(p.requestedAt).toLocaleTimeString('en-US', {
+                          hour: 'numeric',
+                          minute: '2-digit',
+                        })}
+                      </span>
+                    </div>
+                  </div>
+                  <div>
+                    {p.status === 'ready' ? (
+                      <span className="tag ok">Ready</span>
+                    ) : p.status === 'waiting' ? (
+                      <span className="tag jun">Waiting</span>
+                    ) : p.status === 'declined' ? (
+                      <span className="tag bad" title={p.reason ?? ''}>
+                        Declined
+                      </span>
+                    ) : (
+                      <span className="tag locked">Cancelled</span>
+                    )}
+                  </div>
+                </div>
 
-                        {p.status === 'ready' && (
-                          <button
-                            type="button"
-                            className="btn sm ghost"
-                            disabled={pending}
-                            onClick={() => runAction(() => adminUpdateStatus(p.id, 'waiting'))}
-                          >
-                            Revert to Waiting
-                          </button>
-                        )}
-
-                        {p.status === 'declined' && (
-                          <button
-                            type="button"
-                            className="btn sm ghost"
-                            disabled={pending}
-                            onClick={() => runAction(() => adminUpdateStatus(p.id, 'waiting'))}
-                          >
-                            Re-Open
-                          </button>
-                        )}
-
-                        {p.status === 'cancelled' && (
-                          <button
-                            type="button"
-                            className="btn sm gold"
-                            disabled={pending}
-                            onClick={() => runAction(() => adminUnblockPlate(p.id))}
-                            title="Lifts day-of cancellation lock so member can request again"
-                          >
-                            🔓 Unblock Re-Request
-                          </button>
-                        )}
+                {(p.flags.hasAny || p.note || (p.reason && p.status === 'declined')) && (
+                  <div className="lp-queue-card-body">
+                    {p.flags.hasAny && (
+                      <div className="lp-flags-mini">
+                        {p.flags.allergens.map((a) => (
+                          <span key={a} className="lp-chip allergen" style={{ fontSize: 10 }}>
+                            ⚠️ {a}
+                          </span>
+                        ))}
+                        {p.flags.dietary.map((d) => (
+                          <span key={d} className="lp-chip dietary" style={{ fontSize: 10 }}>
+                            {d}
+                          </span>
+                        ))}
                       </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    )}
+                    {p.note && <div style={{ fontStyle: 'italic', color: 'var(--ink-400)' }}>“{p.note}”</div>}
+                    {p.reason && p.status === 'declined' && (
+                      <div style={{ color: 'var(--red-600)' }}>Reason: {p.reason}</div>
+                    )}
+                  </div>
+                )}
+
+                <div className="lp-queue-card-actions">
+                  {p.status === 'waiting' && (
+                    <>
+                      <button
+                        type="button"
+                        className="btn sm good"
+                        disabled={pending}
+                        onClick={() => runAction(() => adminUpdateStatus(p.id, 'ready'))}
+                        title="Mark Ready in Student Fridge"
+                      >
+                        Mark Ready
+                      </button>
+                      <button
+                        type="button"
+                        className="btn sm danger"
+                        disabled={pending}
+                        onClick={() => setDecliningId(p.id)}
+                      >
+                        Decline
+                      </button>
+                    </>
+                  )}
+
+                  {p.status === 'ready' && (
+                    <button
+                      type="button"
+                      className="btn sm ghost"
+                      disabled={pending}
+                      onClick={() => runAction(() => adminUpdateStatus(p.id, 'waiting'))}
+                    >
+                      Revert to Waiting
+                    </button>
+                  )}
+
+                  {p.status === 'declined' && (
+                    <button
+                      type="button"
+                      className="btn sm ghost"
+                      disabled={pending}
+                      onClick={() => runAction(() => adminUpdateStatus(p.id, 'waiting'))}
+                    >
+                      Re-Open
+                    </button>
+                  )}
+
+                  {p.status === 'cancelled' && (
+                    <button
+                      type="button"
+                      className="btn sm gold"
+                      disabled={pending}
+                      onClick={() => runAction(() => adminUnblockPlate(p.id))}
+                      title="Lifts day-of cancellation lock so member can request again"
+                    >
+                      🔓 Unblock Re-Request
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
@@ -332,135 +322,139 @@ export function LatePlateAdminClient({
       )}
 
       {/* Manual Request Input (Manager Override) */}
-      <div className="card card-pad" style={{ marginBottom: 20 }}>
-        <h2 className="section-title" style={{ margin: 0 }}>
-          Manual Request Placement (Manager Override)
-        </h2>
-        <p style={{ fontSize: 13, color: 'var(--ink-400)', marginTop: 2 }}>
-          Place a late plate on behalf of any brother. This bypasses cutoff times and closed meal restrictions.
-        </p>
+      <details className="card card-pad" style={{ marginBottom: 20, cursor: 'pointer' }}>
+        <summary style={{ outline: 'none', userSelect: 'none' }}>
+          <h2 className="section-title" style={{ margin: 0, display: 'inline-block' }}>
+            Manual Request Placement (Manager Override)
+          </h2>
+          <p style={{ fontSize: 13, color: 'var(--ink-400)', marginTop: 4, fontWeight: 'normal' }}>
+            Place a late plate on behalf of any brother. Bypasses cutoff times.
+          </p>
+        </summary>
+        
+        <div style={{ marginTop: 16, cursor: 'default' }}>
+          <form onSubmit={handleManualSubmit}>
+            <div className="lp-manual-grid">
+              <div>
+                <label className="field-label">Brother</label>
+                <select
+                  className="field"
+                  value={selectedMemberId}
+                  onChange={(e) => handleMemberSelect(e.target.value)}
+                  style={{ width: '100%' }}
+                >
+                  {roster.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-        <form onSubmit={handleManualSubmit} style={{ marginTop: 14 }}>
-          <div className="lp-manual-grid">
-            <div>
-              <label className="field-label">Brother</label>
-              <select
-                className="field"
-                value={selectedMemberId}
-                onChange={(e) => handleMemberSelect(e.target.value)}
-                style={{ width: '100%' }}
-              >
-                {roster.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.name}
-                  </option>
-                ))}
-              </select>
+              <div>
+                <label className="field-label">Date</label>
+                <input
+                  type="date"
+                  className="field"
+                  value={manualDate}
+                  onChange={(e) => setManualDate(e.target.value)}
+                  style={{ width: '100%' }}
+                />
+              </div>
+
+              <div>
+                <label className="field-label">Meal</label>
+                <select
+                  className="field"
+                  value={manualMeal}
+                  onChange={(e) => setManualMeal(e.target.value as Meal)}
+                  style={{ width: '100%' }}
+                >
+                  <option value="lunch">Lunch</option>
+                  <option value="dinner">Dinner</option>
+                </select>
+              </div>
             </div>
 
-            <div>
-              <label className="field-label">Date</label>
+            <div style={{ marginTop: 12 }}>
+              <label className="field-label">Note for Kitchen (Optional)</label>
               <input
-                type="date"
                 className="field"
-                value={manualDate}
-                onChange={(e) => setManualDate(e.target.value)}
+                placeholder="e.g. Grabbing around 9 PM / Placed by manager"
+                value={manualNote}
+                onChange={(e) => setManualNote(e.target.value)}
                 style={{ width: '100%' }}
               />
             </div>
 
-            <div>
-              <label className="field-label">Meal</label>
-              <select
-                className="field"
-                value={manualMeal}
-                onChange={(e) => setManualMeal(e.target.value as Meal)}
-                style={{ width: '100%' }}
+            <div style={{ marginTop: 12 }}>
+              <button
+                type="button"
+                className="btn sm ghost"
+                onClick={() => setFlagsOpen((o) => !o)}
               >
-                <option value="lunch">Lunch</option>
-                <option value="dinner">Dinner</option>
-              </select>
+                {flagSummary.hasAny
+                  ? `Dietary Flags: ${flagSummary.lines.join(' · ')} (edit)`
+                  : '+ Specify Dietary Restrictions'}
+              </button>
             </div>
-          </div>
 
-          <div style={{ marginTop: 12 }}>
-            <label className="field-label">Note for Kitchen (Optional)</label>
-            <input
-              className="field"
-              placeholder="e.g. Grabbing around 9 PM / Placed by manager"
-              value={manualNote}
-              onChange={(e) => setManualNote(e.target.value)}
-              style={{ width: '100%' }}
-            />
-          </div>
+            {flagsOpen && (
+              <div className="lp-flag-panel" style={{ marginTop: 10 }}>
+                <div className="lp-flag-group-title">Allergens</div>
+                <div className="lp-flag-grid">
+                  {ALLERGENS.map((f) => (
+                    <label key={f.id} className="lp-flag-check">
+                      <input
+                        type="checkbox"
+                        checked={manualFlags.includes(f.id)}
+                        onChange={() => toggleFlag(f.id)}
+                      />
+                      <span>{f.label}</span>
+                    </label>
+                  ))}
+                </div>
 
-          <div style={{ marginTop: 12 }}>
-            <button
-              type="button"
-              className="btn sm ghost"
-              onClick={() => setFlagsOpen((o) => !o)}
-            >
-              {flagSummary.hasAny
-                ? `Dietary Flags: ${flagSummary.lines.join(' · ')} (edit)`
-                : '+ Specify Dietary Restrictions'}
-            </button>
-          </div>
+                <div className="lp-flag-group-title" style={{ marginTop: 8 }}>
+                  Dietary & Religious
+                </div>
+                <div className="lp-flag-grid">
+                  {DIETARY.map((f) => (
+                    <label key={f.id} className="lp-flag-check">
+                      <input
+                        type="checkbox"
+                        checked={manualFlags.includes(f.id)}
+                        onChange={() => toggleFlag(f.id)}
+                      />
+                      <span>{f.label}</span>
+                    </label>
+                  ))}
+                </div>
 
-          {flagsOpen && (
-            <div className="lp-flag-panel" style={{ marginTop: 10 }}>
-              <div className="lp-flag-group-title">Allergens</div>
-              <div className="lp-flag-grid">
-                {ALLERGENS.map((f) => (
-                  <label key={f.id} className="lp-flag-check">
-                    <input
-                      type="checkbox"
-                      checked={manualFlags.includes(f.id)}
-                      onChange={() => toggleFlag(f.id)}
-                    />
-                    <span>{f.label}</span>
-                  </label>
-                ))}
+                {manualFlags.includes(OTHER_FLAG_ID) && (
+                  <input
+                    className="field"
+                    placeholder="Other restriction details"
+                    value={manualOther}
+                    onChange={(e) => setManualOther(e.target.value)}
+                    style={{ marginTop: 8, width: '100%' }}
+                  />
+                )}
               </div>
+            )}
 
-              <div className="lp-flag-group-title" style={{ marginTop: 8 }}>
-                Dietary & Religious
-              </div>
-              <div className="lp-flag-grid">
-                {DIETARY.map((f) => (
-                  <label key={f.id} className="lp-flag-check">
-                    <input
-                      type="checkbox"
-                      checked={manualFlags.includes(f.id)}
-                      onChange={() => toggleFlag(f.id)}
-                    />
-                    <span>{f.label}</span>
-                  </label>
-                ))}
-              </div>
-
-              {manualFlags.includes(OTHER_FLAG_ID) && (
-                <input
-                  className="field"
-                  placeholder="Other restriction details"
-                  value={manualOther}
-                  onChange={(e) => setManualOther(e.target.value)}
-                  style={{ marginTop: 8, width: '100%' }}
-                />
-              )}
+            <div style={{ marginTop: 16 }}>
+              <button
+                type="submit"
+                className="btn gold sm"
+                disabled={pending || !selectedMemberId}
+              >
+                {pending ? 'Placing…' : 'Place Late Plate'}
+              </button>
             </div>
-          )}
-
-          <div style={{ marginTop: 16 }}>
-            <button
-              type="submit"
-              className="btn gold sm"
-              disabled={pending || !selectedMemberId}
-            >
-              {pending ? 'Placing…' : 'Place Late Plate'}
-            </button>
-          </div>
-        </form>
-      </div>
+          </form>
+        </div>
+      </details>
     </div>
   );
 }
