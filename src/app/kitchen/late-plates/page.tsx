@@ -15,13 +15,15 @@ import { timingSafeEqual } from 'node:crypto';
 
 import { todayInEastern, parseISO } from '../../../lib/dates.ts';
 import { currentKitchenMeal } from '../../../lib/late-plate-service.ts';
+import { getActiveSemester } from '../../../lib/week-service.ts';
 import { KitchenQueue } from './kitchen-queue.tsx';
 import { TokenRecovery } from './token-recovery.tsx';
 
 export const dynamic = 'force-dynamic';
 
-function tokenMatches(provided: string | undefined): boolean {
-  const expected = process.env.LATE_PLATE_DEVICE_TOKEN;
+async function tokenMatches(provided: string | undefined): Promise<boolean> {
+  const semester = await getActiveSemester().catch(() => null);
+  const expected = semester?.kioskToken || process.env.LATE_PLATE_DEVICE_TOKEN;
   if (!expected || !provided) return false;
   const a = Buffer.from(provided);
   const b = Buffer.from(expected);
@@ -38,7 +40,7 @@ export default async function KitchenLatePlatesPage({
   // Touch headers so this can never be statically rendered with a token baked in.
   await headers();
 
-  if (!tokenMatches(params.device)) {
+  if (!(await tokenMatches(params.device))) {
     return (
       <div className="kq-shell kq-locked">
         <div className="kq-locked-card">
