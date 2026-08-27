@@ -14,6 +14,7 @@ const BROTHER_NAV = [
 const ADMIN_NAV = [
   { href: '/admin', label: 'Dashboard', icon: 'dashboard' },
   { href: '/admin/late-plates', label: 'Late Plates', icon: 'late-plate' },
+  { href: '/tv/admin.html', label: 'TV Board', icon: 'settings' },
   { href: '/admin/roster', label: 'Roster', icon: 'roster' },
   { href: '/admin/stats', label: 'Stats', icon: 'stats' },
   { href: '/schedule', label: 'Schedule', icon: 'schedule' },

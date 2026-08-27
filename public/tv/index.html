@@ -1,0 +1,1718 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ZBT Kitchen TV</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #06080f;
+      --panel: #111827;
+      --panel-2: #0b1220;
+      --line: #1f2a3d;
+      --text: #ffffff;
+      --dim: #9fb0c8;
+      --blue: #56ccff;
+      --gold: #ffc233;
+      --green: #4ade80;
+      --red: #ff5d5d;
+      --safe-margin: 0px;
+      --font: 'Inter', 'Roboto', 'Noto Sans', 'DejaVu Sans', system-ui, sans-serif;
+
+      /* Announcement accents. Muted and low-saturation on purpose: eight neon
+         hues on one dark panel read as a toy, and the saturated ones fight the
+         gold the rest of the board is built from. These are desaturated enough
+         to sit together calmly, and still far enough apart in hue AND lightness
+         to be told apart from across a kitchen. Keys are unchanged so existing
+         announcements keep the colour they were given. */
+      --acc-gold: #e2b45f;
+      --acc-blue: #7fb0d4;
+      --acc-green: #86bb95;
+      --acc-red: #d98479;
+      --acc-purple: #a794c9;
+      --acc-teal: #6faaa6;
+      --acc-orange: #d3946b;
+      --acc-pink: #c68fa2;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      cursor: none;
+      -webkit-font-smoothing: antialiased;
+      padding: var(--safe-margin, 0px);
+    }
+
+    .icon { width: 1em; height: 1em; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+    .icon-fill { fill: currentColor; stroke: none; }
+
+    /* ---------- HEADER ---------- */
+    header {
+      background: linear-gradient(180deg, #0d1626 0%, #080e1a 100%);
+      border-bottom: 3px solid var(--gold);
+      padding: 0.9rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex: none;
+    }
+    .brand { display: flex; align-items: center; gap: 1.15rem; }
+    .crest { width: auto; object-fit: contain; flex: none; }
+    .crest.size-small { height: 3.4rem; }
+    .crest.size-medium { height: 4.8rem; }
+    .crest.size-large { height: 6.2rem; }
+
+    .brand-title { font-size: 2.9rem; font-weight: 900; letter-spacing: 0.22em; color: var(--gold); line-height: 1; }
+    .brand-sub { font-size: 1.05rem; font-weight: 700; letter-spacing: 0.35em; color: var(--dim); margin-top: 0.45rem; }
+    .header-right { text-align: right; }
+    .clock { display: flex; align-items: baseline; justify-content: flex-end; gap: 0.2rem; font-variant-numeric: tabular-nums; line-height: 1; }
+    .clock-hm { font-size: 4.2rem; font-weight: 900; letter-spacing: -0.02em; }
+    .clock-sec { font-size: 2.1rem; font-weight: 800; color: var(--blue); }
+    .clock-ampm { font-size: 1.5rem; font-weight: 800; color: var(--gold); margin-left: 0.35rem; }
+    .date-line { font-size: 1.25rem; font-weight: 700; color: var(--dim); letter-spacing: 0.06em; margin-top: 0.35rem; }
+
+    /* ---------- GRID ---------- */
+    main { display: grid; gap: 1.25rem; padding: 1.25rem 1.5rem; flex: 1; min-height: 0; }
+    .col { display: flex; flex-direction: column; gap: 1.25rem; min-height: 0; min-width: 0; }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 1rem;
+      padding: 0.85rem 1.1rem;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      min-width: 0;
+      box-shadow: 0 12px 32px rgba(0,0,0,0.45);
+    }
+
+    .card-head {
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      border-bottom: 2px solid var(--line);
+      padding-bottom: 0.5rem;
+      margin-bottom: 0.65rem;
+      flex: none;
+    }
+    .card-head .icon { font-size: 1.6rem; }
+    .card-title { flex: none; white-space: nowrap; font-size: 1.5rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
+    .card-tag {
+      margin-left: auto; font-size: 0.95rem; font-weight: 800; letter-spacing: 0.08em;
+      color: var(--blue); background: rgba(86,204,255,0.12); border: 1px solid rgba(86,204,255,0.3);
+      padding: 0.22rem 0.65rem; border-radius: 0.5rem; text-transform: uppercase; white-space: nowrap;
+      min-width: 0; overflow: hidden; text-overflow: ellipsis;
+    }
+    .card-tag.gold { color: var(--gold); background: rgba(255,194,51,0.12); border-color: rgba(255,194,51,0.3); }
+
+    /* ---------- MEALS ---------- */
+    /* flex-basis 0, not auto: with auto, shrinking one menu's type changes that
+       card's basis, which resizes the other card underneath the fitter that just
+       ran on it. Heights come from flex-grow alone so one pass converges. */
+    .meal-card { flex: 1 1 0; min-height: 0; transition: transform .3s ease, box-shadow .3s ease, border-color .3s ease; }
+    .meal-card.serving {
+      border-color: var(--gold);
+      transform: translateY(-0.35rem);
+      box-shadow: 0 0 0 2px rgba(255,194,51,0.35), 0 18px 46px rgba(0,0,0,0.6), 0 0 40px rgba(255,194,51,0.12);
+      background: linear-gradient(180deg, #16203a 0%, var(--panel) 55%);
+    }
+    .serving-badge {
+      display: none;
+      font-size: 0.85rem; font-weight: 900; letter-spacing: 0.12em;
+      color: #10151f; background: var(--gold);
+      border-radius: 0.45rem; padding: 0.2rem 0.6rem; margin-left: 0.6rem;
+      animation: pulse 2.4s ease-in-out infinite;
+    }
+    .meal-card.serving .serving-badge { display: inline-block; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.72; } }
+    .meal-name { font-size: 1.9rem; font-weight: 900; letter-spacing: 0.04em; }
+
+    .menu-list { list-style: none; overflow: hidden; flex: 1; min-height: 0; font-size: 1.7rem; column-gap: 1.5rem; }
+    .menu-list.two-col { column-count: 2; }
+    .menu-item {
+      font-size: 1em; font-weight: 700; color: var(--text);
+      display: flex; align-items: flex-start; gap: 0.55rem;
+      line-height: 1.22; margin-bottom: 0.3rem; break-inside: avoid;
+    }
+    .menu-item::before { content: ''; width: 0.5rem; height: 0.5rem; border-radius: 50%; background: var(--gold); flex: none; margin-top: 0.45em; }
+    .menu-empty { font-size: 0.85em; font-weight: 600; color: var(--dim); font-style: italic; }
+
+    .crew-strip {
+      min-width: 0;
+      margin-top: 0.55rem; padding-top: 0.5rem; border-top: 1px dashed var(--line);
+      flex: none; display: flex; align-items: baseline; flex-wrap: wrap; gap: 0.35rem 0.8rem;
+    }
+    .crew-label { font-size: 0.95rem; font-weight: 800; letter-spacing: 0.1em; color: var(--dim); text-transform: uppercase; flex: none; }
+    .crew-names { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem 0.85rem; }
+    .crew-name { font-size: 1.25rem; font-weight: 800; display: flex; align-items: center; gap: 0.35rem; }
+    .pill { font-size: 0.8rem; font-weight: 900; padding: 0.1rem 0.45rem; border-radius: 0.4rem; letter-spacing: 0.05em; }
+    .pill.flag { background: rgba(255,93,93,0.18); color: var(--red); }
+    .pill.cov { background: rgba(74,222,128,0.18); color: var(--green); }
+
+    /* An unclaimed shift is the one thing on this board that needs somebody to
+       act. It is the only element that pulses, and the only one in red -- if it
+       shared a colour or an animation with anything else it would stop reading
+       as "this is for you". */
+    .crew-name.open {
+      color: #ffd9d9;
+      background: rgba(255,60,60,0.16);
+      border: 2px solid var(--red);
+      border-radius: 0.45rem;
+      padding: 0.12rem 0.6rem;
+      letter-spacing: 0.09em;
+      font-weight: 900;
+      animation: openPulse 1.7s ease-in-out infinite;
+    }
+    @keyframes openPulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(255,60,60,0.55), 0 0 14px rgba(255,60,60,0.18); background: rgba(255,60,60,0.16); }
+      50%      { box-shadow: 0 0 0 0.55rem rgba(255,60,60,0), 0 0 26px rgba(255,60,60,0.42); background: rgba(255,60,60,0.30); }
+    }
+    /* The reward, not the problem: gold, and on its own beat so it reads as a
+       separate piece of information from the red. */
+    .pill.bounty {
+      background: var(--gold); color: #17120a; font-weight: 900;
+      letter-spacing: 0.06em; padding: 0.12rem 0.5rem;
+      animation: bountyGlow 1.7s ease-in-out infinite;
+    }
+    @keyframes bountyGlow {
+      0%, 100% { box-shadow: 0 0 0 rgba(255,194,51,0); }
+      50%      { box-shadow: 0 0 16px rgba(255,194,51,0.85); }
+    }
+
+    /* Lunch after its cleanup window: one line, still answering "what was lunch"
+       without holding a third of the column to say it. */
+    .recap { display: none; align-items: center; gap: 0.7rem; flex: 1 1 0; min-width: 0; margin-left: 0.2rem; }
+    .meal-card.collapsed { flex: none; padding: 0.6rem 1.1rem; }
+    .meal-card.collapsed .card-head { border-bottom: 0; padding-bottom: 0; margin-bottom: 0; }
+    .meal-card.collapsed .card-title { font-size: 1.15rem; color: var(--dim); }
+    .meal-card.collapsed .card-head .icon { font-size: 1.2rem; color: var(--green); }
+    .meal-card.collapsed .menu-list,
+    .meal-card.collapsed .crew-strip,
+    .meal-card.collapsed .card-tag { display: none; }
+    .meal-card.collapsed .recap { display: flex; }
+    .recap-done { font-size: 0.9rem; font-weight: 900; letter-spacing: 0.1em; color: var(--green); background: rgba(74,222,128,0.14); border-radius: 0.4rem; padding: 0.12rem 0.5rem; flex: none; }
+    .recap-menu { font-size: 1.15rem; font-weight: 700; color: #b9c8dd; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+    .recap-duty { font-size: 0.98rem; font-weight: 800; color: var(--dim); margin-left: auto; flex: none; white-space: nowrap; }
+    .recap-duty.open { color: var(--red); }
+
+    /* ---------- DUTY CHECKLIST ---------- */
+    #duty-card { flex: 1 1 auto; min-height: 0; }
+    .duty-head { display: flex; align-items: baseline; gap: 0.8rem; flex: none; margin-bottom: 0.7rem; flex-wrap: wrap; }
+    .duty-crew { font-size: 1.2rem; font-weight: 800; color: #cbd8ea; }
+    .duty-crew span { color: var(--dim); font-weight: 700; }
+    .duty-count { margin-left: auto; font-size: 1.05rem; font-weight: 900; letter-spacing: 0.08em; color: var(--gold); }
+    .duty-list { list-style: none; flex: 1; min-height: 0; overflow: hidden; font-size: 1.9rem; }
+    .duty-item {
+      display: flex; align-items: flex-start; gap: 0.7rem;
+      font-size: 1em; font-weight: 700; line-height: 1.24; color: var(--text);
+      margin-bottom: 0.5em; break-inside: avoid;
+    }
+    .duty-n {
+      flex: none; width: 1.5em; height: 1.5em; border-radius: 50%;
+      background: rgba(255,194,51,0.14); border: 2px solid rgba(255,194,51,0.5); color: var(--gold);
+      font-size: 0.62em; font-weight: 900; display: flex; align-items: center; justify-content: center;
+      margin-top: 0.16em;
+    }
+    .duty-foot { flex: none; margin-top: 0.6rem; padding-top: 0.55rem; border-top: 1px dashed var(--line);
+      font-size: 1.1rem; font-weight: 800; color: var(--dim); display: flex; align-items: center; gap: 0.55rem; }
+    .duty-foot .icon { font-size: 1.25rem; }
+    .duty-foot.live { color: var(--gold); }
+    .duty-foot.over { color: var(--green); }
+
+    /* ---------- TOMORROW ---------- */
+    /* This was a two-row card taking 30% of the kitchen column at 1080p, which
+       is more than tomorrow's menu is worth while today's is still being served.
+       As a strip it says the same thing in half the height, and the height goes
+       to the meals. */
+    .tomorrow-card { flex: none; padding: 0.6rem 1.1rem; }
+    .tmr-row { display: flex; align-items: baseline; gap: 0.75rem; min-width: 0; }
+    .tmr-row .icon { font-size: 1.1rem; color: var(--gold); flex: none; align-self: center; }
+    .tmr-h { font-size: 0.92rem; font-weight: 900; letter-spacing: 0.14em; color: var(--gold); text-transform: uppercase; flex: none; }
+    .tmr-date { font-size: 0.92rem; font-weight: 800; color: var(--dim); flex: none; }
+    .tmr-pair { display: flex; align-items: baseline; gap: 0.4rem; min-width: 0; flex: 1; }
+    .tmr-pair b { font-size: 0.86rem; font-weight: 900; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dim); flex: none; }
+    .tmr-v { font-size: 1.08rem; font-weight: 700; color: #cbd8ea; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+    .open-line {
+      margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px dashed var(--line);
+      font-size: 1.05rem; font-weight: 800; color: var(--dim);
+      display: flex; align-items: center; gap: 0.5rem; min-width: 0;
+    }
+    .open-line .icon { font-size: 1.2rem; flex: none; }
+    .open-line > span:first-of-type { flex: none; }
+    .open-line.alert { color: var(--red); }
+    .open-line.ok { color: var(--green); }
+    .open-line .note { color: var(--dim); font-weight: 700; margin-left: auto; text-align: right;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+
+    /* ---------- WEATHER CARD (COMPACT & HIGH IMPACT) ---------- */
+    .wx-card {
+      padding: 0.65rem 0.95rem;
+      background: linear-gradient(135deg, #10192e 0%, var(--panel) 70%);
+      border: 1px solid var(--line);
+      border-radius: 0.85rem;
+      flex: none;
+      box-shadow: 0 12px 32px rgba(0,0,0,0.45);
+    }
+    .wx-main-row {
+      display: flex; align-items: center; justify-content: space-between; gap: 0.9rem;
+    }
+    .wx-temp-block {
+      display: flex; align-items: center; gap: 0.75rem; flex: none;
+    }
+    .wx-icon { font-size: 3.4rem; color: var(--blue); stroke-width: 1.8; flex: none; }
+    .wx-temp-group { display: flex; flex-direction: column; }
+    .wx-temp { font-size: 3.4rem; font-weight: 900; line-height: 0.92; letter-spacing: -0.03em; }
+    .wx-feels { font-size: 0.98rem; font-weight: 750; color: var(--dim); margin-top: 0.2rem; white-space: nowrap; }
+    .wx-feels b { color: #cbd5e1; font-weight: 850; }
+    .wx-meta-group { display: flex; flex-direction: column; margin-left: 0.2rem; }
+    .wx-cond { font-size: 1.25rem; font-weight: 900; color: var(--gold); line-height: 1.1; white-space: nowrap; }
+    .wx-place { font-size: 0.82rem; font-weight: 800; color: var(--dim); letter-spacing: 0.1em; text-transform: uppercase; margin-top: 0.15rem; }
+
+    .wx-div { width: 1px; height: 3.6rem; background: var(--line); flex: none; }
+
+    .wx-rain-block {
+      flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 0.35rem; justify-content: center;
+    }
+    .wx-rain-head { display: flex; align-items: center; min-width: 0; }
+    .wx-rain-msg {
+      font-size: 1.05rem; font-weight: 850; color: #cbd5e1;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .wx-rain-alert {
+      background: rgba(245, 158, 11, 0.18); border: 1.5px solid #f59e0b; color: #fef08a;
+      padding: 0.18rem 0.55rem; border-radius: 0.4rem; font-weight: 900; font-size: 1.08rem;
+      letter-spacing: 0.03em; animation: rainAlertPulse 2s ease-in-out infinite;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    @keyframes rainAlertPulse {
+      0%, 100% { box-shadow: 0 0 0 rgba(245, 158, 11, 0); }
+      50%      { box-shadow: 0 0 16px rgba(245, 158, 11, 0.5); }
+    }
+
+    .wx-rain-graph {
+      display: flex; align-items: flex-end; gap: 0.35rem; height: 3.2rem;
+      background: rgba(0, 0, 0, 0.3); border-radius: 0.5rem;
+      padding: 0.25rem 0.45rem 0.15rem; border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .wx-bar-col {
+      flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+      height: 100%; gap: 0.12rem; min-width: 0;
+    }
+    .wx-bar-val { font-size: 0.72rem; font-weight: 900; color: var(--blue); line-height: 1; min-height: 0.75rem; }
+    .wx-bar-track {
+      width: 100%; max-width: 18px; background: rgba(255, 255, 255, 0.08);
+      border-radius: 3px; flex: 1; display: flex; align-items: flex-end; overflow: hidden;
+    }
+    .wx-bar-fill {
+      width: 100%; background: linear-gradient(180deg, #38bdf8 0%, #0284c7 100%);
+      border-radius: 3px; min-height: 2px; transition: height 0.4s ease;
+    }
+    .wx-bar-fill.high { background: linear-gradient(180deg, #60a5fa 0%, #2563eb 100%); }
+    .wx-bar-lbl { font-size: 0.75rem; font-weight: 800; color: var(--dim); line-height: 1; margin-top: 0.1rem; }
+
+    /* ---------- LATE PLATES ---------- */
+    #col-plates .card-title { font-size: 1.22rem; }
+    #col-plates .card-head .icon { font-size: 1.3rem; }
+    #col-plates .card-tag { font-size: 0.8rem; padding: 0.18rem 0.45rem; }
+    .lp-meals { flex: none; display: flex; flex-direction: column; gap: 0.55rem; margin-bottom: 0.7rem; }
+    .lp-meal { background: var(--panel-2); border: 1px solid var(--line); border-radius: 0.6rem; padding: 0.5rem 0.7rem; }
+    .lp-meal-top { display: flex; align-items: baseline; gap: 0.5rem; flex-wrap: wrap; min-width: 0; }
+    .lp-meal-name { font-size: 1.15rem; font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; color: #cbd8ea; }
+    .lp-cut { margin-left: auto; font-size: 0.85rem; font-weight: 800; color: var(--dim); white-space: nowrap; }
+    .lp-nums { display: flex; gap: 0.9rem; margin-top: 0.35rem; }
+    .lp-num { display: flex; align-items: baseline; gap: 0.3rem; }
+    .lp-num b { font-size: 1.9rem; font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums; }
+    .lp-num span { font-size: 0.85rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--dim); }
+    .lp-num.make b { color: var(--gold); }
+    .lp-num.ready b { color: var(--green); }
+    .lp-closed { font-size: 0.9rem; font-weight: 800; color: var(--red); margin-top: 0.3rem; }
+    .lp-names { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 0.3rem;
+      font-size: calc(1rem * var(--lp-scale, 1)); }
+    .lp-names-lab { font-size: 0.85em; font-weight: 900; letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim); flex: none; margin-bottom: 0.15rem; }
+    .lp-name { font-size: 1.2em; font-weight: 800; display: flex; align-items: center; gap: 0.5rem; flex: none; }
+    .lp-dot { width: 0.5em; height: 0.5em; border-radius: 50%; flex: none; }
+    .lp-name.waiting .lp-dot { background: var(--gold); }
+    .lp-name.ready .lp-dot { background: var(--green); }
+    .lp-name.ready { color: var(--green); }
+    .lp-msg { font-size: 1em; font-weight: 700; color: var(--dim); font-style: italic; }
+
+    /* ---------- ANNOUNCEMENTS ---------- */
+    .ann-wrap { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+    /* --ann-scale is the fill lever. Pagination decides what goes on a page at
+       scale 1; this then stretches or shrinks that page to use the height it
+       actually has, so a single short notice is not a postage stamp in a sea of
+       panel and eight of them are not clipped. */
+    .ann-list {
+      display: flex; gap: 0.8rem; overflow: hidden; flex: 1; min-height: 0;
+      font-size: calc(1rem * var(--ann-scale, 1));
+    }
+    .ann-list.stack { flex-direction: column; }
+    .ann-list.grid2 { flex-direction: row; align-items: stretch; }
+    .ann-col { display: flex; flex-direction: column; gap: 0.8rem; flex: 1; min-width: 0; }
+
+    .ann {
+      --acc: var(--acc-gold);
+      position: relative;
+      background: linear-gradient(135deg, color-mix(in srgb, var(--acc) 11%, #0d1524) 0%, #0a1120 72%);
+      border: 1px solid color-mix(in srgb, var(--acc) 22%, var(--line));
+      border-left: 0.4em solid color-mix(in srgb, var(--acc) 80%, #6a7488);
+      border-radius: 0.7em;
+      padding: 0.75em 0.9em;
+      overflow: hidden;
+      flex: none;
+      display: flex; flex-direction: column; gap: 0.45em;
+    }
+    .ann.emph-highlight {
+      border-color: color-mix(in srgb, var(--acc) 40%, var(--line));
+      border-left-width: 0.62em;
+      background: linear-gradient(135deg, color-mix(in srgb, var(--acc) 22%, #0d1524) 0%, #0b1322 78%);
+    }
+    .ann.emph-urgent {
+      border: 2px solid color-mix(in srgb, var(--acc) 75%, #7a8296); border-left-width: 0.62em;
+      background: linear-gradient(135deg, color-mix(in srgb, var(--acc) 30%, #10151f) 0%, #0c1220 80%);
+      animation: annUrgent 2.6s ease-in-out infinite;
+    }
+    @keyframes annUrgent {
+      0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--acc) 0%, transparent); }
+      50%      { box-shadow: 0 0 26px color-mix(in srgb, var(--acc) 38%, transparent); }
+    }
+
+    .ann-chips { display: flex; align-items: center; gap: 0.4em; flex-wrap: wrap; }
+    .ann-chip {
+      font-size: 0.78em; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase;
+      padding: 0.16em 0.55em; border-radius: 0.35em;
+      background: color-mix(in srgb, var(--acc) 20%, transparent);
+      color: color-mix(in srgb, var(--acc) 62%, #ffffff);
+      border: 1px solid color-mix(in srgb, var(--acc) 38%, transparent);
+    }
+    .ann-chip.solid { background: color-mix(in srgb, var(--acc) 88%, #ffffff); color: #14181f; border-color: transparent; }
+    .ann-chip.when { background: rgba(255,255,255,0.07); color: #c3d0e2; border-color: rgba(255,255,255,0.14); letter-spacing: 0.06em; }
+
+    .ann-title { font-size: 1.62em; font-weight: 800; color: color-mix(in srgb, var(--acc) 55%, #ffffff); line-height: 1.12; }
+    .ann-body { font-size: 1.25em; font-weight: 600; color: #cdd8e8; line-height: 1.34; white-space: pre-wrap; }
+
+    .ann-img { width: 100%; border-radius: 0.45em; display: block; background: #0a0f1a; }
+    .ann-img.fit-cover { object-fit: cover; }
+    .ann-img.fit-contain { object-fit: contain; }
+    .ann-img.foc-top { object-position: top center; }
+    .ann-img.foc-bottom { object-position: bottom center; }
+    .ann-img.size-small { height: 6.5em; }
+    .ann-img.size-medium { height: 9.5em; }
+    .ann-img.size-large { height: 13.5em; }
+    .ann-img.size-xl, .ann-img.size-fill { height: 18em; }
+
+    /* Side layout for normal multi-card grid */
+    .ann.lay-side { flex-direction: row; align-items: stretch; gap: 0.8em; }
+    .ann.lay-side .ann-frame { width: 38%; flex: none; position: relative; min-height: 6em; align-self: stretch; }
+    .ann.lay-side .ann-frame img { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 0.45em; }
+    .ann.lay-side .ann-side-text { display: flex; flex-direction: column; gap: 0.4em; min-width: 0; flex: 1; }
+
+    /* Background layout for normal multi-card grid */
+    .ann.lay-bg { padding: 0; min-height: 9em; justify-content: flex-end; }
+    .ann.lay-bg .ann-bg-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .ann.lay-bg .ann-bg-text {
+      position: relative; padding: 0.85em 0.95em; margin-top: auto;
+      background: linear-gradient(180deg, rgba(6,8,15,0) 0%, rgba(6,8,15,0.86) 42%, rgba(6,8,15,0.96) 100%);
+      display: flex; flex-direction: column; gap: 0.35em;
+    }
+
+    /* ---------- FULL PAGE / SOLO SPOTLIGHT (100% CONTAINER EXPANSION) ---------- */
+    .ann-list.solo-mode { height: 100%; flex: 1; min-height: 0; display: flex; flex-direction: column; }
+    .ann-list.solo-mode .ann, .ann.solo-page {
+      height: 100% !important; flex: 1 1 100% !important; min-height: 0 !important; box-sizing: border-box !important;
+      padding: 1.5rem 1.8rem !important; display: flex !important;
+    }
+    /* Solo Side Layout (Portrait / Square Photos) */
+    .ann-list.solo-mode .ann.lay-side, .ann.solo-page.lay-side { flex-direction: row !important; align-items: stretch !important; gap: 2rem !important; }
+    .ann-list.solo-mode .ann.lay-side .ann-solo-side-frame,
+    .ann-list.solo-mode .ann.lay-side .ann-frame,
+    .ann.solo-page.lay-side .ann-solo-side-frame {
+      flex: 0 0 54% !important; max-width: 58% !important; width: auto !important; height: 100% !important; min-height: 0 !important;
+      display: flex !important; align-items: center !important; justify-content: center !important;
+      border-radius: 0.8rem !important; overflow: hidden !important; background: rgba(0, 0, 0, 0.45) !important; position: relative !important;
+    }
+    .ann-list.solo-mode .ann.lay-side .ann-solo-side-frame img,
+    .ann-list.solo-mode .ann.lay-side .ann-frame img,
+    .ann.solo-page.lay-side .ann-solo-side-frame img {
+      position: static !important; width: 100% !important; height: 100% !important; max-width: 100% !important; max-height: 100% !important;
+      object-fit: contain !important; border-radius: 0.6rem !important;
+    }
+    .ann-list.solo-mode .ann.lay-side .ann-solo-side-text,
+    .ann-list.solo-mode .ann.lay-side .ann-side-text,
+    .ann.solo-page.lay-side .ann-solo-side-text {
+      flex: 1 1 46% !important; min-width: 0 !important; display: flex !important; flex-direction: column !important;
+      justify-content: center !important; gap: 1.2rem !important;
+    }
+    .ann-list.solo-mode .ann.lay-side .ann-title,
+    .ann.solo-page.lay-side .ann-title { font-size: 2.8rem !important; font-weight: 850 !important; line-height: 1.18 !important; }
+    .ann-list.solo-mode .ann.lay-side .ann-body,
+    .ann.solo-page.lay-side .ann-body { font-size: 2rem !important; font-weight: 650 !important; line-height: 1.38 !important; color: #f1f5f9 !important; }
+
+    /* Solo Top Layout (Landscape Photos) */
+    .ann-list.solo-mode .ann.lay-top, .ann.solo-page.lay-top { flex-direction: column !important; align-items: stretch !important; gap: 1.2rem !important; height: 100% !important; }
+    .ann-list.solo-mode .ann.lay-top .ann-solo-top-head,
+    .ann.solo-page.lay-top .ann-solo-top-head { flex: none !important; display: flex !important; flex-direction: column !important; gap: 0.6rem !important; }
+    .ann-list.solo-mode .ann.lay-top .ann-title,
+    .ann.solo-page.lay-top .ann-title { font-size: 2.6rem !important; font-weight: 850 !important; line-height: 1.15 !important; }
+    .ann-list.solo-mode .ann.lay-top .ann-body,
+    .ann.solo-page.lay-top .ann-body { font-size: 1.85rem !important; font-weight: 650 !important; line-height: 1.32 !important; color: #f1f5f9 !important; }
+    .ann-list.solo-mode .ann.lay-top .ann-solo-top-frame,
+    .ann-list.solo-mode .ann.lay-top .ann-top-frame,
+    .ann.solo-page.lay-top .ann-solo-top-frame {
+      flex: 1 1 0 !important; min-height: 0 !important; width: 100% !important; height: 100% !important; display: flex !important;
+      align-items: center !important; justify-content: center !important; border-radius: 0.8rem !important;
+      overflow: hidden !important; background: rgba(0, 0, 0, 0.45) !important;
+    }
+    .ann-list.solo-mode .ann.lay-top .ann-solo-top-frame img,
+    .ann-list.solo-mode .ann.lay-top .ann-top-frame img,
+    .ann-list.solo-mode .ann.lay-top img.ann-img,
+    .ann.solo-page.lay-top .ann-solo-top-frame img {
+      width: 100% !important; height: 100% !important; max-width: 100% !important; max-height: 100% !important;
+      object-fit: contain !important; border-radius: 0.6rem !important;
+    }
+
+    /* Solo Background Layout */
+    .ann-list.solo-mode .ann.lay-bg, .ann.solo-page.lay-bg { padding: 0 !important; height: 100% !important; justify-content: flex-end !important; position: relative !important; }
+    .ann-list.solo-mode .ann.lay-bg .ann-bg-img, .ann.solo-page.lay-bg .ann-bg-img { position: absolute !important; inset: 0 !important; width: 100% !important; height: 100% !important; object-fit: contain !important; background: #000 !important; }
+    .ann-list.solo-mode .ann.lay-bg .ann-bg-text, .ann.solo-page.lay-bg .ann-bg-text {
+      position: relative !important; padding: 2rem 2.2rem !important;
+      background: linear-gradient(180deg, rgba(6,8,15,0) 0%, rgba(6,8,15,0.85) 30%, rgba(6,8,15,0.98) 100%) !important;
+      display: flex !important; flex-direction: column !important; gap: 0.6rem !important;
+    }
+    .ann-list.solo-mode .ann.lay-bg .ann-title, .ann.solo-page.lay-bg .ann-title { font-size: 2.8rem !important; }
+    .ann-list.solo-mode .ann.lay-bg .ann-body, .ann.solo-page.lay-bg .ann-body { font-size: 2rem !important; }
+
+    .ann-empty { color: var(--dim); font-style: italic; }
+
+    /* Segmented page progress: one segment per page, the live one filling in
+       real time. Replaces the old dots, which said how many pages there were
+       but nothing about how long you had to read the one in front of you. */
+    .ann-prog { display: flex; gap: 0.35rem; margin-top: 0.6rem; flex: none; height: 0.4rem; }
+    .ann-seg { flex: 1; background: rgba(255,255,255,0.10); border-radius: 999px; overflow: hidden; }
+    .ann-seg i { display: block; height: 100%; width: 0; background: var(--gold); border-radius: 999px; }
+    .ann-seg.done i { width: 100%; background: rgba(255,194,51,0.45); }
+    .ann-seg.live i { width: 0; }
+    .ann-seg.live.run i { width: 100%; transition: width linear var(--page-ms, 15000ms); }
+
+    /* ---------- TICKER ---------- */
+    .ticker { background: #0a1120; border-top: 2px solid var(--line); height: 3.6rem; display: flex; align-items: center; overflow: hidden; flex: none; }
+    .ticker-tag { background: var(--gold); color: #0a1120; font-weight: 900; font-size: 1rem; letter-spacing: 0.16em; padding: 0 1.3rem; height: 100%; display: flex; align-items: center; white-space: nowrap; flex: none; }
+    .ticker-wrap { flex: 1; overflow: hidden; white-space: nowrap; }
+    .ticker-move { display: inline-block; padding-left: 100%; animation: ticker 30s linear infinite; }
+    .ticker-text { font-size: 1.45rem; font-weight: 800; letter-spacing: 0.03em; padding-right: 4rem; }
+    @keyframes ticker { 0% { transform: translate3d(0,0,0); } 100% { transform: translate3d(-100%,0,0); } }
+
+    .hidden { display: none !important; }
+
+    /* Offscreen twin of .ann-list used to measure real card heights before
+       paginating. Same width and same styles, so the numbers mean something. */
+    #ann-measure { position: absolute; left: -99999px; top: 0; visibility: hidden; pointer-events: none; }
+  </style>
+</head>
+<body>
+
+<!-- Inline icon set. Emoji depend on a colour-emoji font that Raspberry Pi OS does
+     not install by default, so all display chrome uses these instead. -->
+<svg style="display:none" aria-hidden="true">
+  <symbol id="i-utensils" viewBox="0 0 24 24"><path d="M4 2v7a3 3 0 0 0 3 3 3 3 0 0 0 3-3V2"/><path d="M7 2v20"/><path d="M18 2c-1.7 1.5-2.5 4-2.5 7 0 2 .6 3 2.5 3.2V22"/></symbol>
+  <symbol id="i-mega" viewBox="0 0 24 24"><path d="M3 11v2a1 1 0 0 0 1 1h3l6 4V6L7 10H4a1 1 0 0 0-1 1z"/><path d="M17 9a4 4 0 0 1 0 6"/><path d="M20 6.5a8 8 0 0 1 0 11"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.5"/><path d="M12 1v2M12 21v2M4.2 4.2l1.5 1.5M18.3 18.3l1.5 1.5M1 12h2M21 12h2M4.2 19.8l1.5-1.5M18.3 5.7l1.5-1.5"/></symbol>
+  <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></symbol>
+  <symbol id="i-cloud-sun" viewBox="0 0 24 24"><circle cx="8" cy="8" r="3"/><path d="M8 1v1.5M8 13.5V15M1 8h1.5M13.5 8H15M3.1 3.1l1 1M11.9 3.1l-1 1"/><path d="M17.5 13h-.9a5.5 5.5 0 1 0-6.6 7h7.5a3.5 3.5 0 0 0 0-7z"/></symbol>
+  <symbol id="i-cloud-rain" viewBox="0 0 24 24"><path d="M18 8h-1.26A8 8 0 1 0 9 18h9a5 5 0 0 0 0-10z"/><path d="M8 20v2M12 20v2M16 20v2"/></symbol>
+  <symbol id="i-cloud-snow" viewBox="0 0 24 24"><path d="M18 8h-1.26A8 8 0 1 0 9 18h9a5 5 0 0 0 0-10z"/><path d="M8 20h.01M12 21h.01M16 20h.01M10 22h.01M14 22h.01"/></symbol>
+  <symbol id="i-fog" viewBox="0 0 24 24"><path d="M18 8h-1.26A8 8 0 1 0 9 18h9a5 5 0 0 0 0-10z"/><path d="M4 21h16M7 18h13"/></symbol>
+  <symbol id="i-thunder" viewBox="0 0 24 24"><path d="M19 15.9A5 5 0 0 0 18 6h-1.26A8 8 0 1 0 5.1 15"/><path d="M13 11l-4 6h6l-4 6"/></symbol>
+  <symbol id="i-drop" viewBox="0 0 24 24"><path d="M12 2.7l5.7 5.6a8 8 0 1 1-11.4 0z"/></symbol>
+  <symbol id="i-wind" viewBox="0 0 24 24"><path d="M9.6 4.6A2 2 0 1 1 11 8H2M12.6 19.4A2 2 0 1 0 14 16H2M17.7 7.7A2.5 2.5 0 1 1 19.5 12H2"/></symbol>
+  <symbol id="i-thermo" viewBox="0 0 24 24"><path d="M14 14.8V4a2 2 0 0 0-4 0v10.8a4 4 0 1 0 4 0z"/></symbol>
+  <symbol id="i-umbrella" viewBox="0 0 24 24"><path d="M12 2a10 10 0 0 1 10 10H2A10 10 0 0 1 12 2z"/><path d="M12 12v7a2.5 2.5 0 0 0 5 0"/></symbol>
+  <symbol id="i-sunrise" viewBox="0 0 24 24"><path d="M17 18a5 5 0 0 0-10 0"/><path d="M12 2v6M4.2 10.2l1.4 1.4M1 18h2M21 18h2M18.4 11.6l1.4-1.4M23 22H1"/><path d="M8 6l4-4 4 4"/></symbol>
+  <symbol id="i-sunset" viewBox="0 0 24 24"><path d="M17 18a5 5 0 0 0-10 0"/><path d="M12 9V3M4.2 10.2l1.4 1.4M1 18h2M21 18h2M18.4 11.6l1.4-1.4M23 22H1"/><path d="M16 5l-4 4-4-4"/></symbol>
+  <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></symbol>
+  <symbol id="i-next" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+  <symbol id="i-broom" viewBox="0 0 24 24"><path d="M19 3l-8 8"/><path d="M12.5 6.5l5 5"/><path d="M11 11l-6 6c-1 1-1 2.5 0 3.5s2.5 1 3.5 0l6-6z"/><path d="M6 15h6"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></symbol>
+  <symbol id="i-plate" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/></symbol>
+</svg>
+
+  <header>
+    <div class="brand">
+      <img class="crest" id="crest" alt="" style="display:none">
+      <div>
+        <div class="brand-title" id="brand-title">ZETA BETA TAU</div>
+        <div class="brand-sub" id="brand-sub">ALPHA ALPHA CHAPTER</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="clock">
+        <span class="clock-hm" id="clock-hm">--:--</span><span class="clock-sec" id="clock-sec">00</span><span class="clock-ampm" id="clock-ampm">--</span>
+      </div>
+      <div class="date-line" id="date-line">--</div>
+    </div>
+  </header>
+
+  <main id="grid">
+    <!-- KITCHEN & WEATHER -->
+    <div class="col" id="col-kitchen">
+      <div class="card wx-card" id="wx-card">
+        <div class="wx-main-row">
+          <div class="wx-temp-block">
+            <svg class="icon wx-icon" id="wx-icon"><use href="#i-sun"/></svg>
+            <div class="wx-temp-group">
+              <div class="wx-temp" id="wx-temp">--&deg;</div>
+              <div class="wx-feels" id="wx-feels-wrap">Feels <b id="wx-feels">--&deg;</b></div>
+            </div>
+            <div class="wx-meta-group">
+              <div class="wx-cond" id="wx-cond">Loading</div>
+              <div class="wx-place" id="wx-place">--</div>
+            </div>
+          </div>
+          <div class="wx-div"></div>
+          <div class="wx-rain-block">
+            <div class="wx-rain-head" id="wx-rain-head">
+              <span class="wx-rain-msg" id="wx-rain-msg">Checking rain forecast...</span>
+            </div>
+            <div class="wx-rain-graph" id="wx-rain-graph"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card meal-card" id="lunch-card">
+        <div class="card-head">
+          <svg class="icon"><use href="#i-utensils"/></svg>
+          <div class="card-title" id="lunch-label">Lunch</div>
+          <span class="serving-badge">SERVING NOW</span>
+          <div class="recap" id="lunch-recap">
+            <span class="recap-done">SERVED</span>
+            <span class="recap-menu" id="lunch-recap-menu">--</span>
+            <span class="recap-duty" id="lunch-recap-duty"></span>
+          </div>
+          <div class="card-tag" id="lunch-time">--</div>
+        </div>
+        <ul class="menu-list" id="lunch-menu"></ul>
+        <div class="crew-strip">
+          <div class="crew-label" id="lunch-cleanup">Cleanup</div>
+          <div class="crew-names" id="lunch-crew"></div>
+        </div>
+      </div>
+
+      <div class="card meal-card" id="dinner-card">
+        <div class="card-head">
+          <svg class="icon"><use href="#i-utensils"/></svg>
+          <div class="card-title" id="dinner-label">Dinner</div>
+          <span class="serving-badge">SERVING NOW</span>
+          <div class="recap" id="dinner-recap">
+            <span class="recap-done">SERVED</span>
+            <span class="recap-menu" id="dinner-recap-menu">--</span>
+            <span class="recap-duty" id="dinner-recap-duty"></span>
+          </div>
+          <div class="card-tag gold" id="dinner-time">--</div>
+        </div>
+        <ul class="menu-list" id="dinner-menu"></ul>
+        <div class="crew-strip">
+          <div class="crew-label" id="dinner-cleanup">Cleanup</div>
+          <div class="crew-names" id="dinner-crew"></div>
+        </div>
+      </div>
+
+      <!-- Takes over the whole meal area between the checklist start and end -->
+      <div class="card hidden" id="duty-card">
+        <div class="card-head">
+          <svg class="icon"><use href="#i-broom"/></svg>
+          <div class="card-title" id="duty-title">Dinner Duty Checklist</div>
+          <div class="card-tag gold" id="duty-window">--</div>
+        </div>
+        <div class="duty-head">
+          <div class="duty-crew" id="duty-crew"></div>
+          <div class="duty-count" id="duty-count"></div>
+        </div>
+        <ol class="duty-list" id="duty-list"></ol>
+        <div class="ann-prog hidden" id="duty-prog"></div>
+        <div class="duty-foot" id="duty-foot"></div>
+      </div>
+
+      <div class="card tomorrow-card" id="tomorrow-card">
+        <div class="tmr-row">
+          <svg class="icon"><use href="#i-next"/></svg>
+          <span class="tmr-h">Tomorrow</span>
+          <span class="tmr-date" id="tmr-date">--</span>
+          <span class="tmr-pair"><b id="tmr-lunch-label">Lunch</b><span class="tmr-v" id="tmr-lunch">--</span></span>
+          <span class="tmr-pair"><b id="tmr-dinner-label">Dinner</b><span class="tmr-v" id="tmr-dinner">--</span></span>
+        </div>
+        <div class="open-line" id="open-line"></div>
+      </div>
+    </div>
+
+    <!-- LATE PLATES (optional column) -->
+    <div class="col hidden" id="col-plates">
+      <div class="card" style="flex:1">
+        <div class="card-head">
+          <svg class="icon"><use href="#i-plate"/></svg>
+          <div class="card-title">Late Plates</div>
+          <div class="card-tag gold" id="lp-total">--</div>
+        </div>
+        <div class="lp-meals" id="lp-meals"></div>
+        <div class="lp-names" id="lp-names"></div>
+        <div class="ann-prog hidden" id="lp-prog"></div>
+      </div>
+    </div>
+
+    <!-- ANNOUNCEMENTS -->
+    <div class="col" id="col-announcements">
+      <div class="card" style="flex:1">
+        <div class="card-head">
+          <svg class="icon"><use href="#i-mega"/></svg>
+          <div class="card-title">Announcements</div>
+          <div class="card-tag" id="ann-page-tag" style="display:none"></div>
+        </div>
+        <div class="ann-wrap">
+          <div class="ann-list stack" id="ann-list"></div>
+          <div class="ann-prog hidden" id="ann-prog"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div class="ticker" id="ticker">
+    <div class="ticker-tag">ZBT</div>
+    <div class="ticker-wrap"><div class="ticker-move"><span class="ticker-text" id="ticker-text"></span></div></div>
+  </div>
+
+  <div id="ann-measure"></div>
+
+  <!-- Shared with both consoles so their live previews cannot drift from the board. -->
+  <script src="/ann-render.js"></script>
+  <script>
+    var TZ = 'America/Indiana/Indianapolis';
+
+    // ---------- DISPLAY SCALING ----------
+    // `booted` keeps the first scale pass from calling the fitters before the
+    // state they read has been assigned. Hoisting makes those vars visible but
+    // undefined, which is exactly the shape of bug that is invisible locally and
+    // leaves a blank board on the Pi.
+    var userScale = 1, userSafeMargin = 0, booted = false;
+    function applyScale(scale, safeMargin) {
+      if (typeof scale === 'number' && isFinite(scale) && scale > 0) {
+        userScale = Math.min(Math.max(scale, 0.5), 3);
+      }
+      if (typeof safeMargin === 'number' && isFinite(safeMargin) && safeMargin >= 0) {
+        userSafeMargin = Math.min(Math.max(safeMargin, 0), 64);
+        document.documentElement.style.setProperty('--safe-margin', userSafeMargin + 'px');
+      }
+      var fit = Math.min((window.innerWidth - userSafeMargin * 2) / 1920, (window.innerHeight - userSafeMargin * 2) / 1080);
+      document.documentElement.style.fontSize = (16 * Math.max(fit, 0.2) * userScale).toFixed(2) + 'px';
+      if (!booted) return;
+      packBudget = 1;
+      fitAllMenus();
+      relayoutAnnouncements();
+      fitDuty();
+    }
+    applyScale();
+    window.addEventListener('resize', function () { applyScale(); });
+
+    // Anything that finishes after first paint -- the weather band filling in,
+    // the duty crew arriving, a config edit -- changes how much room every panel
+    // has. One hook, called by all of them, so no panel is left fitted to a
+    // height the board no longer has.
+    function refitAll() {
+      fitAllMenus();
+      fitDuty();
+      relayoutAnnouncements();
+    }
+
+    function icon(id) { return '<svg class="icon"><use href="#' + id + '"/></svg>'; }
+    function esc(s) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+        return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+      });
+    }
+
+    // ---------- CLOCK ----------
+    function updateClock() {
+      var now = new Date();
+      var parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: TZ, hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true
+      }).formatToParts(now);
+      var get = function (t) { var p = parts.find(function (x) { return x.type === t; }); return p ? p.value : ''; };
+      document.getElementById('clock-hm').textContent = get('hour') + ':' + get('minute');
+      document.getElementById('clock-sec').textContent = get('second');
+      document.getElementById('clock-ampm').textContent = get('dayPeriod');
+      document.getElementById('date-line').textContent = now.toLocaleDateString('en-US', {
+        timeZone: TZ, weekday: 'long', month: 'long', day: 'numeric'
+      }).toUpperCase();
+    }
+
+    // ---------- TIME HELPERS ----------
+    function parseClock(str) {
+      var m = /(\d{1,2})(?::(\d{2}))?\s*([APap])/.exec(String(str || '').trim());
+      if (!m) return null;
+      var h = parseInt(m[1], 10) % 12;
+      if (/p/i.test(m[3])) h += 12;
+      return h * 60 + (parseInt(m[2], 10) || 0);
+    }
+    function parseRange(str) {
+      var parts = String(str || '').split(/[–—-]/);
+      if (parts.length < 2) return null;
+      var a = parseClock(parts[0]), b = parseClock(parts[1]);
+      return (a === null || b === null) ? null : { a: a, b: b };
+    }
+    function minutesNow() {
+      var p = new Intl.DateTimeFormat('en-US', {
+        timeZone: TZ, hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
+      }).formatToParts(new Date());
+      var get = function (t) { var x = p.find(function (q) { return q.type === t; }); return x ? parseInt(x.value, 10) : 0; };
+      return get('hour') * 60 + get('minute');
+    }
+    function inRange(now, r) {
+      if (!r) return false;
+      return r.a <= r.b ? (now >= r.a && now < r.b) : (now >= r.a || now < r.b);
+    }
+    function humanMins(m) {
+      if (m <= 0) return '0m';
+      var h = Math.floor(m / 60), r = m % 60;
+      return h ? (h + 'h ' + r + 'm') : (r + 'm');
+    }
+
+    // ---------- BOARD PHASE ----------
+    // One function owns which of the three kitchen layouts is on screen, and it
+    // only touches the DOM when the phase actually changes. It runs every second
+    // beside the clock, so the board rolls over on its own with nobody in the
+    // house doing anything.
+    var mealCfg = {}, dutyCfg = {}, lunchRecapEnabled = true;
+    var dutyWindows = {};        // meal -> cleanup range from the kitchen API
+    var recapText = { lunch: '', dinner: '' };
+    var phase = null;
+
+    function cleanupEnd(meal) {
+      if (dutyWindows[meal] && dutyWindows[meal].b != null) return dutyWindows[meal].b;
+      var serve = parseRange((mealCfg[meal] || {}).serve);
+      return serve ? serve.b + 30 : null;   // the API is the source of truth; this is only for when it is down
+    }
+
+    function computePhase(now) {
+      var checklist = dutyCfg && dutyCfg.enabled
+        ? { a: parseClock(dutyCfg.start), b: parseClock(dutyCfg.end) } : null;
+      if (checklist && checklist.a != null && checklist.b != null && inRange(now, checklist)) return 'duty';
+      var lce = cleanupEnd('lunch');
+      if (lunchRecapEnabled && lce != null && now >= lce) return 'afterLunch';
+      return 'day';
+    }
+
+    function applyPhase(p) {
+      if (p === phase) return;
+      phase = p;
+      var lunch = document.getElementById('lunch-card');
+      var dinner = document.getElementById('dinner-card');
+      var duty = document.getElementById('duty-card');
+
+      lunch.classList.toggle('hidden', p === 'duty');
+      dinner.classList.toggle('hidden', p === 'duty');
+      duty.classList.toggle('hidden', p !== 'duty');
+      lunch.classList.toggle('collapsed', p === 'afterLunch');
+      // A collapsed or hidden card must not keep an inline flex-grow: it beats
+      // the `flex: none` the collapsed state relies on, which is what left the
+      // one-line lunch recap holding a third of the column.
+      lunch.style.flexGrow = (p === 'afterLunch' || p === 'duty') ? '' : lunch.style.flexGrow;
+      if (p === 'afterLunch' || p === 'duty') lunch.style.flexGrow = '';
+      if (p === 'duty') dinner.style.flexGrow = '';
+
+      if (p === 'duty') renderDuty();
+      // Dinner reclaims the height lunch gave up rather than leaving a gap.
+      fitAllMenus();
+    }
+
+    function updateServing(now) {
+      ['lunch', 'dinner'].forEach(function (k) {
+        var card = document.getElementById(k + '-card');
+        if (!card) return;
+        card.classList.toggle('serving', inRange(now, parseRange((mealCfg[k] || {}).serve)));
+      });
+    }
+
+    function tick() {
+      updateClock();
+      var now = minutesNow();
+      updateServing(now);
+      applyPhase(computePhase(now));
+      if (phase === 'duty') updateDutyFoot(now);
+    }
+
+    // ---------- KITCHEN DUTY ----------
+    var KITCHEN_API = 'https://kitchen.zbtaa.online/api/tv/schedule';
+    var coverNote = 'Any brother can claim an open shift in the app';
+    var apiLabels = {}, dutyCrew = { lunch: [], dinner: [] };
+
+    function slotOpen(slot) {
+      if (!slot) return 0;
+      var filled = (slot.assignments || []).length;
+      var size = typeof slot.size === 'number' ? slot.size : filled;
+      return Math.max(0, size - filled);
+    }
+
+    function renderSlot(slot, meal, labelId, crewId) {
+      var labelEl = document.getElementById(labelId);
+      var crewEl = document.getElementById(crewId);
+      if (!crewEl) return;
+
+      if (labelEl && slot) {
+        var bits = [slot.dutyGroup, slot.time].filter(Boolean).join(' · ');
+        if (bits) { apiLabels[meal] = bits; labelEl.textContent = bits; }
+        // The cleanup window drives when lunch collapses, so it is read from the
+        // same string the board is already showing rather than guessed at.
+        var r = parseRange(slot.time);
+        if (r) dutyWindows[meal] = r;
+      }
+      if (!slot) {
+        crewEl.innerHTML = '<span class="crew-name" style="color:var(--dim);font-weight:600">Not scheduled</span>';
+        dutyCrew[meal] = [];
+        setRecapDuty(meal, 0, 0);
+        return;
+      }
+
+      var names = (slot.assignments || []).map(function (a) {
+        return a.isCovered && a.coveredByName ? a.coveredByName : a.name;
+      });
+      dutyCrew[meal] = names;
+
+      var html = (slot.assignments || []).map(function (a) {
+        return '<span class="crew-name">' + esc(a.isCovered && a.coveredByName ? a.coveredByName : a.name)
+          + (a.isFlagged ? '<span class="pill flag">FLAG</span>' : '')
+          + (a.isCovered ? '<span class="pill cov">COV</span>' : '')
+          + (a.isMakeup ? '<span class="pill cov">MAKEUP</span>' : '') + '</span>';
+      }).join('');
+
+      var open = slotOpen(slot);
+      for (var i = 0; i < open; i++) {
+        html += '<span class="crew-name open">OPEN'
+          + (slot.coverBounty > 1 ? '<span class="pill bounty">' + slot.coverBounty + '× POINTS</span>' : '')
+          + '</span>';
+      }
+      crewEl.innerHTML = html || '<span class="crew-name" style="color:var(--dim);font-weight:600">Nobody assigned</span>';
+      setRecapDuty(meal, open, (slot.dutyGroup || 'Cleanup'));
+    }
+
+    function setRecapDuty(meal, open, group) {
+      var el = document.getElementById(meal + '-recap-duty');
+      if (!el) return;
+      if (open) {
+        el.className = 'recap-duty open';
+        el.textContent = open + ' shift' + (open === 1 ? '' : 's') + ' went unclaimed';
+      } else {
+        el.className = 'recap-duty';
+        el.textContent = (group || 'Cleanup') + ' ✓';
+      }
+    }
+
+    function renderOpenLine(data) {
+      var t = data.today || {}, m = data.tomorrow || {};
+      var todayOpen = slotOpen(t.lunch) + slotOpen(t.dinner);
+      var tmrOpen = slotOpen(m.lunch) + slotOpen(m.dinner);
+      var total = todayOpen + tmrOpen;
+      var line = document.getElementById('open-line');
+      if (!line) return;
+
+      if (!total) {
+        line.className = 'open-line ok';
+        line.innerHTML = icon('i-check') + '<span>All shifts staffed today and tomorrow</span>';
+        return;
+      }
+      var bits = [];
+      if (todayOpen) bits.push(todayOpen + ' today');
+      if (tmrOpen) bits.push(tmrOpen + ' tomorrow');
+      line.className = 'open-line alert';
+      line.innerHTML = icon('i-bolt')
+        + '<span>' + total + ' open shift' + (total === 1 ? '' : 's') + ' — ' + bits.join(', ') + '</span>'
+        + '<span class="note">' + esc(coverNote) + '</span>';
+    }
+
+    async function loadKitchenDuty() {
+      try {
+        var data = await (await fetch(KITCHEN_API)).json();
+        if (!data.success) return;
+        var t = data.today || {};
+        renderSlot(t.lunch, 'lunch', 'lunch-cleanup', 'lunch-crew');
+        renderSlot(t.dinner, 'dinner', 'dinner-cleanup', 'dinner-crew');
+        renderOpenLine(data);
+        // Open chips wrap the crew strip onto a second line, which shortens the
+        // menu above it. The menus were fitted before this response arrived.
+        if (phase === 'duty') renderDuty();
+        refitAll();
+      } catch (err) {
+        console.error('Duty API failed:', err);
+        var line = document.getElementById('open-line');
+        if (line) { line.className = 'open-line'; line.innerHTML = icon('i-bolt') + '<span>Duty board offline</span>'; }
+      }
+    }
+
+    // ---------- DUTY CHECKLIST ----------
+    // Nothing here is interactive: the board has no input device and never will,
+    // so items are numbered rather than drawn as checkboxes. An empty checkbox
+    // that can never be ticked reads as broken software.
+    var dutyPages = [], dutyPage = 0;
+
+    function renderDuty() {
+      var items = (dutyCfg.items || []).filter(function (x) { return String(x || '').trim(); });
+      document.getElementById('duty-title').textContent = dutyCfg.title || 'Dinner Duty Checklist';
+      document.getElementById('duty-window').textContent =
+        (dutyCfg.start || '') + ' – ' + (dutyCfg.end || '');
+
+      var crew = dutyCrew.dinner || [];
+      document.getElementById('duty-crew').innerHTML = crew.length
+        ? '<span>On duty:</span> ' + esc(crew.join(', '))
+        : '<span>Nobody assigned to dinner cleanup</span>';
+      document.getElementById('duty-count').textContent = items.length
+        ? items.length + ' TASK' + (items.length === 1 ? '' : 'S') : '';
+
+      dutyPages = [items];
+      dutyPage = 0;
+      paintDuty();
+    }
+
+    function paintDuty() {
+      var items = dutyPages[dutyPage % (dutyPages.length || 1)] || [];
+      document.getElementById('duty-list').innerHTML = items.length
+        ? items.map(function (x, i) {
+            return '<li class="duty-item"><span class="duty-n">' + (i + 1) + '</span><span>' + esc(x) + '</span></li>';
+          }).join('')
+        : '<li class="menu-empty">No checklist items set yet.</li>';
+      fitDuty();
+    }
+
+    // Long sentences are the whole point of this list, so the type steps down to
+    // fit rather than the text being clipped. It only splits across pages when
+    // even the floor size is not enough.
+    var DUTY_MAX = 2.8, DUTY_MIN = 0.85;
+    function fitDuty() {
+      var el = document.getElementById('duty-list');
+      if (!el || document.getElementById('duty-card').classList.contains('hidden')) return;
+      {
+        var size = DUTY_MAX, guard = 0;
+        el.style.fontSize = size + 'rem';
+        while (el.scrollHeight > el.clientHeight && size > DUTY_MIN && guard++ < 80) {
+          size -= 0.04;
+          el.style.fontSize = size.toFixed(2) + 'rem';
+        }
+        // Still overflowing at the floor: page it, and show the timer bar so a
+        // reader knows more is coming rather than assuming the list is short.
+        var all = (dutyCfg.items || []).filter(function (x) { return String(x || '').trim(); });
+        if (el.scrollHeight > el.clientHeight + 2 && dutyPages.length === 1 && all.length > 2) {
+          var half = Math.ceil(all.length / 2);
+          dutyPages = [all.slice(0, half), all.slice(half)];
+          dutyPage = 0;
+          paintDuty();
+          runProgress('duty-prog', dutyPages.length, 0, pageMs());
+        } else if (dutyPages.length > 1) {
+          document.getElementById('duty-prog').classList.remove('hidden');
+        } else {
+          document.getElementById('duty-prog').classList.add('hidden');
+        }
+      }
+    }
+
+    // The footer changes every minute, and the wording after the shift ends is
+    // long enough to wrap onto a second line -- which takes that line off the
+    // checklist above it. Refit whenever the footer's own height moves.
+    var lastFootH = -1;
+    function updateDutyFoot(now) {
+      var foot = document.getElementById('duty-foot');
+      if (!foot) return;
+      var ends = parseClock(dutyCfg.dutyEnds);
+      if (ends == null) { foot.className = 'duty-foot'; foot.innerHTML = ''; return; }
+      if (now < ends) {
+        foot.className = 'duty-foot live';
+        foot.innerHTML = icon('i-clock') + '<span>Duty ends in ' + humanMins(ends - now) + '</span>';
+      } else {
+        foot.className = 'duty-foot over';
+        foot.innerHTML = icon('i-check') + '<span>Duty window closed — board resets at '
+          + esc(dutyCfg.end || '') + '</span>';
+      }
+      var h = foot.offsetHeight;
+      if (h !== lastFootH) { lastFootH = h; fitDuty(); }
+    }
+
+    // ---------- SEGMENTED PAGE PROGRESS ----------
+    // One segment per page; the live one fills in real time. A CSS transition
+    // does the animating so the Pi's GPU carries it instead of a timer waking
+    // the main thread sixty times a second.
+    function runProgress(elId, pages, current, ms) {
+      var el = document.getElementById(elId);
+      if (!el) return;
+      if (pages <= 1) { el.classList.add('hidden'); el.innerHTML = ''; return; }
+      el.classList.remove('hidden');
+      el.style.setProperty('--page-ms', ms + 'ms');
+      var html = '';
+      for (var i = 0; i < pages; i++) {
+        var cls = i < current ? 'ann-seg done' : (i === current ? 'ann-seg live' : 'ann-seg');
+        html += '<span class="' + cls + '"><i></i></span>';
+      }
+      el.innerHTML = html;
+      var live = el.querySelector('.ann-seg.live');
+      if (live) {
+        void live.offsetWidth;              // commit width:0 before transitioning
+        requestAnimationFrame(function () { live.classList.add('run'); });
+      }
+    }
+
+    // ---------- MENUS ----------
+    var MENU_MAX = 2.4, MENU_MIN = 0.95;
+
+    // Two constraints, not one. Fitting the box is necessary but not sufficient:
+    // in a narrow column the largest size that "fits" can put "Baked Salmon +
+    // Lemon Dill Sauce" across four lines, which is harder to read at a distance
+    // than the same dish two sizes smaller on one. So the type also has to keep
+    // every dish inside two lines before it is allowed to grow.
+    function worstWrap(el) {
+      var items = el.querySelectorAll('.menu-item');
+      var lh = parseFloat(getComputedStyle(el).lineHeight) || parseFloat(getComputedStyle(el).fontSize) * 1.22;
+      var worst = 1;
+      for (var i = 0; i < items.length; i++) {
+        worst = Math.max(worst, Math.round(items[i].getBoundingClientRect().height / lh));
+      }
+      return worst;
+    }
+
+    function fitOnce(el) {
+      var size = MENU_MAX, guard = 0;
+      el.style.fontSize = size + 'rem';
+      while ((el.scrollHeight > el.clientHeight || worstWrap(el) > 2) && size > MENU_MIN && guard++ < 60) {
+        size -= 0.05;
+        el.style.fontSize = size.toFixed(2) + 'rem';
+      }
+      return size;
+    }
+
+    // Whether a menu wants one column or two is a property of the card it landed
+    // in, not of how many dishes there are: the same six items want two columns
+    // in a wide card and one in a narrow one. Rather than guess at a breakpoint,
+    // try both and keep whichever lets the type be larger.
+    function fitMenu(el) {
+      var n = el.querySelectorAll('.menu-item').length;
+      if (n < 4) { el.classList.remove('two-col'); return fitOnce(el); }
+      el.classList.remove('two-col');
+      var one = fitOnce(el);
+      el.classList.add('two-col');
+      var two = fitOnce(el);
+      if (one >= two) { el.classList.remove('two-col'); el.style.fontSize = one.toFixed(2) + 'rem'; return one; }
+      return two;
+    }
+
+    // Every fitter below runs synchronously. Reading scrollHeight forces the
+    // layout these used to wait a frame for, and requestAnimationFrame is
+    // throttled whenever the page is not the visible tab -- which produced a
+    // board that measured correctly on one boot and clipped on the next.
+    function fitAllMenus() {
+      var els = ['lunch', 'dinner'].map(function (k) {
+        var card = document.getElementById(k + '-card');
+        if (!card || card.classList.contains('hidden') || card.classList.contains('collapsed')) return null;
+        return { key: k, card: card, el: document.getElementById(k + '-menu') };
+      }).filter(Boolean);
+      if (!els.length) return;
+
+      // Pass one: Calculate row count and dynamic flex weights.
+      // A 1-item lunch menu takes minimal vertical space, leaving 70-80% of the column
+      // for a dense multi-dish dinner menu so dinner is never squeezed or clipped.
+      els.forEach(function (m) {
+        var n = m.el.querySelectorAll('.menu-item').length || 1;
+        var cols = (n >= 4) ? 2 : 1;
+        m.el.classList.toggle('two-col', cols === 2);
+        var rows = Math.ceil(n / cols);
+        // Base chrome is 1.6 units, each row of text adds 1.2 units of flex weight
+        m.card.style.flexGrow = (1.6 + rows * 1.2).toFixed(2);
+      });
+
+      // Pass two: Fit font size individually for each menu card
+      els.forEach(function (m) { fitMenu(m.el); });
+    }
+
+    function renderMenu(elId, items) {
+      var el = document.getElementById(elId);
+      var n = (items && items.length) || 0;
+      el.innerHTML = n
+        ? items.map(function (m) { return '<li class="menu-item">' + esc(m) + '</li>'; }).join('')
+        : '<li class="menu-empty">Menu not posted yet</li>';
+    }
+
+    // ---------- WEATHER ----------
+    function wx(code) {
+      if (code === 0) return ['i-sun', 'Clear'];
+      if (code <= 2) return ['i-cloud-sun', 'Partly Cloudy'];
+      if (code === 3) return ['i-cloud', 'Overcast'];
+      if (code <= 48) return ['i-fog', 'Fog'];
+      if (code <= 57) return ['i-cloud-rain', 'Drizzle'];
+      if (code <= 67) return ['i-cloud-rain', 'Rain'];
+      if (code <= 77) return ['i-cloud-snow', 'Snow'];
+      if (code <= 82) return ['i-cloud-rain', 'Showers'];
+      if (code <= 86) return ['i-cloud-snow', 'Snow Showers'];
+      return ['i-thunder', 'Thunderstorm'];
+    }
+    function hhmm(iso) {
+      return new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    }
+
+    var wxCfg = { latitude: 40.4237, longitude: -86.9212, label: 'West Lafayette', timezone: TZ };
+
+    async function loadWeather() {
+      try {
+        var url = 'https://api.open-meteo.com/v1/forecast'
+          + '?latitude=' + wxCfg.latitude + '&longitude=' + wxCfg.longitude
+          + '&current=temperature_2m,apparent_temperature,precipitation,weather_code'
+          + '&hourly=temperature_2m,precipitation_probability,precipitation,weather_code'
+          + '&temperature_unit=fahrenheit&precipitation_unit=inch&wind_speed_unit=mph&timezone=' + encodeURIComponent(wxCfg.timezone);
+        var data = await (await fetch(url)).json();
+        var c = data.current;
+
+        // Current temperature and Feels like
+        document.getElementById('wx-temp').innerHTML = Math.round(c.temperature_2m) + '&deg;';
+        document.getElementById('wx-feels').innerHTML = Math.round(c.apparent_temperature) + '&deg;';
+        document.getElementById('wx-place').textContent = wxCfg.label || 'West Lafayette';
+
+        var now = wx(c.weather_code);
+        document.getElementById('wx-icon').innerHTML = '<use href="#' + now[0] + '"/>';
+        document.getElementById('wx-cond').textContent = now[1];
+
+        // 8-hour Rain Timeline Graph & Status
+        var nowTime = new Date();
+        var start = data.hourly.time.findIndex(function (x) { return new Date(x) >= nowTime; });
+        if (start < 0) start = 0;
+
+        var isRainingNow = (c.precipitation > 0) || (c.weather_code >= 51 && c.weather_code <= 82);
+        var rainAlert = null, rainMsg = null;
+
+        if (isRainingNow) {
+          var stopIdx = -1;
+          for (var i = 0; i < 14; i++) {
+            var k = start + i;
+            if (k >= data.hourly.time.length) break;
+            var p = data.hourly.precipitation_probability[k] || 0;
+            var amt = (data.hourly.precipitation && data.hourly.precipitation[k]) || 0;
+            if (p <= 15 && amt <= 0.01) { stopIdx = k; break; }
+          }
+          if (stopIdx !== -1) {
+            var stopTime = new Date(data.hourly.time[stopIdx]).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+            rainMsg = '🌧️ Raining now · Stopping ~' + stopTime;
+          } else {
+            rainMsg = '🌧️ Rain continuing today';
+          }
+        } else {
+          var nextRainIdx = -1;
+          for (var j = 0; j < 14; j++) {
+            var idx = start + j;
+            if (idx >= data.hourly.time.length) break;
+            var prob = data.hourly.precipitation_probability[idx] || 0;
+            var rainAmt = (data.hourly.precipitation && data.hourly.precipitation[idx]) || 0;
+            if (prob >= 25 || rainAmt > 0.02) { nextRainIdx = idx; break; }
+          }
+          if (nextRainIdx === -1) {
+            rainMsg = '☀️ No rain expected today · Clear & dry';
+          } else {
+            var rainStart = new Date(data.hourly.time[nextRainIdx]);
+            var diffMin = Math.round((rainStart - nowTime) / 60000);
+            var startTime = rainStart.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+            var pop = data.hourly.precipitation_probability[nextRainIdx] || 50;
+            if (diffMin > 0 && diffMin <= 60) {
+              rainAlert = '⚠️ RAIN STARTING IN ' + diffMin + ' MIN (~' + startTime + ')';
+            } else if (diffMin <= 0) {
+              rainAlert = '⚠️ RAIN STARTING IMMINENTLY';
+            } else {
+              rainMsg = '🌧️ Rain expected starting ~' + startTime + ' (' + pop + '%)';
+            }
+          }
+        }
+
+        var headEl = document.getElementById('wx-rain-head');
+        if (headEl) {
+          if (rainAlert) {
+            headEl.innerHTML = '<span class="wx-rain-alert">' + esc(rainAlert) + '</span>';
+          } else {
+            headEl.innerHTML = '<span class="wx-rain-msg">' + esc(rainMsg) + '</span>';
+          }
+        }
+
+        // Render 8-Hour Rain Bar Graph
+        var graphEl = document.getElementById('wx-rain-graph');
+        if (graphEl) {
+          var graphHtml = '';
+          for (var b = 0; b < 8; b++) {
+            var hourIdx = start + b;
+            if (hourIdx >= data.hourly.time.length) break;
+            var barDate = new Date(data.hourly.time[hourIdx]);
+            var hrLbl = barDate.toLocaleTimeString('en-US', { hour: 'numeric' }).replace(' ', '').toLowerCase();
+            var popVal = Math.round(data.hourly.precipitation_probability[hourIdx] || 0);
+            var fillPct = Math.max(6, popVal);
+            var isHigh = popVal >= 50;
+            var popTxt = popVal >= 20 ? (popVal + '%') : '&nbsp;';
+
+            graphHtml += '<div class="wx-bar-col">'
+              + '<div class="wx-bar-val">' + popTxt + '</div>'
+              + '<div class="wx-bar-track"><div class="wx-bar-fill' + (isHigh ? ' high' : '') + '" style="height:' + fillPct + '%;"></div></div>'
+              + '<div class="wx-bar-lbl">' + hrLbl + '</div>'
+              + '</div>';
+          }
+          graphEl.innerHTML = graphHtml;
+        }
+
+        if (booted) refitAll();
+      } catch (err) {
+        console.error('Weather fetch error:', err);
+        document.getElementById('wx-cond').textContent = 'Unavailable';
+        if (booted) refitAll();
+      }
+    }
+
+    // ---------- LATE PLATES ----------
+    var lpPages = [], lpPage = 0, lpEnabled = false, lpShowNames = true, lpPageCount = 1;
+    var MEAL_ORDER = ['lunch', 'dinner'];
+
+    async function loadLatePlates() {
+      if (!lpEnabled) return;
+      try {
+        var d = await (await fetch('/api/tv/late-plates')).json();
+        var mealsEl = document.getElementById('lp-meals');
+        var namesEl = document.getElementById('lp-names');
+
+        if (!d.success) {
+          mealsEl.innerHTML = '';
+          namesEl.innerHTML = '<div class="lp-msg">' + esc(d.reason || 'Queue unavailable') + '</div>';
+          document.getElementById('lp-total').textContent = '--';
+          runProgress('lp-prog', 0, 0, 0);
+          return;
+        }
+
+        var meals = d.meals || {};
+        // Once a meal is served and empty it is history; showing it competes with
+        // the meal the kitchen is actually cooking for.
+        var show = MEAL_ORDER.filter(function (m) {
+          var x = meals[m];
+          if (!x) return false;
+          return !x.served || (x.toMake || 0) > 0 || (x.ready || 0) > 0;
+        });
+        if (!show.length) show = MEAL_ORDER.filter(function (m) { return meals[m]; });
+
+        mealsEl.innerHTML = show.map(function (m) {
+          var x = meals[m] || {};
+          return '<div class="lp-meal"><div class="lp-meal-top">'
+            + '<span class="lp-meal-name">' + esc(m) + '</span>'
+            + '<span class="lp-cut">Cutoff ' + esc(x.cutoff || '--') + '</span></div>'
+            + '<div class="lp-nums">'
+            + '<span class="lp-num make"><b>' + (x.toMake || 0) + '</b><span>to make</span></span>'
+            + '<span class="lp-num ready"><b>' + (x.ready || 0) + '</b><span>ready</span></span>'
+            + '</div>'
+            + (x.closed ? '<div class="lp-closed">Not taking requests</div>' : '')
+            + '</div>';
+        }).join('');
+
+        var plates = (d.plates || []).filter(function (p) { return show.indexOf(p.meal) !== -1; });
+        // Ready first: a brother walking past wants to know his plate is waiting
+        // for him more than he wants to know somebody else's is still cooking.
+        plates.sort(function (a, b) { return (b.status === 'ready') - (a.status === 'ready'); });
+        document.getElementById('lp-total').textContent = plates.length
+          ? plates.length + ' PLATE' + (plates.length === 1 ? '' : 'S') : 'NONE';
+
+        if (!lpShowNames || !plates.length) {
+          namesEl.innerHTML = plates.length ? '' : '<div class="lp-msg">No plates requested yet.</div>';
+          lpPages = [];
+          runProgress('lp-prog', 0, 0, 0);
+          return;
+        }
+        lpPages = plates;
+        lpPage = 0;
+        paintPlates();
+      } catch (err) {
+        console.error('Late plate fetch failed:', err);
+      }
+    }
+
+    function paintPlates() {
+      var namesEl = document.getElementById('lp-names');
+      namesEl.innerHTML = '<div class="lp-names-lab">Requested</div>'
+        + lpPages.map(function (p) {
+            return '<div class="lp-name ' + esc(p.status) + '"><span class="lp-dot"></span>' + esc(p.name) + '</div>';
+          }).join('');
+
+      // Too many names for the column: page them on the same timer the rest of
+      // the board uses, with the same bar, so the behaviour is learnable once.
+      {
+        var s = 1.4, guard = 0;
+        namesEl.style.setProperty('--lp-scale', s);
+        while (namesEl.scrollHeight > namesEl.clientHeight && s > 0.85 && guard++ < 40) {
+          s -= 0.05;
+          namesEl.style.setProperty('--lp-scale', s.toFixed(2));
+        }
+        if (namesEl.scrollHeight <= namesEl.clientHeight) { runProgress('lp-prog', 0, 0, 0); return; }
+        var perPage = Math.max(2, Math.floor(namesEl.clientHeight / (namesEl.scrollHeight / lpPages.length)) - 1);
+        var pages = [];
+        for (var i = 0; i < lpPages.length; i += perPage) pages.push(lpPages.slice(i, i + perPage));
+        var pg = pages[lpPage % pages.length] || [];
+        namesEl.innerHTML = '<div class="lp-names-lab">Requested · ' + (lpPage % pages.length + 1) + ' of ' + pages.length + '</div>'
+          + pg.map(function (p) {
+              return '<div class="lp-name ' + esc(p.status) + '"><span class="lp-dot"></span>' + esc(p.name) + '</div>';
+            }).join('');
+        lpPageCount = pages.length;
+        runProgress('lp-prog', pages.length, lpPage % pages.length, pageMs());
+      }
+    }
+
+    // ---------- ANNOUNCEMENTS ----------
+    var annSettings = { layout: 'auto', pageSeconds: 15, density: 'comfortable', autoFill: true, showProgress: true };
+    var annVisible = [], annPages = [], annPage = 0;
+    var annHtml = AnnRender.html;
+
+    function pageMs() {
+      var currentCols = annPages[annPage % (annPages.length || 1)] || [[]];
+      var flat = [].concat.apply([], currentCols);
+      if (annSettings.adaptiveTimer !== false && flat.length > 0) {
+        return AnnRender.estimatePageSeconds(flat, annSettings.minPageSeconds || 8, annSettings.maxPageSeconds || 35) * 1000;
+      }
+      return Math.max(4, annSettings.pageSeconds || 15) * 1000;
+    }
+
+    // Pages are packed from measured heights, not from a guess at how much a
+    // picture "weighs". The old weight table put four text notices on a page that
+    // could hold seven, and clipped a page that held one tall image.
+    function measureHeights(list, colWidth) {
+      var m = document.getElementById('ann-measure');
+      m.style.width = colWidth + 'px';
+      m.className = document.getElementById('ann-list').className.replace(/grid2|stack/, 'stack');
+      m.innerHTML = list.map(function (a, idx) { return AnnRender.html(a, idx); }).join('');
+      var kids = m.children;
+      var out = [];
+      for (var i = 0; i < kids.length; i++) out.push(kids[i].getBoundingClientRect().height);
+      m.innerHTML = '';
+      return out;
+    }
+
+    function packPages(list, heights, avail, gap, columns) {
+      var pages = [], cols = [], heightsOf = [];
+      function fresh() {
+        cols = []; heightsOf = [];
+        for (var c = 0; c < columns; c++) { cols.push([]); heightsOf.push(0); }
+      }
+      function flush() {
+        if (cols.some(function (c) { return c.length; })) pages.push(cols.map(function (c) { return c.slice(); }));
+      }
+      fresh();
+      for (var i = 0; i < list.length; i++) {
+        var it = list[i];
+        // Solo-page / photo spotlight notices get their own exclusive page
+        if (it.soloPage || it.span === 'page') {
+          flush();
+          pages.push([[it]]);
+          fresh();
+          continue;
+        }
+
+        // Shortest column first: the two columns finish level instead of one
+        // running long and forcing an early page break.
+        var target = 0;
+        for (var c = 1; c < columns; c++) if (heightsOf[c] < heightsOf[target]) target = c;
+        var add = heights[i] + (cols[target].length ? gap : 0);
+        if (heightsOf[target] + add > avail && cols[target].length) {
+          var other = -1;
+          for (var c2 = 0; c2 < columns; c2++) {
+            if (c2 === target) continue;
+            if (heightsOf[c2] + heights[i] + (cols[c2].length ? gap : 0) <= avail) { other = c2; break; }
+          }
+          if (other === -1) { flush(); fresh(); target = 0; add = heights[i]; }
+          else { target = other; add = heights[i] + (cols[target].length ? gap : 0); }
+        }
+        cols[target].push(list[i]);
+        heightsOf[target] += add;
+      }
+      flush();
+      return pages.length ? pages : [[[]]];
+    }
+
+    function chooseColumns(width) {
+      if (annSettings.layout === 'grid2') return 2;
+      if (annSettings.layout === 'stack') return 1;
+      // Auto: only worth splitting when each column is still wide enough to hold
+      // a readable line, and only when there is enough to fill both.
+      var rem = parseFloat(document.documentElement.style.fontSize) || 16;
+      return (width / rem > 34 && annVisible.length >= 3) ? 2 : 1;
+    }
+
+    // Heights are measured at scale 1, but a page is painted at whatever scale
+    // fills the panel, and text can reflow differently at that size. Rather than
+    // trusting the measurement, the paint checks itself and tightens this budget
+    // until the page genuinely fits.
+    var packBudget = 1;
+
+    function relayoutAnnouncements(forceReset) {
+      var list = document.getElementById('ann-list');
+      if (!list || !annSettings || !list.clientHeight) return;
+      var gapPx = parseFloat(getComputedStyle(list).gap) || 12;
+      var columns = chooseColumns(list.clientWidth);
+      var colWidth = (list.clientWidth - (columns - 1) * gapPx) / columns;
+
+      list.classList.toggle('grid2', columns === 2);
+      list.classList.toggle('stack', columns === 1);
+      list.style.setProperty('--ann-scale', 1);
+
+      var prevPagesCount = annPages.length;
+      var heights = measureHeights(annVisible, colWidth);
+      annPages = packPages(annVisible, heights, list.clientHeight * packBudget, gapPx, columns);
+      if (annPage >= annPages.length) annPage = 0;
+      paintAnnouncements();
+      if (forceReset || annPages.length !== prevPagesCount) {
+        resetRotation();
+      }
+    }
+
+    function paintAnnouncements() {
+      var list = document.getElementById('ann-list');
+      var page = annPages[annPage % (annPages.length || 1)] || [[]];
+      var flat = [].concat.apply([], page);
+
+      if (!flat.length) {
+        list.className = 'ann-list stack';
+        list.innerHTML = '<div class="ann"><div class="ann-body ann-empty">No announcements posted.</div></div>';
+        runProgress('ann-prog', 0, 0, 0);
+        document.getElementById('ann-page-tag').style.display = 'none';
+        return;
+      }
+
+      var isSolo = (flat.length === 1);
+      list.classList.toggle('solo-mode', isSolo);
+
+      if (isSolo) {
+        list.className = 'ann-list stack solo-mode';
+        list.innerHTML = AnnRender.html(flat[0], 0, { solo: true });
+      } else {
+        list.className = 'ann-list ' + (page.length > 1 ? 'grid2' : 'stack');
+        list.innerHTML = page.length > 1
+          ? page.map(function (col) {
+              return '<div class="ann-col">' + col.map(function (a, idx) { return AnnRender.html(a, idx); }).join('') + '</div>';
+            }).join('')
+          : page[0].map(function (a, idx) { return AnnRender.html(a, idx); }).join('');
+      }
+
+      var tag = document.getElementById('ann-page-tag');
+      if (annPages.length > 1) {
+        tag.style.display = '';
+        tag.textContent = (annPage % annPages.length + 1) + ' / ' + annPages.length;
+      } else {
+        tag.style.display = 'none';
+      }
+      runProgress('ann-prog', annSettings.showProgress ? annPages.length : 0, annPage % annPages.length, pageMs());
+
+      if (!isSolo && annSettings.autoFill) {
+        var floor = flat.length > 1 ? 0.92 : 0.6;
+        var s = 1.35, guard = 0;
+        list.style.setProperty('--ann-scale', s);
+        while (list.scrollHeight > list.clientHeight && s > floor && guard++ < 40) {
+          s -= 0.03;
+          list.style.setProperty('--ann-scale', s.toFixed(3));
+        }
+      } else if (isSolo) {
+        list.style.setProperty('--ann-scale', 1);
+      }
+
+      if (!isSolo && list.scrollHeight > list.clientHeight + 2 && packBudget > 0.66) {
+        packBudget = Math.max(0.6, packBudget - 0.08);
+        relayoutAnnouncements();
+      }
+    }
+
+    // ---------- CONFIG ----------
+    function dateKey(n) {
+      var d = new Date();
+      d.setDate(d.getDate() + (n || 0));
+      return d.toLocaleDateString('en-CA', { timeZone: TZ });
+    }
+
+    var cachedCfg = null;
+    function applyConfig(cfg) {
+      if (!cfg) return;
+      cachedCfg = cfg;
+
+      applyScale(cfg.uiScale, cfg.safeMargin);
+      document.getElementById('brand-title').textContent = cfg.title || 'ZETA BETA TAU';
+      document.getElementById('brand-sub').textContent = cfg.subtitle || '';
+
+      var crest = document.getElementById('crest');
+      if (cfg.crestImage) {
+        crest.src = cfg.crestImage;
+        crest.className = 'crest size-' + (cfg.crestSize || 'medium');
+        crest.style.display = '';
+      } else {
+        crest.style.display = 'none';
+      }
+
+      var p = cfg.panels || {};
+      var wantPlates = p.latePlates === true && (cfg.latePlates || {}).enabled !== false;
+      var wxCard = document.getElementById('wx-card');
+      if (wxCard) wxCard.classList.toggle('hidden', p.weather === false);
+      document.getElementById('col-kitchen').classList.toggle('hidden', p.kitchen === false && p.weather === false);
+      document.getElementById('col-announcements').classList.toggle('hidden', p.announcements === false);
+      document.getElementById('col-plates').classList.toggle('hidden', !wantPlates);
+      document.getElementById('ticker').classList.toggle('hidden', p.ticker === false);
+
+      var cols = [];
+      if (p.kitchen !== false) cols.push('1.2fr');
+      if (wantPlates) cols.push('0.6fr');
+      if (p.announcements !== false) cols.push(wantPlates ? '1.25fr' : '1.8fr');
+      document.getElementById('grid').style.gridTemplateColumns = cols.length ? cols.join(' ') : '1fr';
+
+      lpEnabled = wantPlates;
+      lpShowNames = (cfg.latePlates || {}).showNames !== false;
+      if (wantPlates) loadLatePlates();
+
+      var meals = cfg.meals || {};
+      var menus = cfg.menus || {};
+      var todayMenu = menus[dateKey(0)] || {};
+      var tmrMenu = menus[dateKey(1)] || {};
+      coverNote = cfg.coverNote || coverNote;
+
+      mealCfg = meals;
+      dutyCfg = cfg.dutyChecklist || {};
+      lunchRecapEnabled = cfg.lunchRecap !== false;
+
+      ['lunch', 'dinner'].forEach(function (k) {
+        var m = meals[k] || {};
+        document.getElementById(k + '-label').textContent = m.label || k;
+        document.getElementById(k + '-time').textContent = m.serve || '';
+        if (!apiLabels[k]) document.getElementById(k + '-cleanup').textContent = m.cleanup || 'Cleanup';
+        renderMenu(k + '-menu', todayMenu[k]);
+        recapText[k] = (todayMenu[k] && todayMenu[k].length) ? todayMenu[k].join(' · ') : 'No menu was posted';
+        document.getElementById(k + '-recap-menu').textContent = recapText[k];
+        document.getElementById('tmr-' + k + '-label').textContent = m.label || k;
+        document.getElementById('tmr-' + k).textContent =
+          (tmrMenu[k] && tmrMenu[k].length) ? tmrMenu[k].join(' · ') : 'Not posted yet';
+      });
+      fitAllMenus();
+      document.getElementById('tmr-date').textContent =
+        new Date(dateKey(1) + 'T12:00').toLocaleDateString('en-US', { weekday: 'short', month: 'numeric', day: 'numeric' });
+
+      phase = null;
+      applyPhase(computePhase(minutesNow()));
+      if (phase === 'duty') { renderDuty(); updateDutyFoot(minutesNow()); }
+
+      if (cfg.weather && cfg.weather.latitude != null) {
+        var changed = cfg.weather.latitude !== wxCfg.latitude || cfg.weather.longitude !== wxCfg.longitude;
+        wxCfg = cfg.weather;
+        TZ = cfg.weather.timezone || TZ;
+        if (changed) loadWeather();
+      }
+
+      annSettings = Object.assign(annSettings, cfg.announcementSettings || {});
+      var nowMs = Date.now();
+      var visible = (cfg.announcements || []).filter(function (a) {
+        return AnnRender.stateOf(a, nowMs) === 'live';
+      });
+      // Urgent leads, then pinned, then the console's own order.
+      visible.sort(function (x, y) {
+        var rank = function (a) { return (a.emphasis === 'urgent' ? 2 : 0) + (a.pinned ? 1 : 0); };
+        return rank(y) - rank(x);
+      });
+      var sameList = JSON.stringify(visible) === JSON.stringify(annVisible);
+      if (!sameList) {
+        annVisible = visible;
+        annPage = 0;
+        packBudget = 1;
+        relayoutAnnouncements(true);
+      }
+
+      document.getElementById('ticker-text').textContent = cfg.tickerText || '';
+    }
+
+    var lastCfgRaw = null, currentBuildVersion = null;
+    async function loadConfig() {
+      try {
+        var raw = await (await fetch('/api/announcements?tv=1&_t=' + Date.now(), { cache: 'no-store' })).text();
+        if (raw === lastCfgRaw) return;
+        lastCfgRaw = raw;
+        var data = JSON.parse(raw);
+        if (data._buildVersion) {
+          if (currentBuildVersion === null) {
+            currentBuildVersion = data._buildVersion;
+          } else if (currentBuildVersion !== data._buildVersion) {
+            // New code/assets pulled or server restarted or reload clicked:
+            // Hard reload the browser window bypassing all memory/HTTP caches!
+            window.location.href = window.location.pathname + '?_hardReload=' + Date.now();
+            return;
+          }
+        }
+        applyConfig(data);
+      } catch (err) {
+        console.error('Config fetch error:', err);
+      }
+    }
+
+    // ---------- PAGE ROTATION ----------
+    var nextRotateAt = 0, rotationPaused = false;
+    function resetRotation() { nextRotateAt = Date.now() + pageMs(); }
+
+    function rotate() {
+      if (rotationPaused) return;
+      if (annPages.length > 1) {
+        annPage = (annPage + 1) % annPages.length;
+        paintAnnouncements();
+      }
+      if (dutyPages.length > 1 && phase === 'duty') {
+        dutyPage = (dutyPage + 1) % dutyPages.length;
+        paintDuty();
+        runProgress('duty-prog', dutyPages.length, dutyPage, pageMs());
+      }
+      if (lpEnabled && lpPageCount > 1) {
+        lpPage = (lpPage + 1) % lpPageCount;
+        paintPlates();
+      }
+      resetRotation();
+    }
+
+    setInterval(function () { if (Date.now() >= nextRotateAt) rotate(); }, 200);
+
+    // Recheck lifecycle every 30s so minute-precise expirations trigger on schedule
+    setInterval(function () {
+      if (cachedCfg) applyConfig(cachedCfg);
+    }, 30000);
+
+    // Live preview postMessage listener for instant studio sync
+    window.addEventListener('message', function (e) {
+      if (!e.data || typeof e.data !== 'object') return;
+      if (e.data.type === 'PREVIEW_CONFIG') {
+        applyConfig(e.data.config);
+      } else if (e.data.type === 'SET_ANN_PAGE') {
+        annPage = e.data.page || 0;
+        paintAnnouncements();
+        resetRotation();
+      } else if (e.data.type === 'PAUSE_ROTATION') {
+        rotationPaused = !!e.data.paused;
+      }
+    });
+
+    var imgRelayout = null, imgFixups = 0;
+    document.getElementById('ann-list').addEventListener('load', function () {
+      if (imgFixups++ > 3) return;
+      clearTimeout(imgRelayout);
+      imgRelayout = setTimeout(relayoutAnnouncements, 150);
+    }, true);
+
+    booted = true;
+    setInterval(tick, 1000);
+    tick();
+    resetRotation();
+    loadConfig();
+    loadKitchenDuty();
+    loadWeather();
+    setInterval(loadConfig, 1000);
+    setInterval(loadKitchenDuty, 120000);
+    setInterval(loadLatePlates, 20000);
+    setInterval(loadWeather, 600000);
+  </script>
+</body>
+</html>

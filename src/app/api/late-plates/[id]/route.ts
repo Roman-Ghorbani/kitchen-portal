@@ -34,7 +34,7 @@ export async function PATCH(
   request: NextRequest,
   context: { params: Promise<{ id: string }> },
 ) {
-  const caller = callerOf(request);
+  const caller = await callerOf(request);
   if (!canWrite(caller)) return json(UNAUTHORIZED, 401);
 
   const { id } = await context.params;

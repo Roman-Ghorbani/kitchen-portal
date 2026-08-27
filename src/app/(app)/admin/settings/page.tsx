@@ -6,6 +6,7 @@ import type { MealDayConfig, Meal } from '../../../../lib/types.ts';
 import { AppShell } from '../../shell.tsx';
 import { MealGrid } from './meal-grid.tsx';
 import { LatePlateToggle } from './late-plate-toggle.tsx';
+import { KioskLink } from './kiosk-link.tsx';
 
 export const dynamic = 'force-dynamic';
 
@@ -94,6 +95,8 @@ export default async function SettingsPage() {
             mind is always safe.
           </dd>
         </dl>
+
+        <KioskLink token={semester.kioskToken} />
       </div>
 
       <div className="card card-pad" style={{ marginTop: 16 }}>

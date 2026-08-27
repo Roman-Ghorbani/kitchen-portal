@@ -41,13 +41,13 @@ function withSession(
 }
 
 describe('the device token', () => {
-  test('is refused when no token is configured at all', () => {
+  test('is refused when no token is configured at all', async () => {
     delete process.env.LATE_PLATE_DEVICE_TOKEN;
     assert.equal(hasDeviceToken(req(`/api/late-plates?device=${TOKEN}`)), false);
     assert.equal(hasDeviceToken(req('/api/late-plates')), false);
   });
 
-  test('is accepted from the query string, a header, or a bearer token', () => {
+  test('is accepted from the query string, a header, or a bearer token', async () => {
     process.env.LATE_PLATE_DEVICE_TOKEN = TOKEN;
     try {
       assert.equal(hasDeviceToken(req(`/api/late-plates?device=${TOKEN}`)), true);
@@ -64,7 +64,7 @@ describe('the device token', () => {
     }
   });
 
-  test('rejects a wrong token, including one that is merely a prefix', () => {
+  test('rejects a wrong token, including one that is merely a prefix', async () => {
     process.env.LATE_PLATE_DEVICE_TOKEN = TOKEN;
     try {
       assert.equal(hasDeviceToken(req('/api/late-plates?device=wrong')), false);
@@ -80,29 +80,29 @@ describe('the device token', () => {
 });
 
 describe('who may read and who may write', () => {
-  test('a signed-out stranger may do neither', () => {
-    const caller = callerOf(req('/api/late-plates'));
+  test('a signed-out stranger may do neither', async () => {
+    const caller = await callerOf(req('/api/late-plates'));
     assert.equal(canRead(caller), false);
     assert.equal(canWrite(caller), false);
   });
 
-  test('a brother may read the queue but not change it', () => {
-    const caller = callerOf(withSession('/api/late-plates', 'brother'));
+  test('a brother may read the queue but not change it', async () => {
+    const caller = await callerOf(withSession('/api/late-plates', 'brother'));
     assert.equal(canRead(caller), true);
     assert.equal(canWrite(caller), false);
   });
 
-  test('the kitchen manager may do both', () => {
-    const caller = callerOf(withSession('/api/late-plates', 'admin', 'Roman'));
+  test('the kitchen manager may do both', async () => {
+    const caller = await callerOf(withSession('/api/late-plates', 'admin', 'Roman'));
     assert.equal(canRead(caller), true);
     assert.equal(canWrite(caller), true);
     assert.equal(actorNameOf(caller), 'Roman');
   });
 
-  test('the tablet may do both, and signs the log as itself', () => {
+  test('the tablet may do both, and signs the log as itself', async () => {
     process.env.LATE_PLATE_DEVICE_TOKEN = TOKEN;
     try {
-      const caller = callerOf(req(`/api/late-plates?device=${TOKEN}`));
+      const caller = await callerOf(req(`/api/late-plates?device=${TOKEN}`));
       assert.equal(canRead(caller), true);
       assert.equal(canWrite(caller), true);
       assert.equal(actorNameOf(caller), 'Kitchen tablet');
@@ -111,8 +111,8 @@ describe('who may read and who may write', () => {
     }
   });
 
-  test('a tampered session cookie is not a session', () => {
-    const caller = callerOf(req('/api/late-plates', { cookie: 'zbt_session=nonsense.sig' }));
+  test('a tampered session cookie is not a session', async () => {
+    const caller = await callerOf(req('/api/late-plates', { cookie: 'zbt_session=nonsense.sig' }));
     assert.equal(canRead(caller), false);
   });
 });

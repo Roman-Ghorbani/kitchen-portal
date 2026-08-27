@@ -113,3 +113,19 @@ export async function toggleLatePlates(enabled: boolean): Promise<SettingsResult
   };
 }
 
+
+import { randomBytes } from 'crypto';
+
+export async function generateKioskToken(): Promise<SettingsResult> {
+  await requireAdmin();
+  const semester = await getActiveSemester();
+  const token = randomBytes(16).toString('hex');
+  
+  await db
+    .update(semesters)
+    .set({ kioskToken: token })
+    .where(eq(semesters.id, semester.id));
+    
+  revalidatePath('/admin/settings');
+  return { ok: true, message: 'Kiosk token regenerated.' };
+}

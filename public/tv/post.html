@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZBT Board — Announcement Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/studio.css">
+<style>
+  .hero { background: #0f172a; color: #e2e8f0; padding: 1.2rem 1.4rem; }
+  .hero-in { max-width: 1400px; margin: 0 auto; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+  .hero h1 { color: #fff; font-size: 1.35rem; }
+  .hero p { margin: 0.15rem 0 0; color: #94a3b8; font-size: 0.88rem; }
+  .hero .hb { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.14); color: #cbd5e1; }
+  .hero .hb-ok { color: #6ee7b7; } .hero .hb-warn { color: #fcd34d; } .hero .hb-bad { color: #fca5a5; }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-in">
+    <div class="side-brand" style="flex:none"><div class="mark">ZBT</div></div>
+    <div style="flex:1;min-width:200px">
+      <h1>Announcement Studio</h1>
+      <p>Post announcements, flyers, and alerts. What you see in the simulator updates instantly as you type.</p>
+    </div>
+    <div id="hb" class="hb hb-unknown">Checking the board…</div>
+    <span class="dirty" id="dirty" style="color:#fcd34d">Unsaved changes</span>
+    <button onclick="save()">Save to the TV</button>
+  </div>
+</div>
+
+<div class="content" style="max-width:1400px;margin:0 auto">
+  <div class="studio-split">
+    <!-- LEFT PANE: STUDIO CONTROLS -->
+    <div class="studio-editor">
+      <div id="ann-tabs"></div>
+
+      <div class="studio-bar">
+        <button onclick="Studio.add()">+ New announcement</button>
+        <div id="templates" style="display:flex;gap:.4rem;flex-wrap:wrap"></div>
+        <div class="spacer"></div>
+        <input type="text" class="search" id="annSearch" placeholder="Search notices…">
+        <span class="studio-count" id="annCount"></span>
+      </div>
+
+      <div class="acards" id="annList"></div>
+
+      <div class="card" style="margin-top:1.4rem">
+        <h3>Announcement Panel Behavior &amp; Timer</h3>
+        <p class="note">These settings govern how the TV cycles through pages and formats multiple notices.</p>
+        <div id="annSettings"></div>
+      </div>
+
+      <div class="card">
+        <h3>Bottom Ticker</h3>
+        <p class="note">The continuous scrolling ticker along the bottom. Separate items with spaces and a pipe (|).</p>
+        <input type="text" id="ticker" placeholder="Chapter Sunday @ 7 PM  |  Check the app for open shifts  |  Keep the kitchen clean">
+      </div>
+
+      <p class="note" style="margin:1.2rem 0 3rem">
+        Menus, meal times, duty checklists, and display calibration live in the
+        <a href="/admin">Full Admin Console</a>.
+      </p>
+    </div>
+
+    <!-- RIGHT PANE: STICKY ACCURATE TV SIMULATOR -->
+    <div class="sim-sticky">
+      <div id="sim-container"></div>
+      <div class="card" style="padding:.75rem .9rem;margin-bottom:0">
+        <div class="note" style="margin:0">
+          <b>Live Simulator:</b> Shows the actual 16:9 TV layout with exact word breaks, overscan boundaries, and real-time edits.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="savebar">
+  <button onclick="save()">Save to the TV</button>
+  <span id="status"></span>
+  <div class="spacer"></div>
+  <span class="note">Ctrl/⌘ + S saves</span>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="/ann-render.js"></script>
+<script src="/studio.js"></script>
+<script>
+var cfg = null;
+
+function getPayload() {
+  return Object.assign({}, cfg || {}, {
+    announcements: Studio.items(),
+    announcementSettings: Studio.settings(),
+    tickerText: document.getElementById('ticker').value
+  });
+}
+
+async function load() {
+  cfg = await (await fetch('/api/announcements')).json();
+  document.getElementById('ticker').value = cfg.tickerText || '';
+  document.getElementById('ticker').addEventListener('input', function () {
+    Panel.markDirty();
+  });
+  Studio.load(cfg.announcements, cfg.announcementSettings);
+  Studio.render();
+  Studio.renderSettings(document.getElementById('annSettings'));
+  Panel.setPayloadGetter(getPayload);
+  Panel.syncLiveSimulator();
+  Panel.markClean();
+}
+
+async function save() {
+  Panel.status('Saving…', 'busy');
+  try {
+    var res = await fetch('/api/announcements', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        announcements: Studio.items(),
+        announcementSettings: Studio.settings(),
+        tickerText: document.getElementById('ticker').value
+      })
+    });
+    if (res.ok) {
+      Panel.markClean();
+      Panel.status('Saved. It is on the TV now.', 'ok');
+      Panel.syncLiveSimulator();
+    } else {
+      Panel.status('Save failed (' + res.status + '). Nothing changed on the board.', 'bad');
+    }
+  } catch (err) {
+    Panel.status('Could not reach the board. Check you are on the tailnet.', 'bad');
+  }
+  setTimeout(function () { Panel.status(''); }, 6000);
+}
+
+document.addEventListener('keydown', function (e) {
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') { e.preventDefault(); save(); }
+});
+
+Studio.init({
+  list: document.getElementById('annList'),
+  count: document.getElementById('annCount'),
+  onChange: function () {
+    Panel.syncLiveSimulator();
+  }
+});
+Studio.templateBar(document.getElementById('templates'));
+document.getElementById('annSearch').addEventListener('input', function () { Studio.setFilter(this.value); });
+
+Panel.mountSimulator(document.getElementById('sim-container'));
+Panel.health();
+setInterval(Panel.health, 5000);
+load();
+</script>
+</body>
+</html>

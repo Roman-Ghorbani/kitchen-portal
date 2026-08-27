@@ -1,0 +1,1 @@
+ALTER TABLE `semesters` ADD `kiosk_token` text;

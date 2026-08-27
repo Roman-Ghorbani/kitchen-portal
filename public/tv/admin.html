@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZBT Kitchen TV — Console</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/studio.css">
+</head>
+<body>
+<div class="shell">
+  <aside class="side">
+    <div class="side-brand">
+      <div class="mark">ZBT</div>
+      <div><b>Kitchen TV</b><span>Console</span></div>
+    </div>
+    <nav class="nav" id="nav"></nav>
+    <div style="padding:0 .4rem">
+      <div id="hb" class="hb hb-unknown">Checking the board…</div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <h1 id="page-title">Display &amp; Hardware</h1>
+      <span class="dirty" id="dirty">Unsaved changes</span>
+      <div class="spacer"></div>
+      <button class="ghost" onclick="location.href='/post'">Comms Studio</button>
+      <button onclick="save()" id="save-top">Save to the TV</button>
+    </div>
+
+    <div class="content">
+
+      <!-- ================= HUB 1: DISPLAY & HARDWARE ================= -->
+      <section class="page on" data-page="display">
+        <div class="page-head">
+          <h2>Display &amp; Hardware Calibration</h2>
+          <p>Configure TV geometry, overscan margins for the Insignia dining room screen, active panels, and branding.</p>
+        </div>
+
+        <div class="card" style="padding:0;background:transparent;border:0;box-shadow:none">
+          <div id="sim-container"></div>
+        </div>
+
+        <div class="card">
+          <h3>Active Screen Panels</h3>
+          <p class="note">Turning a panel off redistributes its width to other panels. Disabling late plates lets announcements expand to full comfort.</p>
+          <div class="toggles">
+            <label class="switch"><input type="checkbox" id="p-kitchen"> Kitchen &amp; Menu</label>
+            <label class="switch"><input type="checkbox" id="p-weather"> Weather Band</label>
+            <label class="switch"><input type="checkbox" id="p-latePlates"> Late Plates Column</label>
+            <label class="switch"><input type="checkbox" id="p-announcements"> Announcements</label>
+            <label class="switch"><input type="checkbox" id="p-ticker"> Bottom Ticker</label>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Insignia TV Overscan &amp; Size Tuning</h3>
+          <div class="row fg">
+            <div>
+              <label>Overscan Safe Inset Margin <b id="marginOut">0px</b></label>
+              <input type="range" id="safeMargin" min="0" max="64" step="2" value="0" style="width:100%">
+              <div class="note">Nudge inward (e.g. 16–32px) if the TV bezel or HDMI overscan clips edge text or badge borders.</div>
+            </div>
+            <div>
+              <label>UI Scale Zoom <b id="scaleOut">100%</b></label>
+              <input type="range" id="scale" min="0.5" max="2.5" step="0.05" value="1" style="width:100%">
+              <div class="note">Scales typography and card spacing proportionally across all columns.</div>
+            </div>
+          </div>
+          <div class="row fg">
+            <div><label>Header Title</label><input type="text" id="title"></div>
+            <div><label>Header Subtitle</label><input type="text" id="subtitle"></div>
+          </div>
+          <div class="fg">
+            <label>Chapter Crest</label>
+            <div id="crestPreview" style="margin-bottom:.5rem"></div>
+            <div class="row">
+              <div><input type="file" accept="image/*" id="crestFile"></div>
+              <div><select id="crestSize"><option value="small">Small</option><option value="medium">Medium</option><option value="large">Large</option></select></div>
+              <div><button type="button" class="ghost" onclick="clearCrest()">Remove crest</button></div>
+            </div>
+          </div>
+        <div class="card" style="background:#f8fafc;border:1px solid #cbd5e1">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.75rem">
+            <div>
+              <h3 style="margin:0">Live TV Display Control</h3>
+              <p class="note" style="margin:0">The wall TV kiosk automatically reloads within 1 second whenever you pull code or update files.</p>
+            </div>
+            <button type="button" class="btn primary sm" id="btn-force-reload-tv">🔄 Refresh Wall TV Browser</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= HUB 2: MENUS & TIMES ================= -->
+      <section class="page" data-page="menus">
+        <div class="page-head">
+          <h2>Weekly Menus &amp; Meal Times</h2>
+          <p>One dish per line. Vertical space is automatically allocated to fit all items without clipping or wasted blank room.</p>
+        </div>
+
+        <div class="card">
+          <h3>After Lunch Behavior</h3>
+          <label class="switch"><input type="checkbox" id="lunchRecap"> Collapse lunch to a single-line recap once cleanup ends</label>
+          <div class="note">When active, afternoon board shifts focus to dinner, giving dinner 80%+ of the column height.</div>
+        </div>
+
+        <div class="card">
+          <div class="weeknav">
+            <button class="ghost sm" onclick="shiftWeek(-1)">&larr; Previous</button>
+            <strong id="weekLabel">—</strong>
+            <button class="ghost sm" onclick="shiftWeek(1)">Next &rarr;</button>
+            <div class="spacer"></div>
+            <button class="ghost sm" onclick="copyLastWeek()">Copy last week</button>
+            <button class="ghost sm" onclick="gotoThisWeek()">This week</button>
+          </div>
+          <div id="week"></div>
+        </div>
+
+        <div class="card">
+          <h3>Meal Serving Times</h3>
+          <p class="note">Serving times trigger the SERVING NOW indicator on the board.</p>
+          <div class="row fg">
+            <div><label>Lunch label</label><input type="text" id="m-lunch-label"></div>
+            <div><label>Lunch serving time</label><input type="text" id="m-lunch-serve"></div>
+            <div><label>Lunch cleanup note</label><input type="text" id="m-lunch-cleanup"></div>
+          </div>
+          <div class="row fg">
+            <div><label>Dinner label</label><input type="text" id="m-dinner-label"></div>
+            <div><label>Dinner serving time</label><input type="text" id="m-dinner-serve"></div>
+            <div><label>Dinner cleanup note</label><input type="text" id="m-dinner-cleanup"></div>
+          </div>
+          <div class="fg" style="margin-top:1rem">
+            <label>Open-shift cover note</label>
+            <input type="text" id="coverNote">
+            <div class="note">Shown beside open cleanup slots to invite voluntary coverage.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= HUB 3: ANNOUNCEMENTS ================= -->
+      <section class="page" data-page="announcements">
+        <div class="page-head">
+          <h2>Announcements Studio</h2>
+          <p>Organize announcements, flyers, and event notices with smart auto-expiration and adaptive timers.</p>
+        </div>
+        <div id="ann-tabs"></div>
+        <div class="studio-bar">
+          <button onclick="Studio.add()">+ New announcement</button>
+          <div id="templates" style="display:flex;gap:.4rem;flex-wrap:wrap"></div>
+          <div class="spacer"></div>
+          <input type="text" class="search" id="annSearch" placeholder="Search announcements…">
+          <span class="studio-count" id="annCount"></span>
+        </div>
+        <div class="acards" id="annList"></div>
+
+        <div class="card" style="margin-top:1.4rem">
+          <h3>Announcement Panel Behavior &amp; Adaptive Timer</h3>
+          <div id="annSettings"></div>
+        </div>
+      </section>
+
+      <!-- ================= HUB 4: DUTY & LATE PLATES ================= -->
+      <section class="page" data-page="duty">
+        <div class="page-head">
+          <h2>Duty Checklist &amp; Late Plates</h2>
+          <p>Configure the dinner duty checklist popup and kitchen app sync for late plate orders.</p>
+        </div>
+
+        <div class="card">
+          <label class="switch"><input type="checkbox" id="duty-enabled"> Show dinner duty checklist during window</label>
+          <div class="row fg" style="margin-top:1rem">
+            <div><label>Heading</label><input type="text" id="duty-title"></div>
+            <div><label>Appears at</label><input type="text" id="duty-start" placeholder="7:30 PM"></div>
+            <div><label>Duty ends at</label><input type="text" id="duty-dutyEnds" placeholder="9:00 PM"></div>
+            <div><label>Comes down at</label><input type="text" id="duty-end" placeholder="9:30 PM"></div>
+          </div>
+          <div class="note">"Duty ends" drives the countdown timer on the screen.</div>
+        </div>
+
+        <div class="card">
+          <h3>Checklist Tasks</h3>
+          <div id="clItems"></div>
+          <button class="ghost" onclick="addTask()" style="margin-top:.5rem">+ Add task</button>
+        </div>
+
+        <div class="card">
+          <h3>Late Plates Queue Sync</h3>
+          <label class="switch"><input type="checkbox" id="lp-enabled"> Read late plate queue from online kitchen app</label>
+          <div class="row fg" style="margin-top:.8rem">
+            <div><label>Kitchen app URL</label><input type="text" id="lp-baseUrl" placeholder="https://kitchen.zbtaa.online"></div>
+            <div><label>Device Token</label><input type="password" id="lp-token" placeholder="unchanged"><div class="note" id="lp-tokenState"></div></div>
+          </div>
+          <label class="switch"><input type="checkbox" id="lp-showNames"> Display brother names in queue list</label>
+          <div class="fg" style="margin-top:1rem">
+            <button class="ghost" type="button" onclick="testPlates()">Test Connection</button>
+            <span id="lp-test" class="note" style="margin-left:.6rem"></span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= HUB 5: ENVIRONMENT & TICKER ================= -->
+      <section class="page" data-page="environment">
+        <div class="page-head">
+          <h2>Environment &amp; Bottom Ticker</h2>
+          <p>Weather location coordinates and the continuous scrolling footer ticker.</p>
+        </div>
+
+        <div class="card">
+          <h3>Bottom Ticker Text</h3>
+          <div class="fg"><label>Scrolling Ticker Line</label><input type="text" id="ticker" placeholder="Chapter Sunday @ 7 PM  |  Keep the kitchen clean"></div>
+          <div class="note">Separate items with spaces and a pipe (|).</div>
+        </div>
+
+        <div class="card">
+          <h3>Weather Location</h3>
+          <div class="row fg">
+            <div><label>City / Place Name</label><input type="text" id="w-label"></div>
+            <div><label>Latitude</label><input type="number" id="w-lat" step="0.0001"></div>
+            <div><label>Longitude</label><input type="number" id="w-lon" step="0.0001"></div>
+          </div>
+          <div class="note">Defaults to West Lafayette, IN (40.4237, -86.9212). Shows real-time weather and 6-hour forecast.</div>
+        </div>
+      </section>
+
+    </div>
+
+    <div class="savebar">
+      <button onclick="save()">Save to the TV</button>
+      <span id="status"></span>
+      <div class="spacer"></div>
+      <span class="note">Ctrl/⌘ + S saves</span>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="/ann-render.js"></script>
+<script src="/studio.js"></script>
+<script>
+var cfg = null, menus = {}, weekStart = null, crestImage = '', duty = { items: [] };
+var esc = AnnRender.esc;
+
+var PAGES = [
+  { id: 'display', name: 'Display & Hardware', icon: 'board' },
+  { id: 'menus', name: 'Menus & Times', icon: 'menu' },
+  { id: 'announcements', name: 'Announcements', icon: 'mega' },
+  { id: 'duty', name: 'Duty & Late Plates', icon: 'broom' },
+  { id: 'environment', name: 'Environment & Ticker', icon: 'sun' }
+];
+
+function buildNav() {
+  document.getElementById('nav').innerHTML = PAGES.map(function (p) {
+    return '<button data-p="' + p.id + '">' + Panel.icon(p.icon) + '<span>' + p.name + '</span>'
+      + (p.id === 'announcements' ? '<span class="badge" id="nav-ann"></span>' : '') + '</button>';
+  }).join('');
+  document.querySelectorAll('#nav button').forEach(function (b) {
+    b.addEventListener('click', function () { location.hash = b.dataset.p; });
+  });
+}
+
+function showPage(id) {
+  var page = PAGES.find(function (p) { return p.id === id; }) || PAGES[0];
+  document.querySelectorAll('.page').forEach(function (s) { s.classList.toggle('on', s.dataset.page === page.id); });
+  document.querySelectorAll('#nav button').forEach(function (b) { b.classList.toggle('on', b.dataset.p === page.id); });
+  document.getElementById('page-title').textContent = page.name;
+  window.scrollTo(0, 0);
+}
+window.addEventListener('hashchange', function () { showPage(location.hash.slice(1)); });
+
+function bindDirty(ids) {
+  ids.forEach(function (id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    var ev = el.type === 'checkbox' || el.tagName === 'SELECT' ? 'change' : 'input';
+    el.addEventListener(ev, function () {
+      Panel.markDirty();
+    });
+  });
+}
+
+/* ---------- crest ---------- */
+function renderCrest() {
+  document.getElementById('crestPreview').innerHTML = crestImage
+    ? '<img src="' + esc(crestImage) + '" style="height:64px;background:#0f172a;padding:6px;border-radius:8px">'
+    : '<span class="note">No crest uploaded</span>';
+}
+function clearCrest() { crestImage = ''; renderCrest(); Panel.markDirty(); }
+
+/* ---------- week grid ---------- */
+function key(d) {
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+function mondayOf(d) {
+  var x = new Date(d); x.setHours(12, 0, 0, 0);
+  x.setDate(x.getDate() - ((x.getDay() + 6) % 7));
+  return x;
+}
+function gotoThisWeek() { weekStart = mondayOf(new Date()); renderWeek(); }
+function shiftWeek(n) { weekStart.setDate(weekStart.getDate() + n * 7); renderWeek(); }
+
+function copyLastWeek() {
+  var copied = 0;
+  for (var i = 0; i < 7; i++) {
+    var to = new Date(weekStart); to.setDate(to.getDate() + i);
+    var from = new Date(weekStart); from.setDate(from.getDate() + i - 7);
+    var src = menus[key(from)];
+    if (src && ((src.lunch || []).length || (src.dinner || []).length)) {
+      menus[key(to)] = JSON.parse(JSON.stringify(src));
+      copied++;
+    }
+  }
+  renderWeek();
+  Panel.markDirty();
+  Panel.toast(copied ? 'Copied ' + copied + ' day' + (copied === 1 ? '' : 's') + ' from the previous week' : 'The previous week is empty');
+}
+
+function renderWeek() {
+  var end = new Date(weekStart); end.setDate(end.getDate() + 6);
+  var fmt = { month: 'short', day: 'numeric' };
+  document.getElementById('weekLabel').textContent =
+    weekStart.toLocaleDateString('en-US', fmt) + ' – ' + end.toLocaleDateString('en-US', fmt);
+
+  var todayKey = key(new Date()), html = '';
+  for (var i = 0; i < 7; i++) {
+    var d = new Date(weekStart); d.setDate(d.getDate() + i);
+    var k = key(d), m = menus[k] || {};
+    html += '<div class="day' + (k === todayKey ? ' today' : '') + '">'
+      + '<div class="dh">' + d.toLocaleDateString('en-US', { weekday: 'long', month: 'numeric', day: 'numeric' }) + '</div>'
+      + '<div class="dd">'
+      + '<div><label>Lunch Menu</label><textarea data-k="' + k + '" data-meal="lunch" placeholder="One dish per line">'
+      + esc((m.lunch || []).join('\n')) + '</textarea></div>'
+      + '<div><label>Dinner Menu</label><textarea data-k="' + k + '" data-meal="dinner" placeholder="One dish per line">'
+      + esc((m.dinner || []).join('\n')) + '</textarea></div>'
+      + '</div></div>';
+  }
+  document.getElementById('week').innerHTML = html;
+  document.querySelectorAll('#week textarea').forEach(function (t) {
+    t.addEventListener('input', function () {
+      var k = t.dataset.k, meal = t.dataset.meal;
+      var list = t.value.split('\n').map(function (x) { return x.trim(); }).filter(Boolean);
+      menus[k] = menus[k] || {};
+      menus[k][meal] = list;
+      if (!(menus[k].lunch || []).length && !(menus[k].dinner || []).length) delete menus[k];
+      Panel.markDirty();
+    });
+  });
+}
+
+/* ---------- duty checklist ---------- */
+function renderTasks() {
+  var el = document.getElementById('clItems');
+  el.innerHTML = duty.items.map(function (t, i) {
+    return '<div class="cl-item"><div class="cl-n">' + (i + 1) + '</div>'
+      + '<textarea data-i="' + i + '">' + esc(t) + '</textarea>'
+      + '<div style="display:flex;flex-direction:column;gap:.25rem;flex:none;min-width:0">'
+      + '<button type="button" class="ghost sm" data-act="up" data-i="' + i + '"' + (i === 0 ? ' disabled' : '') + '>&uarr;</button>'
+      + '<button type="button" class="ghost sm" data-act="down" data-i="' + i + '"' + (i === duty.items.length - 1 ? ' disabled' : '') + '>&darr;</button>'
+      + '<button type="button" class="danger sm" data-act="del" data-i="' + i + '">&times;</button>'
+      + '</div></div>';
+  }).join('') || '<div class="note">No tasks configured.</div>';
+
+  el.querySelectorAll('textarea').forEach(function (t) {
+    t.addEventListener('input', function () { duty.items[+t.dataset.i] = t.value; Panel.markDirty(); });
+  });
+  el.querySelectorAll('[data-act]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var i = +b.dataset.i;
+      if (b.dataset.act === 'del') duty.items.splice(i, 1);
+      else {
+        var j = i + (b.dataset.act === 'up' ? -1 : 1);
+        if (j < 0 || j >= duty.items.length) return;
+        var t = duty.items[i]; duty.items[i] = duty.items[j]; duty.items[j] = t;
+      }
+      Panel.markDirty(); renderTasks();
+    });
+  });
+}
+function addTask() { duty.items.push(''); Panel.markDirty(); renderTasks(); }
+
+/* ---------- late plates test ---------- */
+async function testPlates() {
+  var out = document.getElementById('lp-test');
+  out.textContent = 'Checking connection…';
+  try {
+    var d = await (await fetch('/api/tv/late-plates')).json();
+    if (d.success) {
+      var n = (d.plates || []).length;
+      out.style.color = 'var(--ok)';
+      out.textContent = 'Connected — ' + n + ' plate' + (n === 1 ? '' : 's') + ' in the live queue.';
+    } else {
+      out.style.color = 'var(--bad)';
+      out.textContent = d.reason || 'Not connected.';
+    }
+  } catch (err) {
+    out.style.color = 'var(--bad)';
+    out.textContent = 'Could not reach the server.';
+  }
+}
+
+/* ---------- load / save ---------- */
+var val = function (id, v) { var e = document.getElementById(id); if (e) e.value = v == null ? '' : v; };
+var chk = function (id, v) { var e = document.getElementById(id); if (e) e.checked = !!v; };
+
+async function load() {
+  cfg = await (await fetch('/api/announcements')).json();
+
+  var sc = cfg.uiScale || 1;
+  val('scale', sc);
+  document.getElementById('scaleOut').textContent = Math.round(sc * 100) + '%';
+  document.getElementById('scale').addEventListener('input', function () {
+    document.getElementById('scaleOut').textContent = Math.round(this.value * 100) + '%';
+  });
+
+  var sm = cfg.safeMargin || 0;
+  val('safeMargin', sm);
+  document.getElementById('marginOut').textContent = sm + 'px';
+  document.getElementById('safeMargin').addEventListener('input', function () {
+    document.getElementById('marginOut').textContent = this.value + 'px';
+  });
+
+  val('title', cfg.title); val('subtitle', cfg.subtitle);
+  crestImage = cfg.crestImage || '';
+  val('crestSize', cfg.crestSize || 'medium');
+  renderCrest();
+  document.getElementById('crestFile').addEventListener('change', function () {
+    if (!this.files[0]) return;
+    Panel.uploadImage(this.files[0], function (url) {
+      crestImage = url; renderCrest(); Panel.markDirty();
+      Panel.status('Crest uploaded.', 'ok');
+    }, function (m) { Panel.status(m, 'busy'); });
+  });
+
+  val('ticker', cfg.tickerText);
+  val('coverNote', cfg.coverNote);
+  chk('lunchRecap', cfg.lunchRecap !== false);
+
+  var p = cfg.panels || {};
+  ['kitchen', 'weather', 'announcements', 'ticker'].forEach(function (k) { chk('p-' + k, p[k] !== false); });
+  chk('p-latePlates', p.latePlates === true);
+
+  var m = cfg.meals || {};
+  ['lunch', 'dinner'].forEach(function (k) {
+    val('m-' + k + '-label', (m[k] || {}).label);
+    val('m-' + k + '-serve', (m[k] || {}).serve);
+    val('m-' + k + '-cleanup', (m[k] || {}).cleanup);
+  });
+
+  var w = cfg.weather || {};
+  val('w-label', w.label); val('w-lat', w.latitude); val('w-lon', w.longitude);
+
+  var d = cfg.dutyChecklist || {};
+  chk('duty-enabled', d.enabled !== false);
+  val('duty-title', d.title); val('duty-start', d.start);
+  val('duty-end', d.end); val('duty-dutyEnds', d.dutyEnds);
+  duty.items = (d.items || []).slice();
+  renderTasks();
+
+  var lp = cfg.latePlates || {};
+  chk('lp-enabled', lp.enabled === true);
+  chk('lp-showNames', lp.showNames !== false);
+  val('lp-baseUrl', lp.baseUrl);
+  document.getElementById('lp-tokenState').textContent = lp.tokenSet
+    ? 'A token is set. Leave blank to keep existing.'
+    : 'No token set.';
+
+  menus = cfg.menus || {};
+  weekStart = mondayOf(new Date());
+  renderWeek();
+
+  Studio.load(cfg.announcements, cfg.announcementSettings);
+  Studio.render();
+  Studio.renderSettings(document.getElementById('annSettings'));
+  document.getElementById('nav-ann').textContent = Studio.items().length;
+
+  bindDirty(['scale', 'safeMargin', 'title', 'subtitle', 'crestSize', 'ticker', 'coverNote', 'lunchRecap',
+    'p-kitchen', 'p-weather', 'p-announcements', 'p-ticker', 'p-latePlates',
+    'm-lunch-label', 'm-lunch-serve', 'm-lunch-cleanup', 'm-dinner-label', 'm-dinner-serve', 'm-dinner-cleanup',
+    'w-label', 'w-lat', 'w-lon', 'duty-enabled', 'duty-title', 'duty-start', 'duty-end', 'duty-dutyEnds',
+    'lp-enabled', 'lp-showNames', 'lp-baseUrl', 'lp-token']);
+
+  Panel.setPayloadGetter(payload);
+  Panel.syncLiveSimulator();
+  Panel.markClean();
+}
+
+function payload() {
+  var get = function (id) { var e = document.getElementById(id); return e ? e.value : ''; };
+  var on = function (id) { var e = document.getElementById(id); return !!(e && e.checked); };
+
+  var cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 30);
+  var cutKey = key(cutoff), pruned = {};
+  Object.keys(menus).forEach(function (k) { if (k >= cutKey) pruned[k] = menus[k]; });
+
+  return {
+    uiScale: parseFloat(get('scale')) || 1,
+    safeMargin: parseInt(get('safeMargin'), 10) || 0,
+    title: get('title'), subtitle: get('subtitle'),
+    crestImage: crestImage, crestSize: get('crestSize'),
+    tickerText: get('ticker'), coverNote: get('coverNote'),
+    lunchRecap: on('lunchRecap'),
+    panels: {
+      kitchen: on('p-kitchen'), weather: on('p-weather'),
+      announcements: on('p-announcements'), ticker: on('p-ticker'), latePlates: on('p-latePlates')
+    },
+    meals: {
+      lunch: { label: get('m-lunch-label'), serve: get('m-lunch-serve'), cleanup: get('m-lunch-cleanup') },
+      dinner: { label: get('m-dinner-label'), serve: get('m-dinner-serve'), cleanup: get('m-dinner-cleanup') }
+    },
+    weather: {
+      label: get('w-label'),
+      latitude: parseFloat(get('w-lat')),
+      longitude: parseFloat(get('w-lon')),
+      timezone: (cfg && cfg.weather && cfg.weather.timezone) || 'America/Indiana/Indianapolis'
+    },
+    dutyChecklist: {
+      enabled: on('duty-enabled'), title: get('duty-title'),
+      start: get('duty-start'), end: get('duty-end'), dutyEnds: get('duty-dutyEnds'),
+      items: duty.items.map(function (x) { return String(x).trim(); }).filter(Boolean)
+    },
+    latePlates: {
+      enabled: on('lp-enabled'), showNames: on('lp-showNames'),
+      baseUrl: get('lp-baseUrl'), token: get('lp-token')
+    },
+    menus: pruned,
+    announcements: Studio.items(),
+    announcementSettings: Studio.settings()
+  };
+}
+
+async function save() {
+  Panel.status('Saving…', 'busy');
+  try {
+    var body = payload();
+    var res = await fetch('/api/announcements', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+    });
+    if (res.ok) {
+      menus = body.menus;
+      val('lp-token', '');
+      Panel.markClean();
+      Panel.status('Saved. The TV is updating now.', 'ok');
+      document.getElementById('nav-ann').textContent = Studio.items().length;
+      Panel.syncLiveSimulator();
+    } else {
+      Panel.status('Save failed (' + res.status + ').', 'bad');
+    }
+  } catch (err) {
+    Panel.status('Save failed. Is the server running?', 'bad');
+  }
+  setTimeout(function () { Panel.status(''); }, 6000);
+}
+
+document.addEventListener('keydown', function (e) {
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') { e.preventDefault(); save(); }
+});
+
+Studio.init({
+  list: document.getElementById('annList'),
+  count: document.getElementById('annCount'),
+  onChange: function () {
+    document.getElementById('nav-ann').textContent = Studio.items().length;
+    Panel.syncLiveSimulator();
+  }
+});
+Studio.templateBar(document.getElementById('templates'));
+document.getElementById('annSearch').addEventListener('input', function () { Studio.setFilter(this.value); });
+
+var reloadTvBtn = document.getElementById('btn-force-reload-tv');
+if (reloadTvBtn) {
+  reloadTvBtn.addEventListener('click', async function () {
+    try {
+      var r = await fetch('/api/reload-tv', { method: 'POST' });
+      if (r.ok) {
+        Panel.toast('Sent instant reload signal to Wall TV!');
+      } else {
+        Panel.toast('Failed to trigger reload', 'error');
+      }
+    } catch (e) {
+      Panel.toast('Could not reach TV server', 'error');
+    }
+  });
+}
+
+buildNav();
+showPage(location.hash.slice(1));
+Panel.mountSimulator(document.getElementById('sim-container'));
+Panel.health();
+setInterval(Panel.health, 5000);
+load();
+</script>
+</body>
+</html>

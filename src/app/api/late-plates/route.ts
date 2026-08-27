@@ -47,7 +47,7 @@ export async function OPTIONS() {
 }
 
 export async function GET(request: NextRequest) {
-  const caller = callerOf(request);
+  const caller = await callerOf(request);
   if (!canRead(caller)) return json(UNAUTHORIZED, 401);
 
   const requested = request.nextUrl.searchParams.get('date');
@@ -156,7 +156,7 @@ export async function GET(request: NextRequest) {
  * the prank the device token elsewhere is guarding against.
  */
 export async function POST(request: NextRequest) {
-  const caller = callerOf(request);
+  const caller = await callerOf(request);
   if (!caller.session || caller.session.role !== 'brother') {
     return json({ error: 'Sign in as a brother to request a late plate.' }, 401);
   }

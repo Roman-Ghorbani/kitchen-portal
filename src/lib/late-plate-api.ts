@@ -42,6 +42,8 @@ function constantTimeEquals(a: string, b: string): boolean {
   return timingSafeEqual(bufA, bufB);
 }
 
+import { getActiveSemester } from './week-service.ts';
+
 /**
  * True when the request carries the kitchen device token.
  *
@@ -50,8 +52,9 @@ function constantTimeEquals(a: string, b: string): boolean {
  * is not configured - an unset secret disables token access rather than
  * opening the endpoint to everybody, which is the failure mode that matters.
  */
-export function hasDeviceToken(request: NextRequest): boolean {
-  const expected = process.env.LATE_PLATE_DEVICE_TOKEN;
+export async function hasDeviceToken(request: NextRequest): Promise<boolean> {
+  const semester = await getActiveSemester().catch(() => null);
+  const expected = semester?.kioskToken || process.env.LATE_PLATE_DEVICE_TOKEN;
   if (!expected) return false;
 
   const auth = request.headers.get('authorization');
@@ -73,8 +76,8 @@ export interface Caller {
   device: boolean;
 }
 
-export function callerOf(request: NextRequest): Caller {
-  return { session: sessionFrom(request), device: hasDeviceToken(request) };
+export async function callerOf(request: NextRequest): Promise<Caller> {
+  return { session: sessionFrom(request), device: await hasDeviceToken(request) };
 }
 
 export function canRead(caller: Caller): boolean {

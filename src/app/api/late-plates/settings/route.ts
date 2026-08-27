@@ -39,7 +39,7 @@ export async function OPTIONS() {
 }
 
 export async function GET(request: NextRequest) {
-  const caller = callerOf(request);
+  const caller = await callerOf(request);
   if (!canRead(caller)) return json(UNAUTHORIZED, 401);
 
   const requested = request.nextUrl.searchParams.get('date');
@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PUT(request: NextRequest) {
-  const caller = callerOf(request);
+  const caller = await callerOf(request);
   if (!canWrite(caller)) return json(UNAUTHORIZED, 401);
 
   let body: {
