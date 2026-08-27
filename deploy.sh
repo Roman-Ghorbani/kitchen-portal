@@ -27,6 +27,7 @@ set -euo pipefail
 DROPLET="${KITCHEN_HOST:-zbt@zbt-kitchen-tv}"
 APP_DIR="${KITCHEN_APP_DIR:-~/KitchenTracker}"
 SITE="${KITCHEN_URL:-https://kitchen.zbtaa.online}"
+SERVICE_NAME="${KITCHEN_SERVICE:-kitchen-tv}"
 SSH_CMD="ssh -o ConnectTimeout=10"
 # --------------------------------------------------------------------------
 
@@ -53,7 +54,7 @@ fi
 # ---- rollback ------------------------------------------------------------
 if [ "$ROLLBACK" = true ]; then
   step "Rolling back to the previous version"
-  $SSH_CMD "$DROPLET" "cd $APP_DIR && git reset --hard HEAD@{1} && npm ci --silent && npm run build && sudo systemctl restart kitchen"
+  $SSH_CMD "$DROPLET" "cd $APP_DIR && git reset --hard HEAD@{1} && npm ci --silent && npm run build && sudo systemctl restart $SERVICE_NAME"
   sleep 4
   code=$(curl -s -o /dev/null -w '%{http_code}' "$SITE/schedule" || echo 000)
   [ "$code" = "200" ] && ok "rolled back, site is up" || die "rolled back but site returns $code"
@@ -105,7 +106,7 @@ if git diff --name-only HEAD@{1} HEAD 2>/dev/null | grep -qE "package(-lock)?\.j
 fi
 npm run db:migrate
 npm run build
-sudo systemctl restart kitchen
+sudo systemctl restart $SERVICE_NAME
 REMOTE
 ok "built and restarted on the droplet"
 
@@ -124,5 +125,5 @@ if [ "$code" = "200" ]; then
 else
   echo ""
   die "site returned $code. Run './deploy.sh --rollback' to put the last version back,
-   then 'ssh $DROPLET \"sudo journalctl -u kitchen -n 50\"' to see what broke."
+   then 'ssh $DROPLET \"sudo journalctl -u $SERVICE_NAME -n 50\"' to see what broke."
 fi
