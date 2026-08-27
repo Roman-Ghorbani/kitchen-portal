@@ -88,7 +88,7 @@ export default async function AdminLatePlatesPage() {
   const lunchToday = todayPlates.filter((p) => p.meal === 'lunch').length;
   const dinnerToday = todayPlates.filter((p) => p.meal === 'dinner').length;
 
-  const hasTabletToken = Boolean(process.env.LATE_PLATE_DEVICE_TOKEN);
+  const hasTabletToken = Boolean(semester?.kioskToken || process.env.LATE_PLATE_DEVICE_TOKEN);
   const latePlatesEnabled = semester?.latePlatesEnabled ?? true;
 
   // Last chef action
@@ -153,7 +153,7 @@ export default async function AdminLatePlatesPage() {
               Chef Tablet & Kitchen Activity
             </h2>
             <div style={{ fontSize: 13, color: 'var(--ink-400)', marginTop: 2 }}>
-              Kiosk link: <code>/kitchen/late-plates?token={hasTabletToken ? '***' : 'UNCONFIGURED'}</code>
+              Kiosk link: <code>/kitchen/late-plates?device={hasTabletToken ? '***' : 'UNCONFIGURED'}</code>
             </div>
           </div>
 
