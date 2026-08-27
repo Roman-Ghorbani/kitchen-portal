@@ -24,8 +24,8 @@
 set -euo pipefail
 
 # ---- your settings -------------------------------------------------------
-DROPLET="${KITCHEN_HOST:-kitchen@203.0.113.10}"
-APP_DIR=/srv/kitchen
+DROPLET="${KITCHEN_HOST:-pi@zbt-kitchen-tv}"
+APP_DIR="${KITCHEN_APP_DIR:-~/KitchenTracker}"
 SITE="${KITCHEN_URL:-https://kitchen.zbtaa.online}"
 SSH_CMD="ssh -o ConnectTimeout=10"
 # --------------------------------------------------------------------------
