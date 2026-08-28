@@ -106,7 +106,7 @@ if git diff --name-only HEAD@{1} HEAD 2>/dev/null | grep -qE "package(-lock)?\.j
 fi
 npm run db:migrate
 npm run build
-sudo systemctl restart $SERVICE_NAME
+pm2 restart all
 REMOTE
 ok "built and restarted on the droplet"
 

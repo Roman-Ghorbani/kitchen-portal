@@ -42,7 +42,7 @@ export default async function KitchenLatePlatesPage({
 
   if (!(await tokenMatches(params.device))) {
     return (
-      <div className="kq-shell kq-locked">
+      <div className="kq-shell kq-locked" data-theme="light">
         <div className="kq-locked-card">
           <h1>Kitchen late plates</h1>
           <p>
@@ -65,7 +65,7 @@ export default async function KitchenLatePlatesPage({
   });
 
   return (
-    <div className="kq-shell">
+    <div className="kq-shell" data-theme="light">
       <KitchenQueue
         device={params.device!}
         date={date}

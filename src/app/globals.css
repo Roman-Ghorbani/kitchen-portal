@@ -5495,9 +5495,57 @@ body {
  * this is read at arm's length across a counter.
  */
 
+/* Kitchen / Chef screen is always forced to light mode */
+.kq-shell,
+:root:has(.kq-shell),
+body:has(.kq-shell),
+[data-theme='light'] .kq-shell {
+  color-scheme: light !important;
+  --gold-600: #8a6a25;
+  --gold-500: #b78f3d;
+  --gold-400: #d9b269;
+  --gold-300: #e8c98f;
+  --gold-100: #f6edda;
+
+  --green-600: #2f7d55;
+  --green-100: #e4f2ea;
+  --red-600: #b04234;
+  --red-100: #fae9e6;
+  --amber-600: #a16520;
+  --amber-100: #f8ecdb;
+  --violet-600: #5f519b;
+  --violet-100: #eceaf6;
+
+  --bg: #eef1f6;
+  --card: #ffffff;
+  --raised: #f7f9fc;
+  --sunken: #e6eaf2;
+
+  --navy-100: #dde3ee;
+  --navy-50: #eef1f7;
+  --navy-900: #131f33;
+  --navy-800: #1b2b44;
+  --navy-700: #2b4166;
+  --navy-600: #3a5480;
+
+  --ink-900: #0f1828;
+  --ink-700: #33415c;
+  --ink-600: #4d5b76;
+  --ink-400: #7a869e;
+  --ink-300: #9aa4ba;
+
+  --line: rgba(15, 24, 40, 0.09);
+  --line-strong: rgba(15, 24, 40, 0.16);
+
+  --shadow-sm: 0 1px 2px rgba(13, 22, 38, 0.06);
+  --shadow-md: 0 4px 16px rgba(13, 22, 38, 0.08);
+  --shadow-lg: 0 18px 48px rgba(13, 22, 38, 0.16);
+}
+
 .kq-shell {
   min-height: 100vh;
   background: var(--bg);
+  color: var(--ink-900);
   padding: 20px clamp(16px, 4vw, 40px) 60px;
 }
 
@@ -5824,6 +5872,8 @@ body {
   padding: 12px 14px;
   font-size: 15px;
   background: var(--card);
+  color: var(--ink-900);
+  font-family: inherit;
 }
 
 .kq-locked {
