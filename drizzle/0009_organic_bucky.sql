@@ -1,0 +1,1 @@
+ALTER TABLE `semesters` ADD `late_plate_days` text;

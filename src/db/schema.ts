@@ -91,6 +91,12 @@ export const semesters = sqliteTable('semesters', {
   latePlateMessage: text('late_plate_message'),
 
   /**
+   * Which day/meal combinations late plates can be requested for, as
+   * { lunch: boolean[7], dinner: boolean[7] } with index 0 = Monday.
+   */
+  latePlateDays: text('late_plate_days', { mode: 'json' }),
+
+  /**
    * Which day/meal combinations the house serves, as
    * { lunch: boolean[7], dinner: boolean[7] } with index 0 = Monday.
    * Per-semester so it can change between Fall and Spring.

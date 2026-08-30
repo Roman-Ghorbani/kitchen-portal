@@ -1,13 +1,14 @@
-'use server';
+﻿'use server';
 
 import { eq } from 'drizzle-orm';
+import { randomBytes } from 'crypto';
 import { revalidatePath } from 'next/cache';
 
 import { db } from '../../db/index.ts';
 import { semesters, events } from '../../db/schema.ts';
 import { requireAdmin } from '../../lib/session.ts';
 import { getActiveSemester } from '../../lib/week-service.ts';
-import type { Meal, MealDayConfig } from '../../lib/types.ts';
+import { DEFAULT_LATE_PLATE_DAYS, type Meal, type MealDayConfig } from '../../lib/types.ts';
 
 const DAY_NAMES = [
   'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday',
@@ -80,6 +81,57 @@ export async function toggleMealDay(
 }
 
 /**
+ * Turns late plate service on or off for a specific day and meal.
+ *
+ * Configured by the kitchen manager in Settings to disable late plates on weekends
+ * (e.g. Sundays/Saturdays) or specific days when the house does not cook or prepare late plates.
+ */
+export async function toggleLatePlateDay(
+  meal: Meal,
+  dayIndex: number,
+  enabled: boolean,
+): Promise<SettingsResult> {
+  const admin = await requireAdmin();
+
+  if (!Number.isInteger(dayIndex) || dayIndex < 0 || dayIndex > 6) {
+    return { ok: false, message: 'Not a valid day.' };
+  }
+
+  const semester = await getActiveSemester();
+  const config = structuredClone(
+    (semester.latePlateDays ?? DEFAULT_LATE_PLATE_DAYS) as MealDayConfig,
+  );
+  config[meal][dayIndex] = enabled;
+
+  await db
+    .update(semesters)
+    .set({ latePlateDays: config })
+    .where(eq(semesters.id, semester.id));
+
+  await db.insert(events).values({
+    action: 'settings.late_plate_days_changed',
+    entityType: 'semester',
+    entityId: semester.id,
+    actorName: admin.name,
+    summary: `${admin.name} turned ${meal} late plates on ${DAY_NAMES[dayIndex]} ${
+      enabled ? 'on' : 'off'
+    }`,
+    payload: { meal, dayIndex, enabled },
+  });
+
+  revalidatePath('/admin/settings');
+  revalidatePath('/late-plate');
+  revalidatePath('/kitchen/late-plates');
+
+  return {
+    ok: true,
+    message: `${meal.charAt(0).toUpperCase() + meal.slice(1)} late plates on ${DAY_NAMES[dayIndex]} are now ${
+      enabled ? 'enabled' : 'disabled'
+    }.`,
+  };
+}
+
+/**
  * Turns brother late-plate requesting on or off.
  *
  * Used by the kitchen manager when testing the feature live or pausing requests.
@@ -112,9 +164,6 @@ export async function toggleLatePlates(enabled: boolean): Promise<SettingsResult
       : 'Late plate requests are now paused. Brothers will see a notice on the page and request buttons will be disabled.',
   };
 }
-
-
-import { randomBytes } from 'crypto';
 
 export async function generateKioskToken(): Promise<SettingsResult> {
   await requireAdmin();

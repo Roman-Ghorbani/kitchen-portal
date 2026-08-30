@@ -42,7 +42,7 @@ import {
   summariseFlags,
   type FlagSummary,
 } from './dietary.ts';
-import type { Meal, MealDayConfig } from './types.ts';
+import { DEFAULT_LATE_PLATE_DAYS, type Meal, type MealDayConfig } from './types.ts';
 
 export const MEALS: readonly Meal[] = ['lunch', 'dinner'];
 
@@ -208,8 +208,8 @@ export async function mealWindow(
     getActiveSemester().catch(() => null),
     getStandingCutoffs(),
   ]);
-  const mealDays = (semester?.mealDays ?? null) as MealDayConfig | null;
-  const served = mealDays ? Boolean(mealDays[meal][dayIndex(date)]) : true;
+  const latePlateDays = (semester?.latePlateDays ?? DEFAULT_LATE_PLATE_DAYS) as MealDayConfig;
+  const served = latePlateDays ? Boolean(latePlateDays[meal][dayIndex(date)]) : true;
 
   // Day override, then the standing cutoff, then the house default.
   const cutoff = override?.cutoff ?? standing[meal].cutoff;
@@ -315,7 +315,7 @@ export async function mealWindowsForRange(
     getStandingCutoffs(),
   ]);
 
-  const mealDays = (semester?.mealDays ?? null) as MealDayConfig | null;
+  const latePlateDays = (semester?.latePlateDays ?? DEFAULT_LATE_PLATE_DAYS) as MealDayConfig;
   const today = todayInEastern(now);
   const clockMinutes = houseClockMinutes(now);
 
@@ -329,7 +329,7 @@ export async function mealWindowsForRange(
           meal,
           cutoff: override?.cutoff ?? standing[meal].cutoff,
           closed: Boolean(override?.closed),
-          served: mealDays ? Boolean(mealDays[meal][dayIndex(date)]) : true,
+          served: latePlateDays ? Boolean(latePlateDays[meal][dayIndex(date)]) : true,
           today,
           clockMinutes,
         }),
@@ -1160,6 +1160,18 @@ export async function setRecurringLatePlate(
 
   if (!member) return { ok: false, message: 'Member not found.' };
 
+  const semester = await getActiveSemester().catch(() => null);
+  const latePlateDays = (semester?.latePlateDays ?? DEFAULT_LATE_PLATE_DAYS) as MealDayConfig;
+  const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  const dayName = dayNames[dayOfWeek] ?? `Day ${dayOfWeek}`;
+
+  if (latePlateDays && !latePlateDays[meal][dayOfWeek]) {
+    return {
+      ok: false,
+      message: `The house does not offer late plates for ${dayName} ${meal}.`,
+    };
+  }
+
   const trimmed = note?.trim().slice(0, MAX_NOTE) || null;
 
   const [existing] = await db
@@ -1186,11 +1198,9 @@ export async function setRecurringLatePlate(
       meal,
       note: trimmed,
       active: true,
+      createdAt: new Date(),
     });
   }
-
-  const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-  const dayName = dayNames[dayOfWeek] ?? `Day ${dayOfWeek}`;
 
   await db.insert(events).values({
     action: 'late-plate.recurring_saved',

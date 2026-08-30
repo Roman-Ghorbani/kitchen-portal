@@ -2,9 +2,10 @@ import { redirect } from 'next/navigation';
 
 import { getSession } from '../../../../lib/session.ts';
 import { getActiveSemester } from '../../../../lib/week-service.ts';
-import type { MealDayConfig, Meal } from '../../../../lib/types.ts';
+import { DEFAULT_LATE_PLATE_DAYS, type MealDayConfig, type Meal } from '../../../../lib/types.ts';
 import { AppShell } from '../../shell.tsx';
 import { MealGrid } from './meal-grid.tsx';
+import { LatePlateMealGrid } from './late-plate-meal-grid.tsx';
 import { LatePlateToggle } from './late-plate-toggle.tsx';
 import { LatePlateSettingsForm } from './late-plate-settings-form.tsx';
 import { KioskLink } from './kiosk-link.tsx';
@@ -18,6 +19,7 @@ export default async function SettingsPage() {
 
   const semester = await getActiveSemester();
   const mealDays = semester.mealDays as MealDayConfig;
+  const latePlateDays = (semester.latePlateDays ?? DEFAULT_LATE_PLATE_DAYS) as MealDayConfig;
   const slotSizes = semester.slotSizes as Record<Meal, number>;
   const latePlatesEnabled = semester.latePlatesEnabled ?? true;
 
@@ -37,6 +39,17 @@ export default async function SettingsPage() {
           slots, so nobody is ever assigned a shift that does not exist.
         </p>
         <MealGrid initial={mealDays} />
+      </div>
+
+      <div className="card card-pad" style={{ marginTop: 16 }}>
+        <h2 className="section-title" style={{ marginTop: 0 }}>
+          Late plate schedule
+        </h2>
+        <p style={{ fontSize: 13, color: 'var(--ink-400)', marginTop: 0 }}>
+          Configure which days and meals brothers are allowed to request late plates.
+          For example, turn off Sundays and Saturdays if the house does not cook or prepare late plates on weekends (even if duty shifts or kitchen cleanup are assigned).
+        </p>
+        <LatePlateMealGrid initial={latePlateDays} />
       </div>
 
       <div className="card card-pad" style={{ marginTop: 16 }}>

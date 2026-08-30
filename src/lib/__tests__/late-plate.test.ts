@@ -204,6 +204,20 @@ describe('late plate enabled controls', () => {
     assert.equal(typeof enabled, 'boolean');
   });
 
+  test('DEFAULT_LATE_PLATE_DAYS has weekdays active and weekends disabled by default', async () => {
+    const { DEFAULT_LATE_PLATE_DAYS } = await import('../types.ts');
+    // Mon-Fri (0..4) are true
+    for (let i = 0; i < 5; i++) {
+      assert.equal(DEFAULT_LATE_PLATE_DAYS.lunch[i], true);
+      assert.equal(DEFAULT_LATE_PLATE_DAYS.dinner[i], true);
+    }
+    // Sat (5) and Sun (6) are false
+    assert.equal(DEFAULT_LATE_PLATE_DAYS.lunch[5], false);
+    assert.equal(DEFAULT_LATE_PLATE_DAYS.dinner[5], false);
+    assert.equal(DEFAULT_LATE_PLATE_DAYS.lunch[6], false);
+    assert.equal(DEFAULT_LATE_PLATE_DAYS.dinner[6], false);
+  });
+
   test('recurring late plate functions are properly exported', async () => {
     const {
       getMemberRecurringPlates,
@@ -215,6 +229,7 @@ describe('late plate enabled controls', () => {
     assert.equal(typeof deleteRecurringLatePlate, 'function');
   });
 });
+
 
 
 

@@ -71,6 +71,16 @@ export const DEFAULT_MEAL_DAYS: MealDayConfig = {
   dinner: [true, true, true, true, true, true, true],
 };
 
+/**
+ * Days on which late plates can be requested.
+ * By default: Mon-Fri are active, weekends (Sat & Sun) are disabled unless turned on by admin.
+ */
+export const DEFAULT_LATE_PLATE_DAYS: MealDayConfig = {
+  //          Mon   Tue   Wed   Thu   Fri   Sat   Sun
+  lunch: [true, true, true, true, true, false, false],
+  dinner: [true, true, true, true, true, false, false],
+};
+
 export const DEFAULT_SLOT_SIZES: Record<Meal, number> = {
   lunch: 2,
   dinner: 3,
