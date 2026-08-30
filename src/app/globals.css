@@ -5551,13 +5551,63 @@ body:has(.kq-shell),
 
 .kq-head {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
   padding-bottom: 16px;
   border-bottom: 2px solid var(--line-strong);
   margin-bottom: 20px;
+}
+
+.kq-head-brand {
+  display: flex;
+  flex-direction: column;
+}
+
+.kq-offline-banner {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: var(--red-100);
+  color: var(--red-600);
+  border: 1.5px solid var(--red-600);
+  border-radius: var(--radius-sm);
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  box-shadow: var(--shadow-sm);
+  animation: kq-pulse 2.5s infinite ease-in-out;
+}
+
+.kq-offline-dot {
+  width: 10px;
+  height: 10px;
+  min-width: 10px;
+  border-radius: 50%;
+  background: var(--red-600);
+  box-shadow: 0 0 0 2px rgba(176, 66, 52, 0.25);
+  animation: kq-dot-pulse 1.2s infinite ease-in-out;
+}
+
+@keyframes kq-pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+}
+
+@keyframes kq-dot-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.25;
+  }
 }
 
 .kq-head h1 {

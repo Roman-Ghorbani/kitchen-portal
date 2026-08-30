@@ -150,6 +150,11 @@ export function KitchenQueue({
   const [editingCutoff, setEditingCutoff] = useState<MealName | null>(null);
   const [draftMinutes, setDraftMinutes] = useState(0);
   const [savingSettings, setSavingSettings] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<number | null>(null);
+  const [isDisconnected, setIsDisconnected] = useState(false);
+  const [mountedAt] = useState(() => Date.now());
+
+  const STALE_THRESHOLD_MS = 120_000; // 2 minutes
 
   const load = useCallback(async () => {
     try {
@@ -163,6 +168,8 @@ export function KitchenQueue({
       if (!res.ok) throw new Error(`Server said ${res.status}`);
       setData((await res.json()) as Payload);
       setError(null);
+      setLastUpdated(Date.now());
+      setIsDisconnected(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not reach the server');
     }
@@ -170,9 +177,19 @@ export function KitchenQueue({
 
   useEffect(() => {
     load();
-    const timer = setInterval(load, 20_000);
+    const timer = setInterval(load, 5_000);
     return () => clearInterval(timer);
   }, [load]);
+
+  useEffect(() => {
+    const checkInterval = setInterval(() => {
+      const referenceTime = lastUpdated ?? mountedAt;
+      if (Date.now() - referenceTime > STALE_THRESHOLD_MS) {
+        setIsDisconnected(true);
+      }
+    }, 1_000);
+    return () => clearInterval(checkInterval);
+  }, [lastUpdated, mountedAt]);
 
   async function patch(
     plate: Plate,
@@ -256,10 +273,19 @@ export function KitchenQueue({
       <RememberToken device={device} />
 
       <header className="kq-head">
-        <div>
+        <div className="kq-head-brand">
           <h1>Late plates</h1>
           <div className="kq-date">{prettyDate}</div>
         </div>
+
+        {isDisconnected && (
+          <div className="kq-offline-banner" role="alert">
+            <span className="kq-offline-dot" aria-hidden="true" />
+            <span>
+              <strong>NO NETWORK CONNECTION</strong> — Not updated in over 2 minutes
+            </span>
+          </div>
+        )}
 
         <div className="kq-switch" role="tablist" aria-label="Meal">
           {MEALS.map((m) => {
