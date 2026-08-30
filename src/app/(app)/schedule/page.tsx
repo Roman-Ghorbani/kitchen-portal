@@ -107,10 +107,17 @@ export default async function SchedulePage({
   const today = todayInEastern();
   const currentMonday = defaultScheduleMonday();
 
+  // Only show this week and forward — hide past weeks
+  const visibleWeeks = allWeeks.filter((w) => w.weekStart >= currentMonday);
+  const activeWeeks = visibleWeeks.length > 0 ? visibleWeeks : allWeeks;
+
+  if (params.week && params.week < currentMonday) {
+    redirect('/schedule');
+  }
+
   const defaultWeek =
-    allWeeks.find((w) => w.weekStart === currentMonday)?.weekStart ??
-    allWeeks.find((w) => w.weekStart >= currentMonday)?.weekStart ??
-    allWeeks.at(-1)!.weekStart;
+    activeWeeks.find((w) => w.weekStart === currentMonday)?.weekStart ??
+    activeWeeks[0]?.weekStart;
 
   const selected = params.week ?? defaultWeek;
   const week = await getWeek(selected);
@@ -211,9 +218,9 @@ export default async function SchedulePage({
       )}
 
       <div className="week-bar">
-        {allWeeks.length > 1 && (
+        {activeWeeks.length > 1 && (
           <div className="week-toggle">
-            {allWeeks.map((w) => (
+            {activeWeeks.map((w) => (
               <Link
                 key={w.id}
                 href={`/schedule?week=${w.weekStart}`}
