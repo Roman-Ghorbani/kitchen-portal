@@ -826,8 +826,12 @@ export async function cancelLatePlate(
   if (!OPEN_STATUSES.includes(row.status as LatePlateStatus)) {
     return { ok: false, message: 'That request is not active.' };
   }
-
-  const wasReady = row.status === 'ready';
+  if (row.status === 'ready') {
+    return {
+      ok: false,
+      message: 'This late plate is already prepared and waiting in the student fridge.',
+    };
+  }
 
   const [member] = await db
     .select({ name: members.name })
@@ -846,10 +850,8 @@ export async function cancelLatePlate(
     entityId: id,
     actorMemberId: memberId,
     actorName: member?.name ?? null,
-    summary:
-      `${member?.name ?? 'A brother'} cancelled his ${row.meal} late plate for ${row.date}` +
-      (wasReady ? ' (it had already been plated)' : ''),
-    payload: { date: row.date, meal: row.meal, wasReady },
+    summary: `${member?.name ?? 'A brother'} cancelled his ${row.meal} late plate for ${row.date}`,
+    payload: { date: row.date, meal: row.meal },
   });
 
   const today = todayInEastern(now);
@@ -857,9 +859,7 @@ export async function cancelLatePlate(
 
   return {
     ok: true,
-    message: wasReady
-      ? `Cancelled — the kitchen had already plated it. ${isDayOf ? 'You cannot re-request this meal today.' : ''}`
-      : isDayOf
+    message: isDayOf
       ? 'Cancelled. Since this was for today, you cannot request another plate for this meal today.'
       : 'Cancelled.',
   };

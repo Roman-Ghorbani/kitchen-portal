@@ -383,12 +383,19 @@ function MealCell({
             </div>
           )}
           {request.note && <div className="lp-note-back">“{request.note}”</div>}
-          <PlateButton
-            mode="cancel"
-            id={request.id}
-            alreadyReady={request.status === 'ready'}
-            isDayOf={isToday}
-          />
+          {request.status === 'waiting' && (
+            <PlateButton
+              mode="cancel"
+              id={request.id}
+              isDayOf={isToday}
+            />
+          )}
+          {request.status === 'ready' && (
+            <div style={{ marginTop: 10, fontSize: 13, color: '#10b981', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span>🧊</span>
+              <span>Ready for pickup in the student fridge!</span>
+            </div>
+          )}
         </>
       ) : !isCancelledToday && window.open ? (
         <PlateButton

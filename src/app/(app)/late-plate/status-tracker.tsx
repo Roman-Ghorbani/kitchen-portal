@@ -187,13 +187,12 @@ export function StatusTracker({
         )}
       </div>
 
-      {/* Action footer */}
-      {!isCancelled && !isDeclined && (
+      {/* Action footer — only allows cancelling while in queue, not once ready */}
+      {isWaiting && (
         <div className="lp-status-actions">
           <PlateButton
             mode="cancel"
             id={request.id}
-            alreadyReady={request.status === 'ready'}
             isDayOf={isToday}
           />
         </div>

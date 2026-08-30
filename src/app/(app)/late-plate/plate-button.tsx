@@ -27,8 +27,6 @@ type Props =
   | {
       mode: 'cancel';
       id: string;
-      /** The kitchen has already made it. Cancelling still helps them. */
-      alreadyReady: boolean;
       /** Whether this is a day-of cancellation */
       isDayOf?: boolean;
     };
@@ -102,11 +100,6 @@ export function PlateButton(props: Props) {
         {props.isDayOf && (
           <div className="lp-cancel-warn">
             Note: If you cancel today, you cannot request another plate for this meal today.
-          </div>
-        )}
-        {props.alreadyReady && (
-          <div className="lp-msg">
-            Already plated. Cancelling still tells the kitchen not to hold it.
           </div>
         )}
         {message && (
