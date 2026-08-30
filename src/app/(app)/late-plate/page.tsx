@@ -328,7 +328,8 @@ function MealCell({
       </div>
 
       <div className="lp-meal-times">
-        Serves {clock(SERVE_TIMES[meal])} · requests close {clock(window.cutoff)}
+        Serves {clock(SERVE_TIMES[meal])}
+        {window.latePlateAllowed !== false ? ` · requests close ${clock(window.cutoff)}` : ' · no late plates offered'}
       </div>
 
       {/* Menu Highlight Area */}
@@ -419,6 +420,7 @@ function StatusTag({
   if (request?.status === 'waiting') return <span className="tag jun">Requested</span>;
   if (request?.status === 'declined') return <span className="tag bad">Declined</span>;
   if (isToday && request?.status === 'cancelled') return <span className="tag locked">Cancelled</span>;
+  if (window.latePlateAllowed === false) return <span className="tag locked">No Late Plates</span>;
   if (!window.open) return <span className="tag locked">Closed</span>;
   return <span className="tag ok">Open</span>;
 }

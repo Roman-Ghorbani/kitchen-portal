@@ -117,6 +117,8 @@ export interface MealWindow {
   closed: boolean;
   /** Whether the house serves this meal on this day at all. */
   served: boolean;
+  /** Whether late plates are offered/accepted for this meal on this day. */
+  latePlateAllowed?: boolean;
   /** The only field callers should branch on. */
   open: boolean;
   /** Why it is shut, phrased for a brother to read. Null when open. */
@@ -208,8 +210,11 @@ export async function mealWindow(
     getActiveSemester().catch(() => null),
     getStandingCutoffs(),
   ]);
+  const mealDays = semester?.mealDays as MealDayConfig | undefined;
   const latePlateDays = (semester?.latePlateDays ?? DEFAULT_LATE_PLATE_DAYS) as MealDayConfig;
-  const served = latePlateDays ? Boolean(latePlateDays[meal][dayIndex(date)]) : true;
+  const dIdx = dayIndex(date);
+  const served = mealDays ? Boolean(mealDays[meal][dIdx]) : true;
+  const latePlateAllowed = latePlateDays ? Boolean(latePlateDays[meal][dIdx]) : true;
 
   // Day override, then the standing cutoff, then the house default.
   const cutoff = override?.cutoff ?? standing[meal].cutoff;
@@ -222,6 +227,7 @@ export async function mealWindow(
     cutoff,
     closed,
     served,
+    latePlateAllowed,
     today: todayInEastern(now),
     clockMinutes: houseClockMinutes(now),
   });
@@ -239,18 +245,30 @@ export function decideWindow(input: {
   cutoff: string;
   closed: boolean;
   served: boolean;
+  latePlateAllowed?: boolean;
   today: string;
   clockMinutes: number;
 }): MealWindow {
-  const { date, meal, cutoff, closed, served, today, clockMinutes } = input;
+  const { date, meal, cutoff, closed, served, latePlateAllowed = true, today, clockMinutes } = input;
 
-  const base = { date, meal, cutoff, closed, served };
+  const base = { date, meal, cutoff, closed, served, latePlateAllowed };
 
   if (!served) {
     return {
       ...base,
       open: false,
       closedReason: `The house does not serve ${meal} that day.`,
+    };
+  }
+
+  if (!latePlateAllowed) {
+    const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    const dIdx = dayIndex(date);
+    const dayName = dayNames[dIdx] ?? 'that day';
+    return {
+      ...base,
+      open: false,
+      closedReason: `Late plates are not accepted on ${dayName}s.`,
     };
   }
 
@@ -315,13 +333,18 @@ export async function mealWindowsForRange(
     getStandingCutoffs(),
   ]);
 
+  const mealDays = semester?.mealDays as MealDayConfig | undefined;
   const latePlateDays = (semester?.latePlateDays ?? DEFAULT_LATE_PLATE_DAYS) as MealDayConfig;
   const today = todayInEastern(now);
   const clockMinutes = houseClockMinutes(now);
 
   for (const date of dates) {
+    const dIdx = dayIndex(date);
     for (const meal of MEALS) {
       const override = overrides.find((o) => o.date === date && o.meal === meal);
+      const served = mealDays ? Boolean(mealDays[meal][dIdx]) : true;
+      const latePlateAllowed = latePlateDays ? Boolean(latePlateDays[meal][dIdx]) : true;
+
       out.set(
         `${date}:${meal}`,
         decideWindow({
@@ -329,7 +352,8 @@ export async function mealWindowsForRange(
           meal,
           cutoff: override?.cutoff ?? standing[meal].cutoff,
           closed: Boolean(override?.closed),
-          served: latePlateDays ? Boolean(latePlateDays[meal][dayIndex(date)]) : true,
+          served,
+          latePlateAllowed,
           today,
           clockMinutes,
         }),

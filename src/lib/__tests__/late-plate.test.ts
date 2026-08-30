@@ -142,6 +142,12 @@ describe('days the house does not serve', () => {
     const w = window({ served: false, closed: true, date: YESTERDAY });
     assert.match(w.closedReason!, /does not serve/);
   });
+
+  test('a served meal with late plates disabled is shut and mentions late plates', () => {
+    const w = window({ meal: 'dinner', served: true, latePlateAllowed: false });
+    assert.equal(w.open, false);
+    assert.match(w.closedReason!, /Late plates are not accepted/);
+  });
 });
 
 describe('the window reports its own inputs back', () => {
