@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect } from 'react';
 
@@ -91,97 +91,34 @@ export function InstallPrompt() {
       className="alert info"
       style={{
         marginBottom: 20,
-        borderLeft: '4px solid var(--gold-400)',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: 12,
       }}
     >
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'flex-start',
-          flexWrap: 'wrap',
-          gap: 14,
-        }}
-      >
-        <div style={{ flex: '1 1 300px' }}>
-          <div
-            className="alert-title"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-              fontSize: 15,
-              fontWeight: 700,
-              color: 'var(--ink-900)',
-            }}
-          >
-            <span>📱</span>
-            <span>Get ZBT Kitchen on your Home Screen or Laptop</span>
-          </div>
+      <div>
+        <span className="alert-title">📱 Add ZBT Kitchen to your Home Screen</span>
+        <span className="alert-body">
+          Install this app on your phone or laptop for one-tap access to late plates.
+        </span>
+      </div>
 
-          <div
-            className="alert-body"
-            style={{
-              marginTop: 8,
-              fontSize: 13,
-              lineHeight: 1.55,
-              color: 'var(--ink-700)',
-            }}
-          >
-            {isIOS ? (
-              <div>
-                <strong>Safari on iPhone/iPad:</strong> Tap the <strong>Share</strong> icon (
-                <span style={{ fontSize: 14 }}>⎋</span> at bottom) → scroll down and tap{' '}
-                <strong>&ldquo;Add to Home Screen&rdquo;</strong> (
-                <span style={{ fontSize: 13 }}>➕</span>) → tap <strong>Add</strong>.
-              </div>
-            ) : isAndroid ? (
-              <div>
-                <strong>Chrome on Android:</strong> Tap the <strong>Menu</strong> (
-                <span style={{ fontSize: 14 }}>⋮</span> in top-right) → tap{' '}
-                <strong>&ldquo;Add to Home screen&rdquo;</strong> or{' '}
-                <strong>&ldquo;Install app&rdquo;</strong>.
-              </div>
-            ) : (
-              <div>
-                <div style={{ marginBottom: 4 }}>
-                  <strong>If you&apos;re on a laptop:</strong> Click the button below (or the{' '}
-                  <span style={{ fontSize: 13 }}>🖥️</span> install icon in your address bar).
-                </div>
-                <div style={{ fontSize: 12.5, color: 'var(--ink-400)' }}>
-                  <strong>If on mobile:</strong> In Safari tap <strong>Share</strong> (
-                  <span style={{ fontSize: 13 }}>⎋</span>) → <em>&ldquo;Add to Home Screen&rdquo;</em>.
-                  In Chrome tap <strong>Menu</strong> (<span style={{ fontSize: 13 }}>⋮</span>) →{' '}
-                  <em>&ldquo;Add to Home screen&rdquo;</em>.
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            alignSelf: 'flex-start',
-            marginTop: 2,
-          }}
-        >
-          {!isMobile && (
-            <button className="btn sm gold" onClick={handleLaptopInstallClick}>
-              💻 Install App (Laptop)
-            </button>
-          )}
-          {isMobile && deferredPrompt && (
-            <button className="btn sm gold" onClick={handleLaptopInstallClick}>
-              📲 Install App
-            </button>
-          )}
-          <button className="btn sm ghost" onClick={handleDismiss}>
-            Done
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        {!isMobile && (
+          <button className="btn sm gold" onClick={handleLaptopInstallClick}>
+            💻 Install App (Laptop)
           </button>
-        </div>
+        )}
+        {isMobile && deferredPrompt && (
+          <button className="btn sm gold" onClick={handleLaptopInstallClick}>
+            📲 Install App
+          </button>
+        )}
+        <button className="btn sm ghost" onClick={handleDismiss}>
+          Done
+        </button>
       </div>
     </div>
   );
