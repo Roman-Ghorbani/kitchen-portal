@@ -116,7 +116,6 @@ export default async function SchedulePage({
   const week = await getWeek(selected);
   if (!week) redirect('/schedule');
 
-  const isLocked = week.status === 'locked' || week.status === 'complete';
   const meId = session ? session.sub : '';
   const canCover = Boolean(session) && week.status !== 'complete';
 
@@ -242,15 +241,6 @@ export default async function SchedulePage({
         </div>
       </div>
 
-      {isLocked && (
-        <div className="alert warn">
-          <span className="alert-title">This week is locked</span>
-          <span className="alert-body">
-            Conflict flags closed at chapter. For a real emergency, contact
-            Roman directly — do not just skip.
-          </span>
-        </div>
-      )}
 
       <div id="week-grid">
         <WeekGrid
