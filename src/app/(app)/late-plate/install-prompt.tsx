@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 export function InstallPrompt() {
   const [isStandalone, setIsStandalone] = useState(true); // Default true to avoid hydration flash
@@ -246,3 +247,39 @@ export function InstallButton() {
     </div>
   );
 }
+
+export function LatePlateRefresher() {
+  const router = useRouter();
+
+  useEffect(() => {
+    // When a brother returns to the tab or app, refresh immediately to display
+    // any newly posted menus or updated plate statuses.
+    const onFocus = () => {
+      router.refresh();
+    };
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') {
+        router.refresh();
+      }
+    };
+
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onVisible);
+
+    // Also poll every 20 seconds while actively open
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        router.refresh();
+      }
+    }, 20_000);
+
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisible);
+      clearInterval(interval);
+    };
+  }, [router]);
+
+  return null;
+}
+

@@ -34,7 +34,7 @@ import { AppShell } from '../shell.tsx';
 import { PlateButton } from './plate-button.tsx';
 import { StatusTracker } from './status-tracker.tsx';
 import { RecurringSchedules } from './recurring-schedules.tsx';
-import { InstallPrompt, InstallButton } from './install-prompt.tsx';
+import { InstallPrompt, InstallButton, LatePlateRefresher } from './install-prompt.tsx';
 
 export const dynamic = 'force-dynamic';
 
@@ -112,6 +112,7 @@ export default async function LatePlatePage() {
       subtitle="Browse menus, schedule recurring late plates, and track pickup in the student fridge"
     >
       <InstallPrompt />
+      <LatePlateRefresher />
 
       {/* Admin Custom Message Banner */}
       {semester?.latePlateMessage && (
