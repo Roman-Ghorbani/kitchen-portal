@@ -69,7 +69,7 @@ export function UnpreparedMembersSection({
   function copySlackNudge() {
     const targets = scheduledNoPin.length > 0 ? scheduledNoPin : allNoPin;
     const namesList = targets.map((m) => m.name).join(', ');
-    const text = `📢 *Kitchen Duty App Reminder* 📢\nThe following brothers are on the active duty schedule but have not signed into the web app yet:\n👉 *${namesList}*\n\nPlease sign in at https://kitchen.zbtaa.online to set your PIN, check your assigned shifts, and confirm your weekly availability!`;
+    const text = `📢 *Kitchen Portal Reminder* 📢\nThe following brothers are on the active duty schedule but have not signed into the web app yet:\n👉 *${namesList}*\n\nPlease sign in at https://kitchen.zbtaa.online to set your PIN, check your assigned shifts, and confirm your weekly availability!`;
 
     navigator.clipboard.writeText(text);
     setCopied(true);

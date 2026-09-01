@@ -38,7 +38,7 @@ export default async function SignInPage() {
       <div className="signin-brand">
         <div className="brand-mark">ZBT</div>
         <div>
-          <div className="signin-title">Kitchen Duty</div>
+          <div className="signin-title">Kitchen Portal</div>
           <div className="signin-sub">Fall 2026</div>
         </div>
       </div>

@@ -89,7 +89,7 @@ export default async function SchedulePage({
       <AppShell
         session={session}
         active="/schedule"
-        title="Kitchen Duty"
+        title="Duty Schedule"
         subtitle="Nothing posted yet"
       >
         <div className="alert warn">
@@ -155,7 +155,7 @@ export default async function SchedulePage({
     <AppShell
       session={session}
       active="/schedule"
-      title="Kitchen Duty"
+      title="Duty Schedule"
       subtitle={
         lastDay
           ? `${shortDate(week.weekStart)} – ${shortDate(lastDay)}`

@@ -33,6 +33,6 @@
     <rect x="325" y="255" width="22" height="8" rx="3" transform="rotate(38 336 259)" fill="url(#goldGrad)"/>
 
     <path d="M 170,360 L 342,360 L 330,382 L 182,382 Z" fill="url(#goldGrad)"/>
-    <text x="256" y="377" font-family="'Inter', sans-serif" font-weight="900" font-size="16" fill="#0b1526" text-anchor="middle" letter-spacing="2">KITCHEN DUTY</text>
+    <text x="256" y="377" font-family="'Inter', sans-serif" font-weight="900" font-size="14.5" fill="#0b1526" text-anchor="middle" letter-spacing="2">KITCHEN PORTAL</text>
   </g>
 </svg>

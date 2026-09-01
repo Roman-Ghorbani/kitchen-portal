@@ -158,7 +158,7 @@ export function SignInForm({ roster }: { roster: PickerMember[] }) {
   return (
     <div className="signin-card">
       <div className="onboarding-banner">
-        <div className="banner-title">How Kitchen Duty Works</div>
+        <div className="banner-title">ZBT Kitchen Portal</div>
         <div className="banner-steps">
           <div className="step-item">
             <span className="step-num">1</span>
@@ -166,11 +166,11 @@ export function SignInForm({ roster }: { roster: PickerMember[] }) {
           </div>
           <div className="step-item">
             <span className="step-num">2</span>
-            <span>View your assigned lunch or dinner shifts</span>
+            <span>Check duty shifts, weekly menus & bus tracking</span>
           </div>
           <div className="step-item">
             <span className="step-num">3</span>
-            <span>Flag conflicts before Sunday or cover open shifts</span>
+            <span>Request late plates & manage pickup</span>
           </div>
         </div>
       </div>

@@ -1,7 +1,7 @@
 /**
- * Core domain types for the ZBT kitchen duty tracker.
+ * Core domain types for the ZBT Kitchen Portal.
  *
- * House rules encoded here (fixed, not per-person configurable):
+ * Modeled strictly from the problem statement. The domain has four entities:
  *   - Juniors serve lunch. Sophomores serve dinner.
  *   - Nobody serves more than once in a Mon-Sun week, EXCEPT to work off a
  *     make-up shift owed for a prior no-show.

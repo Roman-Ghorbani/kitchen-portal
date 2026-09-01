@@ -100,9 +100,9 @@ export function InstallPrompt() {
       }}
     >
       <div>
-        <span className="alert-title">📱 Add ZBT Kitchen to your Home Screen</span>
+        <span className="alert-title">📱 Add ZBT Kitchen Portal to your Home Screen</span>
         <span className="alert-body">
-          Install this app on your phone or laptop for one-tap access to late plates.
+          Install this portal on your phone or laptop for 1-tap access to shifts, late plates, and weekly menus.
         </span>
       </div>
 

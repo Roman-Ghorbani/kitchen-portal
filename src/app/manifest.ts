@@ -2,9 +2,9 @@ import type { MetadataRoute } from 'next';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'ZBT Kitchen',
-    short_name: 'ZBT Kitchen',
-    description: 'Kitchen Tracker App for Brothers',
+    name: 'ZBT Kitchen Portal',
+    short_name: 'Kitchen Portal',
+    description: 'Kitchen Portal for Brothers — shifts, late plates, and menus',
     start_url: '/late-plate',
     display: 'standalone',
     background_color: '#ffffff',

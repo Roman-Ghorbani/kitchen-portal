@@ -26,10 +26,10 @@ export async function GET(
   const lines: string[] = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//ZBT Chapter House//Kitchen Duty Tracker//EN',
+    'PRODID:-//ZBT Chapter House//Kitchen Portal//EN',
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
-    'X-WR-CALNAME:ZBT Kitchen Duty',
+    'X-WR-CALNAME:ZBT Kitchen Shifts',
     'X-WR-TIMEZONE:America/New_York',
     'REFRESH-INTERVAL;VALUE=DURATION:PT2H',
     'X-PUBLISHED-TTL:PT2H',

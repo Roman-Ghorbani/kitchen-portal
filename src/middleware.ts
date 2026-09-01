@@ -21,7 +21,7 @@ export function middleware(request: NextRequest) {
     const path = request.nextUrl.pathname;
     if (!path.startsWith('/_next/') && !path.endsWith('.png') && !path.endsWith('.svg')) {
       return new NextResponse(
-        `<!DOCTYPE html><html><head><title>Maintenance</title><meta name="viewport" content="width=device-width, initial-scale=1"></head><body style="font-family: system-ui; text-align: center; padding: 2rem; background: #000; color: #fff;"><h1>Kitchen Tracker is Down for Maintenance</h1><p>We are currently migrating servers to the new Pi. The site will be back shortly.</p></body></html>`,
+        `<!DOCTYPE html><html><head><title>Maintenance</title><meta name="viewport" content="width=device-width, initial-scale=1"></head><body style="font-family: system-ui; text-align: center; padding: 2rem; background: #000; color: #fff;"><h1>Kitchen Portal is Down for Maintenance</h1><p>We are currently migrating servers to the new Pi. The site will be back shortly.</p></body></html>`,
         { status: 503, headers: { 'Content-Type': 'text/html' } }
       );
     }

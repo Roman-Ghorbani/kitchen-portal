@@ -2,8 +2,8 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'ZBT Kitchen Duty',
-  description: 'Kitchen duty schedule for the ZBT chapter house',
+  title: 'ZBT Kitchen Portal',
+  description: 'Kitchen Portal for the ZBT chapter house — shifts, late plates, and weekly menus',
   icons: {
     icon: [
       { url: '/icon.svg', type: 'image/svg+xml' },

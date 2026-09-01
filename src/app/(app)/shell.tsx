@@ -50,7 +50,7 @@ export function AppShell({
         <div className="brand">
           <div className="brand-mark">ZBT</div>
           <div className="brand-text">
-            <div className="t1">Kitchen Duty</div>
+            <div className="t1">Kitchen Portal</div>
             <div className="t2">Fall 2026</div>
           </div>
         </div>
