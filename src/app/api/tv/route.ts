@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server.js';
 import { todayInEastern, mondayOf, addDays, dayIndex } from '../../../lib/dates.ts';
 import { getWeek, getActiveSemester, type DisplaySlot } from '../../../lib/week-service.ts';
 import { getOpenShifts } from '../../../lib/shift-service.ts';
+import { getDayMenu } from '../../../lib/menu-service.ts';
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -45,35 +46,50 @@ export async function GET(request: NextRequest) {
     const currentMonday = mondayOf(todayIso);
     const nextMonday = addDays(currentMonday, 7);
 
-    const [currentWeek, nextWeek, openShifts] = await Promise.all([
+    const [currentWeek, nextWeek, openShifts, todayMenu, tomorrowMenu] = await Promise.all([
       getWeek(currentMonday).catch(() => null),
       getWeek(nextMonday).catch(() => null),
       getOpenShifts().catch(() => []),
+      getDayMenu(todayIso).catch(() => null),
+      getDayMenu(tomorrowIso).catch(() => null),
     ]);
 
-    const formatDay = (dateIso: string, weekObj: typeof currentWeek) => {
+    const formatDay = (
+      dateIso: string,
+      weekObj: typeof currentWeek,
+      menuObj: typeof todayMenu,
+    ) => {
       const dayData = weekObj?.days.find((d) => d.date === dateIso);
       const idx = dayIndex(dateIso);
+      const lunchItems = menuObj?.lunch?.items ?? [];
+      const dinnerItems = menuObj?.dinner?.items ?? [];
+
       return {
         date: dateIso,
         dayOfWeek: DAY_NAMES[idx],
         isToday: dateIso === todayIso,
-        lunch: formatTvSlot(dayData?.lunch ?? null, 'lunch'),
-        dinner: formatTvSlot(dayData?.dinner ?? null, 'dinner'),
+        lunch: formatTvSlot(dayData?.lunch ?? null, 'lunch', lunchItems),
+        dinner: formatTvSlot(dayData?.dinner ?? null, 'dinner', dinnerItems),
+        menu: {
+          hasMenu: (menuObj?.hasMenu) ?? (lunchItems.length > 0 || dinnerItems.length > 0),
+          lunch: lunchItems,
+          dinner: dinnerItems,
+        },
       };
     };
 
-    const todayData = formatDay(todayIso, currentWeek || nextWeek);
+    const todayData = formatDay(todayIso, currentWeek || nextWeek, todayMenu);
     const tomorrowData = formatDay(
       tomorrowIso,
       currentWeek?.days.some((d) => d.date === tomorrowIso) ? currentWeek : nextWeek,
+      tomorrowMenu,
     );
 
     const formattedCurrentWeek = currentWeek
       ? {
           weekStart: currentWeek.weekStart,
           status: currentWeek.status,
-          days: currentWeek.days.map((d) => formatDay(d.date, currentWeek)),
+          days: currentWeek.days.map((d) => formatDay(d.date, currentWeek, null)),
         }
       : null;
 
@@ -81,7 +97,7 @@ export async function GET(request: NextRequest) {
       ? {
           weekStart: nextWeek.weekStart,
           status: nextWeek.status,
-          days: nextWeek.days.map((d) => formatDay(d.date, nextWeek)),
+          days: nextWeek.days.map((d) => formatDay(d.date, nextWeek, null)),
         }
       : null;
 
@@ -132,8 +148,24 @@ export async function GET(request: NextRequest) {
   }
 }
 
-function formatTvSlot(slot: DisplaySlot | null, mealType: 'lunch' | 'dinner') {
-  if (!slot) return null;
+function formatTvSlot(
+  slot: DisplaySlot | null,
+  mealType: 'lunch' | 'dinner',
+  menuItems: string[] = [],
+) {
+  if (!slot) {
+    return {
+      id: null,
+      meal: mealType,
+      mealLabel: mealType === 'lunch' ? 'Lunch Cleanup' : 'Dinner Cleanup',
+      time: mealType === 'lunch' ? '2:30 PM – 3:00 PM' : '7:30 PM – 9:00 PM',
+      dutyGroup: mealType === 'lunch' ? 'Juniors' : 'Sophomores',
+      size: 0,
+      coverBounty: 1,
+      assignments: [],
+      menu: menuItems,
+    };
+  }
   return {
     id: slot.id,
     meal: slot.meal,
@@ -154,5 +186,7 @@ function formatTvSlot(slot: DisplaySlot | null, mealType: 'lunch' | 'dinner') {
       isMakeup: a.isMakeup,
       multiplier: a.multiplier,
     })),
+    menu: menuItems,
   };
 }
+

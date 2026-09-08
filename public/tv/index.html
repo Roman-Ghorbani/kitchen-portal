@@ -943,13 +943,41 @@
       try {
         var data = await (await fetch(KITCHEN_API)).json();
         if (!data.success) return;
-        var t = data.today || {};
+        var t = data.today || {}, tmr = data.tomorrow || {};
         renderSlot(t.lunch, 'lunch', 'lunch-cleanup', 'lunch-crew');
         renderSlot(t.dinner, 'dinner', 'dinner-cleanup', 'dinner-crew');
         renderOpenLine(data);
+
+        // Update menus pulled live from KitchenTracker
+        if (t.lunch && t.lunch.menu !== undefined) {
+          renderMenu('lunch-menu', t.lunch.menu);
+          recapText['lunch'] = (t.lunch.menu && t.lunch.menu.length) ? t.lunch.menu.join(' · ') : 'No menu was posted';
+          var lrEl = document.getElementById('lunch-recap-menu');
+          if (lrEl) lrEl.textContent = recapText['lunch'];
+        }
+        if (t.dinner && t.dinner.menu !== undefined) {
+          renderMenu('dinner-menu', t.dinner.menu);
+          recapText['dinner'] = (t.dinner.menu && t.dinner.menu.length) ? t.dinner.menu.join(' · ') : 'No menu was posted';
+          var drEl = document.getElementById('dinner-recap-menu');
+          if (drEl) drEl.textContent = recapText['dinner'];
+        }
+        if (tmr.lunch && tmr.lunch.menu !== undefined) {
+          var tmrLunchEl = document.getElementById('tmr-lunch');
+          if (tmrLunchEl) {
+            tmrLunchEl.textContent = (tmr.lunch.menu && tmr.lunch.menu.length) ? tmr.lunch.menu.join(' · ') : 'Not posted yet';
+          }
+        }
+        if (tmr.dinner && tmr.dinner.menu !== undefined) {
+          var tmrDinnerEl = document.getElementById('tmr-dinner');
+          if (tmrDinnerEl) {
+            tmrDinnerEl.textContent = (tmr.dinner.menu && tmr.dinner.menu.length) ? tmr.dinner.menu.join(' · ') : 'Not posted yet';
+          }
+        }
+
         // Open chips wrap the crew strip onto a second line, which shortens the
         // menu above it. The menus were fitted before this response arrived.
         if (phase === 'duty') renderDuty();
+        fitAllMenus();
         refitAll();
       } catch (err) {
         console.error('Duty API failed:', err);

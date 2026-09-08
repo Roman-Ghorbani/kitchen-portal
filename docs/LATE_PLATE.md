@@ -154,14 +154,14 @@ once you have asked him — that was already on the list.
 
 ## The day's menu
 
-The late-plate page shows what is actually being served, read from the kitchen
-TV Pi over the tailnet. The Pi is where menus are entered, so it stays the
-source of truth and this app is a reader. Setup: `docs/TAILNET.md`.
+The late-plate page shows what is actually being served. Menus are stored directly
+in the `KitchenTracker` database and configured directly by the chefs from their
+kitchen kiosk tablet at `/kitchen/late-plates?device=<token>`.
 
-It fails invisibly by design — one second timeout, last-good value served stale
-and labelled, and no menu section at all rather than an empty card when there is
-nothing. Unset `MENU_SOURCE_URL` and the whole thing is simply off, which is
-what you want on a laptop that is not on the tailnet.
+The Wall TV (`kitchen-tv`) polls `KitchenTracker`'s API to display the day's and
+tomorrow's menus in real-time alongside duty shifts. All edits made by chefs on
+the kiosk propagate instantly to both the brother late-plate dashboard and the
+wall TV.
 
 ## Cutoffs
 

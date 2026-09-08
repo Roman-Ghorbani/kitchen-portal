@@ -1,7 +1,10 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { NextRequest } from 'next/server.js';
-import { GET, OPTIONS } from '../../app/api/menu/route.ts';
+import { GET, PUT, OPTIONS } from '../../app/api/menu/route.ts';
+import { getDayMenu, saveDayMenu } from '../menu-service.ts';
+
+const DEVICE_TOKEN = 'test-kiosk-token-xyz';
 
 describe('Menu API endpoint', () => {
   test('OPTIONS returns 204 with CORS headers', async () => {
@@ -10,7 +13,7 @@ describe('Menu API endpoint', () => {
     assert.equal(response.headers.get('access-control-allow-origin'), '*');
     assert.equal(
       response.headers.get('access-control-allow-methods'),
-      'GET, OPTIONS',
+      'GET, POST, PATCH, PUT, OPTIONS',
     );
   });
 
@@ -53,6 +56,68 @@ describe('Menu API endpoint', () => {
     assert.equal(json.isToday, true);
   });
 
+  test('PUT /api/menu rejects unauthorized calls without token or admin', async () => {
+    const orig = process.env.LATE_PLATE_DEVICE_TOKEN;
+    try {
+      process.env.LATE_PLATE_DEVICE_TOKEN = DEVICE_TOKEN;
+      const req = new NextRequest('http://localhost:3000/api/menu', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          date: '2026-09-08',
+          lunch: ['Grilled Cheese', 'Tomato Soup'],
+          dinner: ['Spaghetti Bolognese', 'Garlic Bread'],
+        }),
+      });
+      const res = await PUT(req);
+      assert.equal(res.status, 401);
+    } finally {
+      process.env.LATE_PLATE_DEVICE_TOKEN = orig;
+    }
+  });
+
+  test('PUT /api/menu saves menu successfully with device token', async () => {
+    const orig = process.env.LATE_PLATE_DEVICE_TOKEN;
+    try {
+      process.env.LATE_PLATE_DEVICE_TOKEN = DEVICE_TOKEN;
+      const req = new NextRequest(
+        `http://localhost:3000/api/menu?device=${DEVICE_TOKEN}`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            date: '2026-09-08',
+            lunch: ['Grilled Cheese', 'Tomato Soup'],
+            dinner: ['Spaghetti Bolognese', 'Garlic Bread'],
+          }),
+        },
+      );
+      const res = await PUT(req);
+      assert.equal(res.status, 200);
+
+      const json = await res.json();
+      assert.equal(json.success, true);
+      assert.equal(json.date, '2026-09-08');
+      assert.deepEqual(json.menu.lunch.items, ['Grilled Cheese', 'Tomato Soup']);
+      assert.deepEqual(json.menu.dinner.items, [
+        'Spaghetti Bolognese',
+        'Garlic Bread',
+      ]);
+
+      // Direct read from getDayMenu matches
+      const direct = await getDayMenu('2026-09-08');
+      assert.ok(direct);
+      assert.deepEqual(direct.lunch.items, ['Grilled Cheese', 'Tomato Soup']);
+      assert.deepEqual(direct.dinner.items, [
+        'Spaghetti Bolognese',
+        'Garlic Bread',
+      ]);
+      assert.equal(direct.hasMenu, true);
+    } finally {
+      process.env.LATE_PLATE_DEVICE_TOKEN = orig;
+    }
+  });
+
   test('GET enforces MENU_API_TOKEN when configured', async () => {
     const originalToken = process.env.MENU_API_TOKEN;
     try {
@@ -90,3 +155,4 @@ describe('Menu API endpoint', () => {
     }
   });
 });
+

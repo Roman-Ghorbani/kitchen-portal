@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server.js';
 import { todayInEastern, addDays, dayIndex } from '../../../lib/dates.ts';
-import { getDayMenu, type DayMenu } from '../../../lib/menu-service.ts';
-
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-API-Key, X-Menu-Token',
-  'Cache-Control': 'no-store, no-cache, must-revalidate',
-};
+import {
+  getDayMenu,
+  saveDayMenu,
+  saveWeekMenus,
+  type DayMenu,
+} from '../../../lib/menu-service.ts';
+import { callerOf, canWrite, CORS_HEADERS } from '../../../lib/late-plate-api.ts';
 
 const DAY_NAMES = [
   'Monday',
@@ -20,16 +19,10 @@ const DAY_NAMES = [
 ];
 
 /**
- * Expected token for external apps to pull menu data.
- * Checks MENU_API_TOKEN, TV_API_KEY, or LATE_PLATE_DEVICE_TOKEN.
+ * Optional token check for external apps if MENU_API_TOKEN is strictly set.
  */
 function getExpectedToken(): string | null {
-  return (
-    process.env.MENU_API_TOKEN ||
-    process.env.TV_API_KEY ||
-    process.env.LATE_PLATE_DEVICE_TOKEN ||
-    null
-  );
+  return process.env.MENU_API_TOKEN || null;
 }
 
 export async function OPTIONS() {
@@ -45,12 +38,7 @@ export async function OPTIONS() {
  * Query parameters:
  *  - date: "YYYY-MM-DD", "today", or "tomorrow" (returns single day)
  *  - days: number of days to fetch starting from date (default 7)
- *  - token / key: API token (if not provided via headers)
- *
- * Headers:
- *  - Authorization: Bearer <token>
- *  - X-API-Key: <token>
- *  - X-Menu-Token: <token>
+ *  - token / key: API token (if MENU_API_TOKEN is strictly configured)
  */
 export async function GET(request: NextRequest) {
   const expectedToken = getExpectedToken();
@@ -154,3 +142,55 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
+/**
+ * PUT /api/menu
+ *
+ * Saves or updates menu items for a single day or batch of days.
+ * Requires admin session or kitchen kiosk device token.
+ */
+export async function PUT(request: NextRequest) {
+  const caller = await callerOf(request);
+  if (!canWrite(caller)) {
+    return NextResponse.json(
+      { success: false, error: 'Unauthorized: Admin or kitchen device token required.' },
+      { status: 401, headers: CORS_HEADERS },
+    );
+  }
+
+  try {
+    const body = await request.json();
+
+    if (body.menus && typeof body.menus === 'object') {
+      await saveWeekMenus(body.menus);
+      return NextResponse.json(
+        { success: true, message: 'Batch menus saved successfully' },
+        { headers: CORS_HEADERS },
+      );
+    }
+
+    const date = body.date || todayInEastern();
+    const updated = await saveDayMenu(date, {
+      lunch: body.lunch,
+      dinner: body.dinner,
+    });
+
+    return NextResponse.json(
+      { success: true, date, menu: updated },
+      { headers: CORS_HEADERS },
+    );
+  } catch (error) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to save menu data',
+      },
+      { status: 500, headers: CORS_HEADERS },
+    );
+  }
+}
+
+export async function POST(request: NextRequest) {
+  return PUT(request);
+}
+

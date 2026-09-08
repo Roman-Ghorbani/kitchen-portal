@@ -21,7 +21,8 @@ describe('TV API endpoint', () => {
       success: boolean;
       timezone: string;
       pollIntervalSeconds: number;
-      today: { date: string; dayOfWeek: string };
+      today: { date: string; dayOfWeek: string; menu: any; lunch: any; dinner: any };
+      tomorrow: { date: string; dayOfWeek: string; menu: any; lunch: any; dinner: any };
       summary: { today: string };
     };
     assert.equal(json.success, true);
@@ -30,6 +31,11 @@ describe('TV API endpoint', () => {
     assert.ok(json.today);
     assert.ok(json.today.date);
     assert.ok(json.today.dayOfWeek);
+    assert.ok(json.today.menu);
+    assert.ok(Array.isArray(json.today.menu.lunch));
+    assert.ok(Array.isArray(json.today.menu.dinner));
+    assert.ok(json.today.lunch);
+    assert.ok(Array.isArray(json.today.lunch.menu));
     assert.ok(json.summary);
     assert.ok(typeof json.summary.today === 'string');
   });

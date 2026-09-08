@@ -40,6 +40,11 @@ This guide explains how `kitchen-tv` ([https://github.com/ZBTAA/kitchen-tv](http
     "date": "2026-08-24",
     "dayOfWeek": "Monday",
     "isToday": true,
+    "menu": {
+      "hasMenu": true,
+      "lunch": ["Chicken Caesar Wraps", "French Fries"],
+      "dinner": ["Teriyaki Salmon", "Steamed Jasmine Rice", "Roasted Broccoli"]
+    },
     "lunch": {
       "id": "slot-uuid-1",
       "meal": "lunch",
@@ -48,6 +53,7 @@ This guide explains how `kitchen-tv` ([https://github.com/ZBTAA/kitchen-tv](http
       "dutyGroup": "Juniors",
       "size": 2,
       "coverBounty": 1,
+      "menu": ["Chicken Caesar Wraps", "French Fries"],
       "assignments": [
         {
           "id": "assignment-uuid-1",
@@ -71,6 +77,7 @@ This guide explains how `kitchen-tv` ([https://github.com/ZBTAA/kitchen-tv](http
       "dutyGroup": "Sophomores",
       "size": 3,
       "coverBounty": 1,
+      "menu": ["Teriyaki Salmon", "Steamed Jasmine Rice", "Roasted Broccoli"],
       "assignments": [...]
     }
   },
@@ -78,6 +85,7 @@ This guide explains how `kitchen-tv` ([https://github.com/ZBTAA/kitchen-tv](http
     "date": "2026-08-25",
     "dayOfWeek": "Tuesday",
     "isToday": false,
+    "menu": { ... },
     "lunch": { ... },
     "dinner": { ... }
   },

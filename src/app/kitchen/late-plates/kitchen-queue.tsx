@@ -3,9 +3,12 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { RememberToken } from './token-recovery.tsx';
+import { MenuEditor } from './menu-editor.tsx';
+
+type KioskView = 'plates' | 'menus';
 
 /**
- * The live queue, as the kitchen sees it.
+ * The live queue and kitchen console, as the kitchen sees it.
  *
  * Three rules shape the layout, all of them from how the kitchen actually runs:
  *
@@ -139,6 +142,7 @@ export function KitchenQueue({
   prettyDate: string;
   initialMeal: MealName;
 }) {
+  const [view, setView] = useState<KioskView>('plates');
   const [data, setData] = useState<Payload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -268,13 +272,16 @@ export function KitchenQueue({
   const handled = forMeal.filter((p) => p.status !== 'waiting').sort(byRequestedAt);
   const counts = data?.meals?.[meal];
 
+  const totalToMake =
+    (data?.meals?.lunch?.toMake ?? 0) + (data?.meals?.dinner?.toMake ?? 0);
+
   return (
     <>
       <RememberToken device={device} />
 
       <header className="kq-head">
         <div className="kq-head-brand">
-          <h1>Late plates</h1>
+          <h1>Kitchen Console</h1>
           <div className="kq-date">{prettyDate}</div>
         </div>
 
@@ -287,35 +294,65 @@ export function KitchenQueue({
           </div>
         )}
 
-        <div className="kq-switch" role="tablist" aria-label="Meal">
-          {MEALS.map((m) => {
-            const outstanding = data?.meals?.[m]?.toMake ?? 0;
-            return (
-              <button
-                key={m}
-                role="tab"
-                aria-selected={meal === m}
-                className={`kq-switch-btn${meal === m ? ' active' : ''}`}
-                onClick={() => {
-                  setMeal(m);
-                  setShowHandled(false);
-                }}
-              >
-                <span className="kq-switch-label">{m}</span>
-                <span
-                  className={`kq-switch-count${outstanding > 0 ? ' pending' : ''}`}
-                >
-                  {outstanding > 0 ? `${outstanding} to make` : 'all done'}
-                </span>
-              </button>
-            );
-          })}
+        <div className="kq-view-nav" role="tablist" aria-label="Console View">
+          <button
+            role="tab"
+            aria-selected={view === 'plates'}
+            className={`kq-view-btn${view === 'plates' ? ' active' : ''}`}
+            onClick={() => setView('plates')}
+          >
+            <span className="kq-view-icon">📋</span>
+            <span>Late Plates</span>
+            {totalToMake > 0 && (
+              <span className="kq-view-badge pending">{totalToMake} to make</span>
+            )}
+          </button>
+          <button
+            role="tab"
+            aria-selected={view === 'menus'}
+            className={`kq-view-btn${view === 'menus' ? ' active' : ''}`}
+            onClick={() => setView('menus')}
+          >
+            <span className="kq-view-icon">🍽️</span>
+            <span>Configure Menus</span>
+          </button>
         </div>
+
+        {view === 'plates' && (
+          <div className="kq-switch" role="tablist" aria-label="Meal">
+            {MEALS.map((m) => {
+              const outstanding = data?.meals?.[m]?.toMake ?? 0;
+              return (
+                <button
+                  key={m}
+                  role="tab"
+                  aria-selected={meal === m}
+                  className={`kq-switch-btn${meal === m ? ' active' : ''}`}
+                  onClick={() => {
+                    setMeal(m);
+                    setShowHandled(false);
+                  }}
+                >
+                  <span className="kq-switch-label">{m}</span>
+                  <span
+                    className={`kq-switch-count${outstanding > 0 ? ' pending' : ''}`}
+                  >
+                    {outstanding > 0 ? `${outstanding} to make` : 'all done'}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
       </header>
 
-      {error && <div className="kq-error">{error}</div>}
+      {view === 'menus' ? (
+        <MenuEditor device={device} todayIso={date} />
+      ) : (
+        <>
+          {error && <div className="kq-error">{error}</div>}
 
-      {data === null && !error && <div className="kq-empty">Loading…</div>}
+          {data === null && !error && <div className="kq-empty">Loading…</div>}
 
       {counts && (
         <div className="kq-mealbar">
@@ -645,7 +682,8 @@ export function KitchenQueue({
           </div>
         </div>
       )}
-
+        </>
+      )}
     </>
   );
 }
