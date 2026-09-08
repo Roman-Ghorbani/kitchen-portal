@@ -5,10 +5,9 @@ import { mondayOf, addDays, weekDates, todayInEastern } from '../../../lib/dates
 
 type MealName = 'lunch' | 'dinner';
 
-interface DayMenuData {
-  date: string;
-  lunch: string[];
-  dinner: string[];
+interface MealDraft {
+  lunch: string;
+  dinner: string;
 }
 
 interface MenuEditorProps {
@@ -17,7 +16,7 @@ interface MenuEditorProps {
 }
 
 function parseDishes(text: string): string[] {
-  return text
+  return (text || '')
     .split('\n')
     .map((line) => line.trim())
     .filter((line) => line.length > 0);
@@ -51,20 +50,26 @@ export function MenuEditor({ device, todayIso }: MenuEditorProps) {
 
   const [weekStart, setWeekStart] = useState<string>(currentWeekMonday);
   const [selectedDate, setSelectedDate] = useState<string>(actualToday);
-  const [menusByDate, setMenusByDate] = useState<Record<string, DayMenuData>>({});
+
+  // User typing buffer: untouched by background saves
+  const [draftsByDate, setDraftsByDate] = useState<Record<string, MealDraft>>({});
+  const [savedCounts, setSavedCounts] = useState<Record<string, number>>({});
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'unsaved' | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Textarea input buffers for the currently selected day
-  const [lunchText, setLunchText] = useState('');
-  const [dinnerText, setDinnerText] = useState('');
-  const [isDirty, setIsDirty] = useState(false);
+  const draftsRef = useRef(draftsByDate);
+  draftsRef.current = draftsByDate;
+
+  const selectedDateRef = useRef(selectedDate);
+  selectedDateRef.current = selectedDate;
 
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const isDirtyRef = useRef(false);
 
-  // Fetch menus for a window around weekStart (past week, current week, next 2 weeks)
+  // Fetch menus for a window around weekStart
   const loadMenus = useCallback(async (baseWeekStart: string) => {
     try {
       setLoading(true);
@@ -76,15 +81,27 @@ export function MenuEditor({ device, todayIso }: MenuEditorProps) {
       if (!res.ok) throw new Error(`Server returned ${res.status}`);
       const data = await res.json();
       if (data.success && Array.isArray(data.days)) {
-        const map: Record<string, DayMenuData> = {};
-        for (const d of data.days) {
-          map[d.date] = {
-            date: d.date,
-            lunch: d.lunch?.items || [],
-            dinner: d.dinner?.items || [],
-          };
-        }
-        setMenusByDate((prev) => ({ ...prev, ...map }));
+        const countsMap: Record<string, number> = {};
+
+        setDraftsByDate((prev) => {
+          const next = { ...prev };
+          for (const d of data.days) {
+            const lunchDishes = d.lunch?.items || [];
+            const dinnerDishes = d.dinner?.items || [];
+            countsMap[d.date] = lunchDishes.length + dinnerDishes.length;
+
+            // Only initialize draft if user hasn't edited it yet
+            if (next[d.date] === undefined) {
+              next[d.date] = {
+                lunch: lunchDishes.join('\n'),
+                dinner: dinnerDishes.join('\n'),
+              };
+            }
+          }
+          return next;
+        });
+
+        setSavedCounts((prev) => ({ ...prev, ...countsMap }));
       }
       setError(null);
     } catch (err) {
@@ -98,28 +115,17 @@ export function MenuEditor({ device, todayIso }: MenuEditorProps) {
     loadMenus(weekStart);
   }, [loadMenus, weekStart]);
 
-  // Sync textarea buffers whenever selectedDate or menusByDate changes (if not actively dirty)
-  useEffect(() => {
-    const existing = menusByDate[selectedDate];
-    const newLunch = (existing?.lunch || []).join('\n');
-    const newDinner = (existing?.dinner || []).join('\n');
-
-    setLunchText(newLunch);
-    setDinnerText(newDinner);
-    setIsDirty(false);
-    setSaveStatus(null);
-  }, [selectedDate, menusByDate]);
-
-  // Direct save helper
+  // Direct save helper - sends text without overwriting user's active draft
   const performSave = useCallback(
-    async (targetDate: string, lunchRaw: string, dinnerRaw: string) => {
+    async (targetDate: string) => {
       if (autoSaveTimerRef.current) {
         clearTimeout(autoSaveTimerRef.current);
         autoSaveTimerRef.current = null;
       }
 
-      const lunchDishes = parseDishes(lunchRaw);
-      const dinnerDishes = parseDishes(dinnerRaw);
+      const currentDraft = draftsRef.current[targetDate] || { lunch: '', dinner: '' };
+      const lunchDishes = parseDishes(currentDraft.lunch);
+      const dinnerDishes = parseDishes(currentDraft.dinner);
 
       setSaving(true);
       setSaveStatus('saving');
@@ -141,21 +147,17 @@ export function MenuEditor({ device, todayIso }: MenuEditorProps) {
           throw new Error(data.error || 'Failed to save menu');
         }
 
-        // Update local cache
-        setMenusByDate((prev) => ({
+        // Update badge count
+        setSavedCounts((prev) => ({
           ...prev,
-          [targetDate]: {
-            date: targetDate,
-            lunch: lunchDishes,
-            dinner: dinnerDishes,
-          },
+          [targetDate]: lunchDishes.length + dinnerDishes.length,
         }));
 
-        setIsDirty(false);
+        isDirtyRef.current = false;
         setSaveStatus('saved');
         setTimeout(() => {
           setSaveStatus((current) => (current === 'saved' ? null : current));
-        }, 4000);
+        }, 3000);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Could not save menu to server');
         setSaveStatus('unsaved');
@@ -168,18 +170,18 @@ export function MenuEditor({ device, todayIso }: MenuEditorProps) {
 
   // Trigger debounced auto-save when user types
   const handleInputChange = (meal: MealName, value: string) => {
-    let nextLunch = lunchText;
-    let nextDinner = dinnerText;
+    const current = draftsRef.current[selectedDate] || { lunch: '', dinner: '' };
+    const updated = {
+      ...current,
+      [meal]: value,
+    };
 
-    if (meal === 'lunch') {
-      setLunchText(value);
-      nextLunch = value;
-    } else {
-      setDinnerText(value);
-      nextDinner = value;
-    }
+    setDraftsByDate((prev) => ({
+      ...prev,
+      [selectedDate]: updated,
+    }));
 
-    setIsDirty(true);
+    isDirtyRef.current = true;
     setSaveStatus('unsaved');
 
     if (autoSaveTimerRef.current) {
@@ -187,49 +189,51 @@ export function MenuEditor({ device, todayIso }: MenuEditorProps) {
     }
 
     autoSaveTimerRef.current = setTimeout(() => {
-      performSave(selectedDate, nextLunch, nextDinner);
-    }, 1200);
+      performSave(selectedDateRef.current);
+    }, 1500);
   };
 
   // Immediate save on blur
   const handleInputBlur = () => {
-    if (isDirty) {
-      performSave(selectedDate, lunchText, dinnerText);
+    if (isDirtyRef.current) {
+      performSave(selectedDateRef.current);
     }
   };
 
-  // Safe day transition: save current pending edits before changing date
+  // Safe day transition
   const handleSelectDate = (newDate: string) => {
     if (newDate === selectedDate) return;
 
-    if (isDirty) {
-      performSave(selectedDate, lunchText, dinnerText);
+    if (isDirtyRef.current) {
+      performSave(selectedDateRef.current);
     }
     setSelectedDate(newDate);
+    setSaveStatus(null);
   };
 
   // Week navigation
   const handleShiftWeek = (deltaWeeks: number) => {
-    if (isDirty) {
-      performSave(selectedDate, lunchText, dinnerText);
+    if (isDirtyRef.current) {
+      performSave(selectedDateRef.current);
     }
     const newWeekStart = addDays(weekStart, deltaWeeks * 7);
     setWeekStart(newWeekStart);
 
-    // Keep same weekday index in new week
     const currentDays = weekDates(weekStart);
     const dayIdx = currentDays.indexOf(selectedDate);
     const newDays = weekDates(newWeekStart);
     const newTargetDate = dayIdx >= 0 ? newDays[dayIdx] : newDays[0];
     setSelectedDate(newTargetDate);
+    setSaveStatus(null);
   };
 
   const handleGoToThisWeek = () => {
-    if (isDirty) {
-      performSave(selectedDate, lunchText, dinnerText);
+    if (isDirtyRef.current) {
+      performSave(selectedDateRef.current);
     }
     setWeekStart(currentWeekMonday);
     setSelectedDate(actualToday);
+    setSaveStatus(null);
   };
 
   // Clean up timer on unmount
@@ -246,8 +250,9 @@ export function MenuEditor({ device, todayIso }: MenuEditorProps) {
   const isThisWeek = weekStart === currentWeekMonday;
   const isNextWeek = weekStart === addDays(currentWeekMonday, 7);
 
-  const lunchDishesCount = parseDishes(lunchText).length;
-  const dinnerDishesCount = parseDishes(dinnerText).length;
+  const activeDraft = draftsByDate[selectedDate] || { lunch: '', dinner: '' };
+  const lunchDishesCount = parseDishes(activeDraft.lunch).length;
+  const dinnerDishesCount = parseDishes(activeDraft.dinner).length;
 
   return (
     <div className="kq-menu-editor">
@@ -298,9 +303,8 @@ export function MenuEditor({ device, todayIso }: MenuEditorProps) {
           const dayName = dt.toLocaleDateString('en-US', { weekday: 'short', timeZone: 'UTC' });
           const shortDate = dt.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', timeZone: 'UTC' });
 
-          const dayData = menusByDate[iso];
-          const hasDishes = (dayData?.lunch?.length || 0) + (dayData?.dinner?.length || 0) > 0;
-          const dishTotal = (dayData?.lunch?.length || 0) + (dayData?.dinner?.length || 0);
+          const totalDishes = savedCounts[iso] || 0;
+          const hasDishes = totalDishes > 0;
 
           return (
             <button
@@ -317,7 +321,7 @@ export function MenuEditor({ device, todayIso }: MenuEditorProps) {
               {hasDishes && (
                 <div
                   className="kq-menu-date-dot"
-                  title={`${dishTotal} dish${dishTotal === 1 ? '' : 'es'} configured`}
+                  title={`${totalDishes} dish${totalDishes === 1 ? '' : 'es'} configured`}
                 />
               )}
             </button>
@@ -359,7 +363,7 @@ export function MenuEditor({ device, todayIso }: MenuEditorProps) {
             <button
               type="button"
               className="kq-btn ready kq-menu-retry-btn"
-              onClick={() => performSave(selectedDate, lunchText, dinnerText)}
+              onClick={() => performSave(selectedDate)}
               disabled={saving}
             >
               💾 Retry Save
@@ -375,7 +379,7 @@ export function MenuEditor({ device, todayIso }: MenuEditorProps) {
         {/* Lunch Card */}
         <div className="kq-menu-card">
           <div className="kq-menu-card-head">
-            <div>
+            <div className="kq-menu-card-head-left">
               <span className="kq-menu-card-icon">☀️</span>
               <span className="kq-menu-card-title">Lunch Menu</span>
               <span className="kq-menu-card-time">11:00 AM – 2:30 PM</span>
@@ -391,19 +395,21 @@ export function MenuEditor({ device, todayIso }: MenuEditorProps) {
 
           <textarea
             className="kq-menu-box"
-            rows={7}
-            placeholder={`One dish per line...\nChicken Caesar Wrap\nPotato Chips\nFresh Fruit`}
-            value={lunchText}
+            placeholder={`Type dishes here, one per line...\ne.g. Chicken Caesar Wrap\nChips\nFruit`}
+            value={activeDraft.lunch}
             onChange={(e) => handleInputChange('lunch', e.target.value)}
             onBlur={handleInputBlur}
             disabled={loading}
+            spellCheck={false}
+            autoCorrect="off"
+            autoCapitalize="sentences"
           />
         </div>
 
         {/* Dinner Card */}
         <div className="kq-menu-card">
           <div className="kq-menu-card-head">
-            <div>
+            <div className="kq-menu-card-head-left">
               <span className="kq-menu-card-icon">🌙</span>
               <span className="kq-menu-card-title">Dinner Menu</span>
               <span className="kq-menu-card-time">4:30 PM – 7:30 PM</span>
@@ -419,12 +425,14 @@ export function MenuEditor({ device, todayIso }: MenuEditorProps) {
 
           <textarea
             className="kq-menu-box"
-            rows={7}
-            placeholder={`One dish per line...\nTeriyaki Salmon\nSteamed Jasmine Rice\nRoasted Broccoli`}
-            value={dinnerText}
+            placeholder={`Type dishes here, one per line...\ne.g. Teriyaki Salmon\nSteamed Jasmine Rice\nRoasted Broccoli`}
+            value={activeDraft.dinner}
             onChange={(e) => handleInputChange('dinner', e.target.value)}
             onBlur={handleInputBlur}
             disabled={loading}
+            spellCheck={false}
+            autoCorrect="off"
+            autoCapitalize="sentences"
           />
         </div>
       </div>
