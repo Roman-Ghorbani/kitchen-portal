@@ -521,10 +521,14 @@ export function KitchenQueue({
               ))}
             </div>
           )}
-        {counts?.closedReason && !counts.closed && toMake.length === 0 && (
-          <div className="kq-foot">{counts.closedReason}</div>
-        )}
-      </div>
+        </>
+      )}
+
+      {counts?.closedReason && !counts.closed && toMake.length === 0 && (
+        <div className="kq-foot">{counts.closedReason}</div>
+      )}
+    </div>
+  )}
 
       {confirming && (
         <div className="kq-modal-scrim" role="dialog" aria-modal="true">
@@ -685,8 +689,6 @@ export function KitchenQueue({
             </button>
           </div>
         </div>
-      )}
-        </>
       )}
     </>
   );
