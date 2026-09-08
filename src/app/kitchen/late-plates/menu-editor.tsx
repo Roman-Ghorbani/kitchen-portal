@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { mondayOf, addDays, weekDates, todayInEastern } from '../../../lib/dates.ts';
 
 type MealName = 'lunch' | 'dinner';
 
@@ -15,59 +16,63 @@ interface MenuEditorProps {
   todayIso: string;
 }
 
-function addDaysISO(baseIso: string, days: number): string {
-  const [y, m, d] = baseIso.split('-').map(Number);
-  const dt = new Date(Date.UTC(y, m - 1, d + days, 12, 0, 0));
-  return dt.toISOString().slice(0, 10);
+function parseDishes(text: string): string[] {
+  return text
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
 }
 
-function prettyDateLabel(iso: string): { weekday: string; dateFormatted: string; isToday: boolean } {
+function prettyDayHeading(iso: string): { weekday: string; dateFormatted: string; fullDate: string } {
   const [y, m, d] = iso.split('-').map(Number);
   const dt = new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
   return {
     weekday: dt.toLocaleDateString('en-US', { weekday: 'long', timeZone: 'UTC' }),
     dateFormatted: dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' }),
-    isToday: false,
+    fullDate: dt.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'UTC' }),
   };
 }
 
+function formatWeekRange(startIso: string): string {
+  const endIso = addDays(startIso, 6);
+  const [sy, sm, sd] = startIso.split('-').map(Number);
+  const [ey, em, ed] = endIso.split('-').map(Number);
+  const sdt = new Date(Date.UTC(sy, sm - 1, sd, 12, 0, 0));
+  const edt = new Date(Date.UTC(ey, em - 1, ed, 12, 0, 0));
+
+  const startStr = sdt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+  const endStr = edt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+  return `${startStr} – ${endStr}`;
+}
+
 export function MenuEditor({ device, todayIso }: MenuEditorProps) {
-  const [selectedDate, setSelectedDate] = useState<string>(todayIso);
+  const actualToday = todayIso || todayInEastern();
+  const currentWeekMonday = mondayOf(actualToday);
+
+  const [weekStart, setWeekStart] = useState<string>(currentWeekMonday);
+  const [selectedDate, setSelectedDate] = useState<string>(actualToday);
   const [menusByDate, setMenusByDate] = useState<Record<string, DayMenuData>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [saveStatus, setSaveStatus] = useState<string | null>(null);
+  const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'unsaved' | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Quick-add inputs for the current view
-  const [lunchInput, setLunchInput] = useState('');
-  const [dinnerInput, setDinnerInput] = useState('');
+  // Textarea input buffers for the currently selected day
+  const [lunchText, setLunchText] = useState('');
+  const [dinnerText, setDinnerText] = useState('');
+  const [isDirty, setIsDirty] = useState(false);
 
-  // Bulk paste modal
-  const [pastingMeal, setPastingMeal] = useState<MealName | null>(null);
-  const [pasteText, setPasteText] = useState('');
+  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Generate a 7-day strip starting today
-  const dayTabs = Array.from({ length: 7 }, (_, i) => {
-    const iso = addDaysISO(todayIso, i);
-    const [y, m, d] = iso.split('-').map(Number);
-    const dt = new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
-    const dayName = dt.toLocaleDateString('en-US', { weekday: 'short', timeZone: 'UTC' });
-    const shortDate = dt.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', timeZone: 'UTC' });
-    return {
-      iso,
-      label: i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : dayName,
-      sub: shortDate,
-      isToday: i === 0,
-    };
-  });
-
-  const loadMenus = useCallback(async () => {
+  // Fetch menus for a window around weekStart (past week, current week, next 2 weeks)
+  const loadMenus = useCallback(async (baseWeekStart: string) => {
     try {
       setLoading(true);
-      const res = await fetch(`/api/menu?days=7&device=${encodeURIComponent(device)}`, {
-        cache: 'no-store',
-      });
+      const startFetch = addDays(baseWeekStart, -7);
+      const res = await fetch(
+        `/api/menu?startDate=${startFetch}&days=28&device=${encodeURIComponent(device)}`,
+        { cache: 'no-store' },
+      );
       if (!res.ok) throw new Error(`Server returned ${res.status}`);
       const data = await res.json();
       if (data.success && Array.isArray(data.days)) {
@@ -90,171 +95,280 @@ export function MenuEditor({ device, todayIso }: MenuEditorProps) {
   }, [device]);
 
   useEffect(() => {
-    loadMenus();
-  }, [loadMenus]);
+    loadMenus(weekStart);
+  }, [loadMenus, weekStart]);
 
-  const currentMenu: DayMenuData = menusByDate[selectedDate] || {
-    date: selectedDate,
-    lunch: [],
-    dinner: [],
-  };
+  // Sync textarea buffers whenever selectedDate or menusByDate changes (if not actively dirty)
+  useEffect(() => {
+    const existing = menusByDate[selectedDate];
+    const newLunch = (existing?.lunch || []).join('\n');
+    const newDinner = (existing?.dinner || []).join('\n');
 
-  const updateMealDishes = (meal: MealName, newDishes: string[]) => {
-    setMenusByDate((prev) => ({
-      ...prev,
-      [selectedDate]: {
-        ...currentMenu,
-        [meal]: newDishes,
-      },
-    }));
+    setLunchText(newLunch);
+    setDinnerText(newDinner);
+    setIsDirty(false);
     setSaveStatus(null);
-  };
+  }, [selectedDate, menusByDate]);
 
-  const handleAddDish = (meal: MealName) => {
-    const input = meal === 'lunch' ? lunchInput : dinnerInput;
-    const trimmed = input.trim();
-    if (!trimmed) return;
-
-    const list = [...(currentMenu[meal] || []), trimmed];
-    updateMealDishes(meal, list);
-
-    if (meal === 'lunch') setLunchInput('');
-    else setDinnerInput('');
-  };
-
-  const handleRemoveDish = (meal: MealName, index: number) => {
-    const list = [...(currentMenu[meal] || [])];
-    list.splice(index, 1);
-    updateMealDishes(meal, list);
-  };
-
-  const handleClearMeal = (meal: MealName) => {
-    updateMealDishes(meal, []);
-  };
-
-  const handleSaveDay = async () => {
-    setSaving(true);
-    setSaveStatus('Saving…');
-    setError(null);
-    try {
-      const res = await fetch(`/api/menu?device=${encodeURIComponent(device)}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          date: selectedDate,
-          lunch: currentMenu.lunch,
-          dinner: currentMenu.dinner,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Save failed');
+  // Direct save helper
+  const performSave = useCallback(
+    async (targetDate: string, lunchRaw: string, dinnerRaw: string) => {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+        autoSaveTimerRef.current = null;
       }
-      setSaveStatus('✓ Saved! TV board and app updated.');
-      setTimeout(() => setSaveStatus(null), 4000);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not save menu to server');
-      setSaveStatus(null);
-    } finally {
-      setSaving(false);
+
+      const lunchDishes = parseDishes(lunchRaw);
+      const dinnerDishes = parseDishes(dinnerRaw);
+
+      setSaving(true);
+      setSaveStatus('saving');
+      setError(null);
+
+      try {
+        const res = await fetch(`/api/menu?device=${encodeURIComponent(device)}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            date: targetDate,
+            lunch: lunchDishes,
+            dinner: dinnerDishes,
+          }),
+        });
+
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || 'Failed to save menu');
+        }
+
+        // Update local cache
+        setMenusByDate((prev) => ({
+          ...prev,
+          [targetDate]: {
+            date: targetDate,
+            lunch: lunchDishes,
+            dinner: dinnerDishes,
+          },
+        }));
+
+        setIsDirty(false);
+        setSaveStatus('saved');
+        setTimeout(() => {
+          setSaveStatus((current) => (current === 'saved' ? null : current));
+        }, 4000);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Could not save menu to server');
+        setSaveStatus('unsaved');
+      } finally {
+        setSaving(false);
+      }
+    },
+    [device],
+  );
+
+  // Trigger debounced auto-save when user types
+  const handleInputChange = (meal: MealName, value: string) => {
+    let nextLunch = lunchText;
+    let nextDinner = dinnerText;
+
+    if (meal === 'lunch') {
+      setLunchText(value);
+      nextLunch = value;
+    } else {
+      setDinnerText(value);
+      nextDinner = value;
+    }
+
+    setIsDirty(true);
+    setSaveStatus('unsaved');
+
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+    }
+
+    autoSaveTimerRef.current = setTimeout(() => {
+      performSave(selectedDate, nextLunch, nextDinner);
+    }, 1200);
+  };
+
+  // Immediate save on blur
+  const handleInputBlur = () => {
+    if (isDirty) {
+      performSave(selectedDate, lunchText, dinnerText);
     }
   };
 
-  const handleCopyPreviousDay = () => {
-    const prevDate = addDaysISO(selectedDate, -1);
-    const prev = menusByDate[prevDate];
-    if (!prev || (prev.lunch.length === 0 && prev.dinner.length === 0)) {
-      alert('No menu found for the previous day to copy.');
-      return;
+  // Safe day transition: save current pending edits before changing date
+  const handleSelectDate = (newDate: string) => {
+    if (newDate === selectedDate) return;
+
+    if (isDirty) {
+      performSave(selectedDate, lunchText, dinnerText);
     }
-    setMenusByDate((old) => ({
-      ...old,
-      [selectedDate]: {
-        date: selectedDate,
-        lunch: [...prev.lunch],
-        dinner: [...prev.dinner],
-      },
-    }));
-    setSaveStatus('Copied from previous day. Click "Save Menu" to apply.');
+    setSelectedDate(newDate);
   };
 
-  const handleApplyPaste = () => {
-    if (!pastingMeal) return;
-    const lines = pasteText
-      .split('\n')
-      .map((l) => l.trim())
-      .filter((l) => l.length > 0);
-    updateMealDishes(pastingMeal, lines);
-    setPastingMeal(null);
-    setPasteText('');
+  // Week navigation
+  const handleShiftWeek = (deltaWeeks: number) => {
+    if (isDirty) {
+      performSave(selectedDate, lunchText, dinnerText);
+    }
+    const newWeekStart = addDays(weekStart, deltaWeeks * 7);
+    setWeekStart(newWeekStart);
+
+    // Keep same weekday index in new week
+    const currentDays = weekDates(weekStart);
+    const dayIdx = currentDays.indexOf(selectedDate);
+    const newDays = weekDates(newWeekStart);
+    const newTargetDate = dayIdx >= 0 ? newDays[dayIdx] : newDays[0];
+    setSelectedDate(newTargetDate);
   };
 
-  const selectedInfo = prettyDateLabel(selectedDate);
+  const handleGoToThisWeek = () => {
+    if (isDirty) {
+      performSave(selectedDate, lunchText, dinnerText);
+    }
+    setWeekStart(currentWeekMonday);
+    setSelectedDate(actualToday);
+  };
+
+  // Clean up timer on unmount
+  useEffect(() => {
+    return () => {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+      }
+    };
+  }, []);
+
+  const daysInWeek = weekDates(weekStart);
+  const dayHeading = prettyDayHeading(selectedDate);
+  const isThisWeek = weekStart === currentWeekMonday;
+  const isNextWeek = weekStart === addDays(currentWeekMonday, 7);
+
+  const lunchDishesCount = parseDishes(lunchText).length;
+  const dinnerDishesCount = parseDishes(dinnerText).length;
 
   return (
     <div className="kq-menu-editor">
-      {/* Date Navigation Strip */}
-      <div className="kq-menu-dates" role="tablist" aria-label="Select Date">
-        {dayTabs.map((tab) => {
-          const isSel = tab.iso === selectedDate;
-          const dayData = menusByDate[tab.iso];
-          const count = (dayData?.lunch?.length || 0) + (dayData?.dinner?.length || 0);
+      {/* Week Navigation Header */}
+      <div className="kq-week-nav">
+        <div className="kq-week-nav-controls">
+          <button
+            type="button"
+            className="kq-btn kq-week-btn"
+            onClick={() => handleShiftWeek(-1)}
+            title="Previous Week"
+          >
+            ◀ Previous Week
+          </button>
+
+          <button
+            type="button"
+            className={`kq-btn kq-week-btn${isThisWeek ? ' kq-week-btn-active' : ''}`}
+            onClick={handleGoToThisWeek}
+          >
+            📅 This Week
+          </button>
+
+          <button
+            type="button"
+            className={`kq-btn kq-week-btn${isNextWeek ? ' kq-week-btn-active' : ''}`}
+            onClick={() => handleShiftWeek(1)}
+            title="Next Week"
+          >
+            Next Week ▶
+          </button>
+        </div>
+
+        <div className="kq-week-range">
+          <span className="kq-week-range-text">{formatWeekRange(weekStart)}</span>
+          {isThisWeek && <span className="kq-week-badge this-week">This Week</span>}
+          {isNextWeek && <span className="kq-week-badge next-week">Next Week</span>}
+        </div>
+      </div>
+
+      {/* 7-Day Day Selector Strip */}
+      <div className="kq-menu-dates" role="tablist" aria-label="Select Day">
+        {daysInWeek.map((iso) => {
+          const isSelected = iso === selectedDate;
+          const isToday = iso === actualToday;
+          const [y, m, d] = iso.split('-').map(Number);
+          const dt = new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
+          const dayName = dt.toLocaleDateString('en-US', { weekday: 'short', timeZone: 'UTC' });
+          const shortDate = dt.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', timeZone: 'UTC' });
+
+          const dayData = menusByDate[iso];
+          const hasDishes = (dayData?.lunch?.length || 0) + (dayData?.dinner?.length || 0) > 0;
+          const dishTotal = (dayData?.lunch?.length || 0) + (dayData?.dinner?.length || 0);
 
           return (
             <button
-              key={tab.iso}
+              key={iso}
               role="tab"
-              aria-selected={isSel}
-              className={`kq-menu-date-btn${isSel ? ' active' : ''}`}
-              onClick={() => {
-                setSelectedDate(tab.iso);
-                setSaveStatus(null);
-              }}
+              aria-selected={isSelected}
+              className={`kq-menu-date-btn${isSelected ? ' active' : ''}${isToday ? ' is-today' : ''}`}
+              onClick={() => handleSelectDate(iso)}
             >
-              <div className="kq-menu-date-label">{tab.label}</div>
-              <div className="kq-menu-date-sub">{tab.sub}</div>
-              {count > 0 && <div className="kq-menu-date-dot" title={`${count} dishes posted`} />}
+              <div className="kq-menu-date-label">
+                {isToday ? 'Today' : dayName}
+              </div>
+              <div className="kq-menu-date-sub">{shortDate}</div>
+              {hasDishes && (
+                <div
+                  className="kq-menu-date-dot"
+                  title={`${dishTotal} dish${dishTotal === 1 ? '' : 'es'} configured`}
+                />
+              )}
             </button>
           );
         })}
       </div>
 
-      {/* Selected Day Header */}
+      {/* Selected Day Control Bar */}
       <div className="kq-menu-day-bar">
-        <div>
+        <div className="kq-menu-day-info">
           <h2 className="kq-menu-day-title">
-            {selectedInfo.weekday}, {selectedInfo.dateFormatted}
-            {selectedDate === todayIso && <span className="kq-today-badge">TODAY</span>}
+            {dayHeading.fullDate}
+            {selectedDate === actualToday && <span className="kq-today-badge">TODAY</span>}
           </h2>
           <div className="kq-menu-day-desc">
-            Configure dishes for this day. Changes appear immediately on the TV and Brother app.
+            Changes appear immediately on the TV and brothers&apos; Late Plate app.
           </div>
         </div>
 
         <div className="kq-menu-day-actions">
-          <button
-            type="button"
-            className="kq-btn ghost"
-            onClick={handleCopyPreviousDay}
-            disabled={saving}
-          >
-            📋 Copy Yesterday
-          </button>
+          {saveStatus === 'saving' && (
+            <span className="kq-sync-indicator saving">
+              <span className="kq-sync-spinner" aria-hidden="true" />
+              Saving…
+            </span>
+          )}
+          {saveStatus === 'saved' && (
+            <span className="kq-sync-indicator saved">
+              ✓ Saved
+            </span>
+          )}
+          {saveStatus === 'unsaved' && (
+            <span className="kq-sync-indicator unsaved">
+              ● Auto-saving…
+            </span>
+          )}
+
           <button
             type="button"
             className="kq-btn ready kq-menu-save-btn"
-            onClick={handleSaveDay}
+            onClick={() => performSave(selectedDate, lunchText, dinnerText)}
             disabled={saving}
           >
-            {saving ? 'Saving…' : '💾 Save Menu'}
+            {saving ? 'Saving…' : saveStatus === 'saved' ? '✓ Saved!' : '💾 Save Menu'}
           </button>
         </div>
       </div>
 
-      {saveStatus && <div className="kq-save-banner">{saveStatus}</div>}
       {error && <div className="kq-error">{error}</div>}
 
-      {/* Lunch and Dinner Cards Grid */}
+      {/* Textarea Menu Input Grid */}
       <div className="kq-menu-grid">
         {/* Lunch Card */}
         <div className="kq-menu-card">
@@ -264,77 +378,24 @@ export function MenuEditor({ device, todayIso }: MenuEditorProps) {
               <span className="kq-menu-card-title">Lunch Menu</span>
               <span className="kq-menu-card-time">11:00 AM – 2:30 PM</span>
             </div>
-            <div className="kq-menu-card-head-actions">
-              <button
-                type="button"
-                className="kq-btn sm ghost"
-                onClick={() => {
-                  setPastingMeal('lunch');
-                  setPasteText(currentMenu.lunch.join('\n'));
-                }}
-              >
-                ✏️ Bulk Paste
-              </button>
-              {currentMenu.lunch.length > 0 && (
-                <button
-                  type="button"
-                  className="kq-btn sm decline"
-                  onClick={() => handleClearMeal('lunch')}
-                >
-                  Clear
-                </button>
-              )}
+            <div className="kq-menu-card-badge">
+              {lunchDishesCount > 0 ? `${lunchDishesCount} dish${lunchDishesCount === 1 ? '' : 'es'}` : 'Empty'}
             </div>
           </div>
 
-          {/* Dishes List */}
-          <div className="kq-menu-dish-list">
-            {currentMenu.lunch.length === 0 ? (
-              <div className="kq-menu-empty-meal">
-                No dishes entered for lunch yet. Type a dish below or use Bulk Paste.
-              </div>
-            ) : (
-              currentMenu.lunch.map((dish, idx) => (
-                <div key={idx} className="kq-dish-row">
-                  <span className="kq-dish-bullet">•</span>
-                  <span className="kq-dish-name">{dish}</span>
-                  <button
-                    type="button"
-                    className="kq-dish-del"
-                    aria-label={`Remove ${dish}`}
-                    onClick={() => handleRemoveDish('lunch', idx)}
-                  >
-                    ×
-                  </button>
-                </div>
-              ))
-            )}
+          <div className="kq-menu-instruction">
+            Enter one dish per line. Leave empty if no lunch is served.
           </div>
 
-          {/* Quick Add Bar */}
-          <div className="kq-dish-input-bar">
-            <input
-              type="text"
-              className="kq-dish-input"
-              placeholder="e.g. Chicken Caesar Wrap..."
-              value={lunchInput}
-              onChange={(e) => setLunchInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  handleAddDish('lunch');
-                }
-              }}
-            />
-            <button
-              type="button"
-              className="kq-btn ready sm"
-              onClick={() => handleAddDish('lunch')}
-              disabled={!lunchInput.trim()}
-            >
-              + Add Dish
-            </button>
-          </div>
+          <textarea
+            className="kq-menu-box"
+            rows={7}
+            placeholder={`One dish per line...\nChicken Caesar Wrap\nPotato Chips\nFresh Fruit`}
+            value={lunchText}
+            onChange={(e) => handleInputChange('lunch', e.target.value)}
+            onBlur={handleInputBlur}
+            disabled={loading}
+          />
         </div>
 
         {/* Dinner Card */}
@@ -345,120 +406,26 @@ export function MenuEditor({ device, todayIso }: MenuEditorProps) {
               <span className="kq-menu-card-title">Dinner Menu</span>
               <span className="kq-menu-card-time">4:30 PM – 7:30 PM</span>
             </div>
-            <div className="kq-menu-card-head-actions">
-              <button
-                type="button"
-                className="kq-btn sm ghost"
-                onClick={() => {
-                  setPastingMeal('dinner');
-                  setPasteText(currentMenu.dinner.join('\n'));
-                }}
-              >
-                ✏️ Bulk Paste
-              </button>
-              {currentMenu.dinner.length > 0 && (
-                <button
-                  type="button"
-                  className="kq-btn sm decline"
-                  onClick={() => handleClearMeal('dinner')}
-                >
-                  Clear
-                </button>
-              )}
+            <div className="kq-menu-card-badge">
+              {dinnerDishesCount > 0 ? `${dinnerDishesCount} dish${dinnerDishesCount === 1 ? '' : 'es'}` : 'Empty'}
             </div>
           </div>
 
-          {/* Dishes List */}
-          <div className="kq-menu-dish-list">
-            {currentMenu.dinner.length === 0 ? (
-              <div className="kq-menu-empty-meal">
-                No dishes entered for dinner yet. Type a dish below or use Bulk Paste.
-              </div>
-            ) : (
-              currentMenu.dinner.map((dish, idx) => (
-                <div key={idx} className="kq-dish-row">
-                  <span className="kq-dish-bullet">•</span>
-                  <span className="kq-dish-name">{dish}</span>
-                  <button
-                    type="button"
-                    className="kq-dish-del"
-                    aria-label={`Remove ${dish}`}
-                    onClick={() => handleRemoveDish('dinner', idx)}
-                  >
-                    ×
-                  </button>
-                </div>
-              ))
-            )}
+          <div className="kq-menu-instruction">
+            Enter one dish per line. Leave empty if no dinner is served.
           </div>
 
-          {/* Quick Add Bar */}
-          <div className="kq-dish-input-bar">
-            <input
-              type="text"
-              className="kq-dish-input"
-              placeholder="e.g. Teriyaki Salmon, Steamed Rice, Broccoli..."
-              value={dinnerInput}
-              onChange={(e) => setDinnerInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  handleAddDish('dinner');
-                }
-              }}
-            />
-            <button
-              type="button"
-              className="kq-btn ready sm"
-              onClick={() => handleAddDish('dinner')}
-              disabled={!dinnerInput.trim()}
-            >
-              + Add Dish
-            </button>
-          </div>
+          <textarea
+            className="kq-menu-box"
+            rows={7}
+            placeholder={`One dish per line...\nTeriyaki Salmon\nSteamed Jasmine Rice\nRoasted Broccoli`}
+            value={dinnerText}
+            onChange={(e) => handleInputChange('dinner', e.target.value)}
+            onBlur={handleInputBlur}
+            disabled={loading}
+          />
         </div>
       </div>
-
-      {/* Bulk Paste Modal */}
-      {pastingMeal && (
-        <div className="kq-modal-scrim" role="dialog" aria-modal="true">
-          <div className="kq-modal">
-            <h2>Paste {pastingMeal === 'lunch' ? 'Lunch' : 'Dinner'} Dishes</h2>
-            <p className="kq-modal-lead">
-              Type or paste dishes, one dish per line.
-            </p>
-
-            <textarea
-              className="kq-paste-textarea"
-              rows={8}
-              placeholder="Dish 1&#10;Dish 2&#10;Side dish..."
-              value={pasteText}
-              onChange={(e) => setPasteText(e.target.value)}
-              autoFocus
-            />
-
-            <div className="kq-modal-actions">
-              <button
-                type="button"
-                className="kq-btn ghost"
-                onClick={() => {
-                  setPastingMeal(null);
-                  setPasteText('');
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                className="kq-btn ready"
-                onClick={handleApplyPaste}
-              >
-                Apply Dishes
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

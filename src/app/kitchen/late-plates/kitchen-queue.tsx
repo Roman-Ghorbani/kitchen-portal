@@ -280,70 +280,76 @@ export function KitchenQueue({
       <RememberToken device={device} />
 
       <header className="kq-head">
-        <div className="kq-head-brand">
-          <h1>Kitchen Console</h1>
-          <div className="kq-date">{prettyDate}</div>
-        </div>
-
-        {isDisconnected && (
-          <div className="kq-offline-banner" role="alert">
-            <span className="kq-offline-dot" aria-hidden="true" />
-            <span>
-              <strong>NO NETWORK CONNECTION</strong> — Not updated in over 2 minutes
-            </span>
+        <div className="kq-head-left">
+          <div className="kq-head-brand">
+            <h1>Kitchen Kiosk</h1>
+            <div className="kq-date">{prettyDate}</div>
           </div>
-        )}
 
-        <div className="kq-view-nav" role="tablist" aria-label="Console View">
-          <button
-            role="tab"
-            aria-selected={view === 'plates'}
-            className={`kq-view-btn${view === 'plates' ? ' active' : ''}`}
-            onClick={() => setView('plates')}
-          >
-            <span className="kq-view-icon">📋</span>
-            <span>Late Plates</span>
-            {totalToMake > 0 && (
-              <span className="kq-view-badge pending">{totalToMake} to make</span>
-            )}
-          </button>
-          <button
-            role="tab"
-            aria-selected={view === 'menus'}
-            className={`kq-view-btn${view === 'menus' ? ' active' : ''}`}
-            onClick={() => setView('menus')}
-          >
-            <span className="kq-view-icon">🍽️</span>
-            <span>Configure Menus</span>
-          </button>
+          {isDisconnected && (
+            <div className="kq-offline-banner" role="alert">
+              <span className="kq-offline-dot" aria-hidden="true" />
+              <span>
+                <strong>NO NETWORK CONNECTION</strong> — Not updated in over 2 minutes
+              </span>
+            </div>
+          )}
         </div>
 
-        {view === 'plates' && (
-          <div className="kq-switch" role="tablist" aria-label="Meal">
-            {MEALS.map((m) => {
-              const outstanding = data?.meals?.[m]?.toMake ?? 0;
-              return (
-                <button
-                  key={m}
-                  role="tab"
-                  aria-selected={meal === m}
-                  className={`kq-switch-btn${meal === m ? ' active' : ''}`}
-                  onClick={() => {
-                    setMeal(m);
-                    setShowHandled(false);
-                  }}
-                >
-                  <span className="kq-switch-label">{m}</span>
-                  <span
-                    className={`kq-switch-count${outstanding > 0 ? ' pending' : ''}`}
+        <div className="kq-head-center">
+          <div className="kq-view-nav" role="tablist" aria-label="Kiosk View">
+            <button
+              role="tab"
+              aria-selected={view === 'plates'}
+              className={`kq-view-btn${view === 'plates' ? ' active' : ''}`}
+              onClick={() => setView('plates')}
+            >
+              <span className="kq-view-icon">📋</span>
+              <span>Late Plates</span>
+              {totalToMake > 0 && (
+                <span className="kq-view-badge pending">{totalToMake} to make</span>
+              )}
+            </button>
+            <button
+              role="tab"
+              aria-selected={view === 'menus'}
+              className={`kq-view-btn${view === 'menus' ? ' active' : ''}`}
+              onClick={() => setView('menus')}
+            >
+              <span className="kq-view-icon">🍽️</span>
+              <span>Menu</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="kq-head-right">
+          {view === 'plates' && (
+            <div className="kq-switch" role="tablist" aria-label="Meal">
+              {MEALS.map((m) => {
+                const outstanding = data?.meals?.[m]?.toMake ?? 0;
+                return (
+                  <button
+                    key={m}
+                    role="tab"
+                    aria-selected={meal === m}
+                    className={`kq-switch-btn${meal === m ? ' active' : ''}`}
+                    onClick={() => {
+                      setMeal(m);
+                      setShowHandled(false);
+                    }}
                   >
-                    {outstanding > 0 ? `${outstanding} to make` : 'all done'}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        )}
+                    <span className="kq-switch-label">{m}</span>
+                    <span
+                      className={`kq-switch-count${outstanding > 0 ? ' pending' : ''}`}
+                    >
+                      {outstanding > 0 ? `${outstanding} to make` : 'all done'}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </header>
 
       {view === 'menus' ? (

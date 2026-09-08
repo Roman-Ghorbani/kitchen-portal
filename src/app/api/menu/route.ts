@@ -101,8 +101,12 @@ export async function GET(request: NextRequest) {
     }
 
     // Horizon / multiple days (default 7 days)
-    const numDays = Math.min(Math.max(Number(daysParam) || 7, 1), 14);
-    const dates = Array.from({ length: numDays }, (_, i) => addDays(today, i));
+    const startDateParam =
+      request.nextUrl.searchParams.get('startDate') ||
+      request.nextUrl.searchParams.get('start');
+    const baseDate = startDateParam || today;
+    const numDays = Math.min(Math.max(Number(daysParam) || 7, 1), 35);
+    const dates = Array.from({ length: numDays }, (_, i) => addDays(baseDate, i));
 
     const menus = await Promise.all(dates.map((d) => getDayMenu(d)));
 
