@@ -355,14 +355,16 @@ export function MenuEditor({ device, todayIso }: MenuEditorProps) {
             </span>
           )}
 
-          <button
-            type="button"
-            className="kq-btn ready kq-menu-save-btn"
-            onClick={() => performSave(selectedDate, lunchText, dinnerText)}
-            disabled={saving}
-          >
-            {saving ? 'Saving…' : saveStatus === 'saved' ? '✓ Saved!' : '💾 Save Menu'}
-          </button>
+          {error && (
+            <button
+              type="button"
+              className="kq-btn ready kq-menu-retry-btn"
+              onClick={() => performSave(selectedDate, lunchText, dinnerText)}
+              disabled={saving}
+            >
+              💾 Retry Save
+            </button>
+          )}
         </div>
       </div>
 

@@ -304,7 +304,7 @@ export function KitchenQueue({
               className={`kq-view-btn${view === 'plates' ? ' active' : ''}`}
               onClick={() => setView('plates')}
             >
-              <span className="kq-view-icon">📋</span>
+              <span className="kq-view-icon">🍽️</span>
               <span>Late Plates</span>
               {totalToMake > 0 && (
                 <span className="kq-view-badge pending">{totalToMake} to make</span>
@@ -316,7 +316,7 @@ export function KitchenQueue({
               className={`kq-view-btn${view === 'menus' ? ' active' : ''}`}
               onClick={() => setView('menus')}
             >
-              <span className="kq-view-icon">🍽️</span>
+              <span className="kq-view-icon">📋</span>
               <span>Menu</span>
             </button>
           </div>
@@ -355,7 +355,7 @@ export function KitchenQueue({
       {view === 'menus' ? (
         <MenuEditor device={device} todayIso={date} />
       ) : (
-        <>
+        <div className="kq-queue-view">
           {error && <div className="kq-error">{error}</div>}
 
           {data === null && !error && <div className="kq-empty">Loading…</div>}
@@ -521,12 +521,10 @@ export function KitchenQueue({
               ))}
             </div>
           )}
-        </>
-      )}
-
-      {counts?.closedReason && !counts.closed && toMake.length === 0 && (
-        <div className="kq-foot">{counts.closedReason}</div>
-      )}
+        {counts?.closedReason && !counts.closed && toMake.length === 0 && (
+          <div className="kq-foot">{counts.closedReason}</div>
+        )}
+      </div>
 
       {confirming && (
         <div className="kq-modal-scrim" role="dialog" aria-modal="true">
