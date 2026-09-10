@@ -852,9 +852,11 @@
     }
 
     // ---------- KITCHEN DUTY ----------
-    var KITCHEN_API = 'https://kitchen.zbtaa.online/api/tv/schedule';
+    var KITCHEN_API = '/api/tv/schedule';
     var coverNote = 'Any brother can claim an open shift in the app';
     var apiLabels = {}, dutyCrew = { lunch: [], dinner: [] };
+    var liveMenuData = { today: { lunch: [], dinner: [] }, tomorrow: { lunch: [], dinner: [] } };
+    var lastScheduleData = null;
 
     function slotOpen(slot) {
       if (!slot) return 0;
@@ -939,50 +941,92 @@
         + '<span class="note">' + esc(coverNote) + '</span>';
     }
 
+    function applyScheduleData(data) {
+      if (!data || !data.success) return;
+      lastScheduleData = data;
+      var todayIso = dateKey(0);
+      var t = data.today || {}, tmr = data.tomorrow || {};
+
+      // Smart date rollover check
+      if (t.date && t.date !== todayIso && tmr.date === todayIso) {
+        t = data.tomorrow || {};
+        tmr = {};
+      }
+
+      renderSlot(t.lunch, 'lunch', 'lunch-cleanup', 'lunch-crew');
+      renderSlot(t.dinner, 'dinner', 'dinner-cleanup', 'dinner-crew');
+      renderOpenLine(data);
+
+      // Update menus pulled live from KitchenTracker
+      if (t.lunch && t.lunch.menu !== undefined) {
+        liveMenuData.today.lunch = Array.isArray(t.lunch.menu) ? t.lunch.menu : [];
+        renderMenu('lunch-menu', liveMenuData.today.lunch);
+        recapText['lunch'] = liveMenuData.today.lunch.length ? liveMenuData.today.lunch.join(' · ') : 'No menu was posted';
+        var lrEl = document.getElementById('lunch-recap-menu');
+        if (lrEl) lrEl.textContent = recapText['lunch'];
+      }
+      if (t.dinner && t.dinner.menu !== undefined) {
+        liveMenuData.today.dinner = Array.isArray(t.dinner.menu) ? t.dinner.menu : [];
+        renderMenu('dinner-menu', liveMenuData.today.dinner);
+        recapText['dinner'] = liveMenuData.today.dinner.length ? liveMenuData.today.dinner.join(' · ') : 'No menu was posted';
+        var drEl = document.getElementById('dinner-recap-menu');
+        if (drEl) drEl.textContent = recapText['dinner'];
+      }
+      if (tmr.lunch && tmr.lunch.menu !== undefined) {
+        liveMenuData.tomorrow.lunch = Array.isArray(tmr.lunch.menu) ? tmr.lunch.menu : [];
+        var tmrLunchEl = document.getElementById('tmr-lunch');
+        if (tmrLunchEl) {
+          tmrLunchEl.textContent = liveMenuData.tomorrow.lunch.length ? liveMenuData.tomorrow.lunch.join(' · ') : 'Not posted yet';
+        }
+      }
+      if (tmr.dinner && tmr.dinner.menu !== undefined) {
+        liveMenuData.tomorrow.dinner = Array.isArray(tmr.dinner.menu) ? tmr.dinner.menu : [];
+        var tmrDinnerEl = document.getElementById('tmr-dinner');
+        if (tmrDinnerEl) {
+          tmrDinnerEl.textContent = liveMenuData.tomorrow.dinner.length ? liveMenuData.tomorrow.dinner.join(' · ') : 'Not posted yet';
+        }
+      }
+
+      if (phase === 'duty') renderDuty();
+      fitAllMenus();
+      refitAll();
+    }
+
+    function hydrateScheduleFromStorage() {
+      try {
+        var raw = localStorage.getItem('zbt_tv_schedule_cache');
+        if (raw) {
+          var parsed = JSON.parse(raw);
+          if (parsed && parsed.success) applyScheduleData(parsed);
+        }
+      } catch (e) {
+        console.warn('Schedule hydrate error:', e);
+      }
+    }
+
+    var dutyRetryTimer = null;
     async function loadKitchenDuty() {
       try {
-        var data = await (await fetch(KITCHEN_API)).json();
-        if (!data.success) return;
-        var t = data.today || {}, tmr = data.tomorrow || {};
-        renderSlot(t.lunch, 'lunch', 'lunch-cleanup', 'lunch-crew');
-        renderSlot(t.dinner, 'dinner', 'dinner-cleanup', 'dinner-crew');
-        renderOpenLine(data);
+        var res;
+        try {
+          res = await fetch('/api/tv/schedule');
+        } catch (errLocal) {
+          res = await fetch('https://kitchen.zbtaa.online/api/tv/schedule');
+        }
+        var data = await res.json();
+        if (!data || !data.success) throw new Error((data && data.reason) || 'Invalid schedule response');
 
-        // Update menus pulled live from KitchenTracker
-        if (t.lunch && t.lunch.menu !== undefined) {
-          renderMenu('lunch-menu', t.lunch.menu);
-          recapText['lunch'] = (t.lunch.menu && t.lunch.menu.length) ? t.lunch.menu.join(' · ') : 'No menu was posted';
-          var lrEl = document.getElementById('lunch-recap-menu');
-          if (lrEl) lrEl.textContent = recapText['lunch'];
-        }
-        if (t.dinner && t.dinner.menu !== undefined) {
-          renderMenu('dinner-menu', t.dinner.menu);
-          recapText['dinner'] = (t.dinner.menu && t.dinner.menu.length) ? t.dinner.menu.join(' · ') : 'No menu was posted';
-          var drEl = document.getElementById('dinner-recap-menu');
-          if (drEl) drEl.textContent = recapText['dinner'];
-        }
-        if (tmr.lunch && tmr.lunch.menu !== undefined) {
-          var tmrLunchEl = document.getElementById('tmr-lunch');
-          if (tmrLunchEl) {
-            tmrLunchEl.textContent = (tmr.lunch.menu && tmr.lunch.menu.length) ? tmr.lunch.menu.join(' · ') : 'Not posted yet';
-          }
-        }
-        if (tmr.dinner && tmr.dinner.menu !== undefined) {
-          var tmrDinnerEl = document.getElementById('tmr-dinner');
-          if (tmrDinnerEl) {
-            tmrDinnerEl.textContent = (tmr.dinner.menu && tmr.dinner.menu.length) ? tmr.dinner.menu.join(' · ') : 'Not posted yet';
-          }
-        }
-
-        // Open chips wrap the crew strip onto a second line, which shortens the
-        // menu above it. The menus were fitted before this response arrived.
-        if (phase === 'duty') renderDuty();
-        fitAllMenus();
-        refitAll();
+        applyScheduleData(data);
+        try { localStorage.setItem('zbt_tv_schedule_cache', JSON.stringify(data)); } catch (e) {}
       } catch (err) {
         console.error('Duty API failed:', err);
         var line = document.getElementById('open-line');
-        if (line) { line.className = 'open-line'; line.innerHTML = icon('i-bolt') + '<span>Duty board offline</span>'; }
+        if (line && !lastScheduleData) {
+          line.className = 'open-line';
+          line.innerHTML = icon('i-bolt') + '<span>Duty board offline</span>';
+        }
+        clearTimeout(dutyRetryTimer);
+        dutyRetryTimer = setTimeout(loadKitchenDuty, 10000);
       }
     }
 
@@ -1192,31 +1236,31 @@
     }
 
     var wxCfg = { latitude: 40.4237, longitude: -86.9212, label: 'West Lafayette', timezone: TZ };
+    var lastWeatherData = null;
+    var wxRetryTimer = null;
 
-    async function loadWeather() {
-      try {
-        var url = 'https://api.open-meteo.com/v1/forecast'
-          + '?latitude=' + wxCfg.latitude + '&longitude=' + wxCfg.longitude
-          + '&current=temperature_2m,apparent_temperature,precipitation,weather_code'
-          + '&hourly=temperature_2m,precipitation_probability,precipitation,weather_code'
-          + '&temperature_unit=fahrenheit&precipitation_unit=inch&wind_speed_unit=mph&timezone=' + encodeURIComponent(wxCfg.timezone);
-        var data = await (await fetch(url)).json();
-        var c = data.current;
+    function applyWeatherData(data) {
+      if (!data || !data.current) return;
+      lastWeatherData = data;
+      var c = data.current;
 
-        // Current temperature and Feels like
-        document.getElementById('wx-temp').innerHTML = Math.round(c.temperature_2m) + '&deg;';
-        document.getElementById('wx-feels').innerHTML = Math.round(c.apparent_temperature) + '&deg;';
-        document.getElementById('wx-place').textContent = wxCfg.label || 'West Lafayette';
+      // Current temperature and Feels like
+      document.getElementById('wx-temp').innerHTML = Math.round(c.temperature_2m) + '&deg;';
+      document.getElementById('wx-feels').innerHTML = Math.round(c.apparent_temperature) + '&deg;';
+      document.getElementById('wx-place').textContent = wxCfg.label || 'West Lafayette';
 
-        var now = wx(c.weather_code);
-        document.getElementById('wx-icon').innerHTML = '<use href="#' + now[0] + '"/>';
-        document.getElementById('wx-cond').textContent = now[1];
+      var now = wx(c.weather_code);
+      document.getElementById('wx-icon').innerHTML = '<use href="#' + now[0] + '"/>';
+      document.getElementById('wx-cond').textContent = now[1];
 
-        // 8-hour Rain Timeline Graph & Status
-        var nowTime = new Date();
-        var start = data.hourly.time.findIndex(function (x) { return new Date(x) >= nowTime; });
-        if (start < 0) start = 0;
+      // 8-hour Rain Timeline Graph & Status
+      var nowTime = new Date();
+      var start = (data.hourly && data.hourly.time)
+        ? data.hourly.time.findIndex(function (x) { return new Date(x) >= nowTime; })
+        : -1;
+      if (start < 0) start = 0;
 
+      if (data.hourly && data.hourly.time && data.hourly.time.length) {
         var isRainingNow = (c.precipitation > 0) || (c.weather_code >= 51 && c.weather_code <= 82);
         var rainAlert = null, rainMsg = null;
 
@@ -1292,11 +1336,42 @@
           }
           graphEl.innerHTML = graphHtml;
         }
+      }
 
-        if (booted) refitAll();
+      if (booted) refitAll();
+    }
+
+    function hydrateWeatherFromStorage() {
+      try {
+        var raw = localStorage.getItem('zbt_tv_weather_cache');
+        if (raw) {
+          var parsed = JSON.parse(raw);
+          if (parsed && parsed.current) applyWeatherData(parsed);
+        }
+      } catch (e) {
+        console.warn('Weather hydrate error:', e);
+      }
+    }
+
+    async function loadWeather() {
+      try {
+        var url = 'https://api.open-meteo.com/v1/forecast'
+          + '?latitude=' + wxCfg.latitude + '&longitude=' + wxCfg.longitude
+          + '&current=temperature_2m,apparent_temperature,precipitation,weather_code'
+          + '&hourly=temperature_2m,precipitation_probability,precipitation,weather_code'
+          + '&temperature_unit=fahrenheit&precipitation_unit=inch&wind_speed_unit=mph&timezone=' + encodeURIComponent(wxCfg.timezone);
+        var res = await fetch(url);
+        var data = await res.json();
+        if (!data || !data.current) throw new Error('Invalid weather data');
+        applyWeatherData(data);
+        try { localStorage.setItem('zbt_tv_weather_cache', JSON.stringify(data)); } catch (e) {}
       } catch (err) {
         console.error('Weather fetch error:', err);
-        document.getElementById('wx-cond').textContent = 'Unavailable';
+        if (!lastWeatherData) {
+          document.getElementById('wx-cond').textContent = 'Unavailable';
+        }
+        clearTimeout(wxRetryTimer);
+        wxRetryTimer = setTimeout(loadWeather, 30000);
         if (booted) refitAll();
       }
     }
@@ -1304,61 +1379,81 @@
     // ---------- LATE PLATES ----------
     var lpPages = [], lpPage = 0, lpEnabled = false, lpShowNames = true, lpPageCount = 1;
     var MEAL_ORDER = ['lunch', 'dinner'];
+    var lastPlatesData = null;
+
+    function applyPlatesData(d) {
+      if (!d || !d.success) return;
+      lastPlatesData = d;
+      var mealsEl = document.getElementById('lp-meals');
+      var namesEl = document.getElementById('lp-names');
+      if (!mealsEl || !namesEl) return;
+
+      var meals = d.meals || {};
+      var show = MEAL_ORDER.filter(function (m) {
+        var x = meals[m];
+        if (!x) return false;
+        return !x.served || (x.toMake || 0) > 0 || (x.ready || 0) > 0;
+      });
+      if (!show.length) show = MEAL_ORDER.filter(function (m) { return meals[m]; });
+
+      mealsEl.innerHTML = show.map(function (m) {
+        var x = meals[m] || {};
+        return '<div class="lp-meal"><div class="lp-meal-top">'
+          + '<span class="lp-meal-name">' + esc(m) + '</span>'
+          + '<span class="lp-cut">Cutoff ' + esc(x.cutoff || '--') + '</span></div>'
+          + '<div class="lp-nums">'
+          + '<span class="lp-num make"><b>' + (x.toMake || 0) + '</b><span>to make</span></span>'
+          + '<span class="lp-num ready"><b>' + (x.ready || 0) + '</b><span>ready</span></span>'
+          + '</div>'
+          + (x.closed ? '<div class="lp-closed">Not taking requests</div>' : '')
+          + '</div>';
+      }).join('');
+
+      var plates = (d.plates || []).filter(function (p) { return show.indexOf(p.meal) !== -1; });
+      plates.sort(function (a, b) { return (b.status === 'ready') - (a.status === 'ready'); });
+      document.getElementById('lp-total').textContent = plates.length
+        ? plates.length + ' PLATE' + (plates.length === 1 ? '' : 'S') : 'NONE';
+
+      if (!lpShowNames || !plates.length) {
+        namesEl.innerHTML = plates.length ? '' : '<div class="lp-msg">No plates requested yet.</div>';
+        lpPages = [];
+        runProgress('lp-prog', 0, 0, 0);
+        return;
+      }
+      lpPages = plates;
+      lpPage = 0;
+      paintPlates();
+    }
+
+    function hydratePlatesFromStorage() {
+      try {
+        var raw = localStorage.getItem('zbt_tv_plates_cache');
+        if (raw) {
+          var parsed = JSON.parse(raw);
+          if (parsed && parsed.success) applyPlatesData(parsed);
+        }
+      } catch (e) {
+        console.warn('Plates hydrate error:', e);
+      }
+    }
 
     async function loadLatePlates() {
       if (!lpEnabled) return;
       try {
         var d = await (await fetch('/api/tv/late-plates')).json();
-        var mealsEl = document.getElementById('lp-meals');
-        var namesEl = document.getElementById('lp-names');
-
         if (!d.success) {
-          mealsEl.innerHTML = '';
-          namesEl.innerHTML = '<div class="lp-msg">' + esc(d.reason || 'Queue unavailable') + '</div>';
-          document.getElementById('lp-total').textContent = '--';
-          runProgress('lp-prog', 0, 0, 0);
+          if (!lastPlatesData) {
+            var mealsEl = document.getElementById('lp-meals');
+            var namesEl = document.getElementById('lp-names');
+            if (mealsEl) mealsEl.innerHTML = '';
+            if (namesEl) namesEl.innerHTML = '<div class="lp-msg">' + esc(d.reason || 'Queue unavailable') + '</div>';
+            document.getElementById('lp-total').textContent = '--';
+            runProgress('lp-prog', 0, 0, 0);
+          }
           return;
         }
-
-        var meals = d.meals || {};
-        // Once a meal is served and empty it is history; showing it competes with
-        // the meal the kitchen is actually cooking for.
-        var show = MEAL_ORDER.filter(function (m) {
-          var x = meals[m];
-          if (!x) return false;
-          return !x.served || (x.toMake || 0) > 0 || (x.ready || 0) > 0;
-        });
-        if (!show.length) show = MEAL_ORDER.filter(function (m) { return meals[m]; });
-
-        mealsEl.innerHTML = show.map(function (m) {
-          var x = meals[m] || {};
-          return '<div class="lp-meal"><div class="lp-meal-top">'
-            + '<span class="lp-meal-name">' + esc(m) + '</span>'
-            + '<span class="lp-cut">Cutoff ' + esc(x.cutoff || '--') + '</span></div>'
-            + '<div class="lp-nums">'
-            + '<span class="lp-num make"><b>' + (x.toMake || 0) + '</b><span>to make</span></span>'
-            + '<span class="lp-num ready"><b>' + (x.ready || 0) + '</b><span>ready</span></span>'
-            + '</div>'
-            + (x.closed ? '<div class="lp-closed">Not taking requests</div>' : '')
-            + '</div>';
-        }).join('');
-
-        var plates = (d.plates || []).filter(function (p) { return show.indexOf(p.meal) !== -1; });
-        // Ready first: a brother walking past wants to know his plate is waiting
-        // for him more than he wants to know somebody else's is still cooking.
-        plates.sort(function (a, b) { return (b.status === 'ready') - (a.status === 'ready'); });
-        document.getElementById('lp-total').textContent = plates.length
-          ? plates.length + ' PLATE' + (plates.length === 1 ? '' : 'S') : 'NONE';
-
-        if (!lpShowNames || !plates.length) {
-          namesEl.innerHTML = plates.length ? '' : '<div class="lp-msg">No plates requested yet.</div>';
-          lpPages = [];
-          runProgress('lp-prog', 0, 0, 0);
-          return;
-        }
-        lpPages = plates;
-        lpPage = 0;
-        paintPlates();
+        applyPlatesData(d);
+        try { localStorage.setItem('zbt_tv_plates_cache', JSON.stringify(d)); } catch (e) {}
       } catch (err) {
         console.error('Late plate fetch failed:', err);
       }
@@ -1614,12 +1709,22 @@
         document.getElementById(k + '-label').textContent = m.label || k;
         document.getElementById(k + '-time').textContent = m.serve || '';
         if (!apiLabels[k]) document.getElementById(k + '-cleanup').textContent = m.cleanup || 'Cleanup';
-        renderMenu(k + '-menu', todayMenu[k]);
-        recapText[k] = (todayMenu[k] && todayMenu[k].length) ? todayMenu[k].join(' · ') : 'No menu was posted';
+
+        if (todayMenu[k] && todayMenu[k].length) {
+          liveMenuData.today[k] = todayMenu[k];
+        }
+        var activeToday = liveMenuData.today[k] || [];
+        renderMenu(k + '-menu', activeToday);
+        recapText[k] = activeToday.length ? activeToday.join(' · ') : 'No menu was posted';
         document.getElementById(k + '-recap-menu').textContent = recapText[k];
         document.getElementById('tmr-' + k + '-label').textContent = m.label || k;
+
+        if (tmrMenu[k] && tmrMenu[k].length) {
+          liveMenuData.tomorrow[k] = tmrMenu[k];
+        }
+        var activeTmr = liveMenuData.tomorrow[k] || [];
         document.getElementById('tmr-' + k).textContent =
-          (tmrMenu[k] && tmrMenu[k].length) ? tmrMenu[k].join(' · ') : 'Not posted yet';
+          activeTmr.length ? activeTmr.join(' · ') : 'Not posted yet';
       });
       fitAllMenus();
       document.getElementById('tmr-date').textContent =
@@ -1730,6 +1835,11 @@
       imgRelayout = setTimeout(relayoutAnnouncements, 150);
     }, true);
 
+    // Hydrate offline/cached data instantly before any network calls complete!
+    hydrateScheduleFromStorage();
+    hydrateWeatherFromStorage();
+    hydratePlatesFromStorage();
+
     booted = true;
     setInterval(tick, 1000);
     tick();
@@ -1738,9 +1848,9 @@
     loadKitchenDuty();
     loadWeather();
     setInterval(loadConfig, 1000);
-    setInterval(loadKitchenDuty, 120000);
+    setInterval(loadKitchenDuty, 45000);
     setInterval(loadLatePlates, 20000);
-    setInterval(loadWeather, 600000);
+    setInterval(loadWeather, 300000);
   </script>
 </body>
 </html>
