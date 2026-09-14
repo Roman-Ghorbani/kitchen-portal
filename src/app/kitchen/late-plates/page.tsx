@@ -56,20 +56,15 @@ export default async function KitchenLatePlatesPage({
     );
   }
 
-  const date = params.date ?? todayInEastern();
-  const pretty = parseISO(date).toLocaleDateString('en-US', {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-    timeZone: 'UTC',
-  });
+  const isExplicitDate = !!params.date;
+  const initialDate = params.date ?? todayInEastern();
 
   return (
     <div className="kq-shell" data-theme="light">
       <KitchenQueue
         device={params.device!}
-        date={date}
-        prettyDate={pretty}
+        initialDate={initialDate}
+        isExplicitDate={isExplicitDate}
         // Opens on whatever the kitchen is working on now, so nobody has to
         // pick a meal before they can see their work.
         initialMeal={currentKitchenMeal()}

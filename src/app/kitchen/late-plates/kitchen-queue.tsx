@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
+import { todayInEastern, parseISO, houseClockMinutes } from '../../../lib/dates.ts';
 import { RememberToken } from './token-recovery.tsx';
 import { MenuEditor } from './menu-editor.tsx';
 
@@ -133,15 +134,16 @@ function byRequestedAt(a: Plate, b: Plate): number {
 
 export function KitchenQueue({
   device,
-  date,
-  prettyDate,
+  initialDate,
+  isExplicitDate = false,
   initialMeal,
 }: {
   device: string;
-  date: string;
-  prettyDate: string;
+  initialDate: string;
+  isExplicitDate?: boolean;
   initialMeal: MealName;
 }) {
+  const [activeDate, setActiveDate] = useState<string>(initialDate);
   const [view, setView] = useState<KioskView>('plates');
   const [data, setData] = useState<Payload | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -160,40 +162,125 @@ export function KitchenQueue({
 
   const STALE_THRESHOLD_MS = 120_000; // 2 minutes
 
+  const prettyDate = parseISO(activeDate).toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    timeZone: 'UTC',
+  });
+
   const load = useCallback(async () => {
     try {
-      // all=1 so cancelled and declined plates are visible here. A brother who
-      // cancelled silently vanishing from this screen is exactly the bug the
-      // chefs would never report and never trust the tool again after.
-      const res = await fetch(
-        `/api/late-plates?date=${date}&all=1&device=${encodeURIComponent(device)}`,
-        { cache: 'no-store' },
-      );
+      // In live kiosk mode (isExplicitDate is false), always query without date
+      // so the server resolves the canonical current day in Eastern Time.
+      const url = isExplicitDate
+        ? `/api/late-plates?date=${activeDate}&all=1&device=${encodeURIComponent(device)}`
+        : `/api/late-plates?all=1&device=${encodeURIComponent(device)}`;
+      const res = await fetch(url, { cache: 'no-store' });
       if (!res.ok) throw new Error(`Server said ${res.status}`);
-      setData((await res.json()) as Payload);
+      const payload = (await res.json()) as Payload;
+
+      if (!isExplicitDate && payload.date && payload.date !== activeDate) {
+        // Day boundary crossed! Update active date and current meal.
+        setActiveDate(payload.date);
+        if (payload.currentMeal) {
+          setMeal(payload.currentMeal);
+        }
+      }
+
+      setData(payload);
       setError(null);
       setLastUpdated(Date.now());
       setIsDisconnected(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not reach the server');
     }
-  }, [date, device]);
+  }, [activeDate, device, isExplicitDate]);
 
+  // 1. Regular polling loop
   useEffect(() => {
     load();
     const timer = setInterval(load, 5_000);
     return () => clearInterval(timer);
   }, [load]);
 
+  // 2. Hardware / Browser Wake & Reconnection Handlers
+  useEffect(() => {
+    const onWakeOrOnline = () => {
+      if (document.visibilityState === 'visible') {
+        if (!isExplicitDate) {
+          const liveDate = todayInEastern();
+          if (liveDate !== activeDate) {
+            setActiveDate(liveDate);
+          }
+        }
+        load();
+      }
+    };
+    const onFocus = () => {
+      load();
+    };
+    const onOnline = () => {
+      setIsDisconnected(false);
+      load();
+    };
+
+    document.addEventListener('visibilitychange', onWakeOrOnline);
+    window.addEventListener('focus', onFocus);
+    window.addEventListener('online', onOnline);
+
+    return () => {
+      document.removeEventListener('visibilitychange', onWakeOrOnline);
+      window.removeEventListener('focus', onFocus);
+      window.removeEventListener('online', onOnline);
+    };
+  }, [activeDate, isExplicitDate, load]);
+
+  // 3. Midnight Rollover & Off-Hours Maintenance Watchdog (4:00 AM Eastern)
+  useEffect(() => {
+    const watchdogTimer = setInterval(() => {
+      if (!isExplicitDate) {
+        const liveDate = todayInEastern();
+        if (liveDate !== activeDate) {
+          setActiveDate(liveDate);
+          load();
+        }
+      }
+
+      // Scheduled 4:00 AM off-hours automatic reload for 24/7 kiosk health
+      // (ensures clean DOM, refreshed JS heap, updated Next.js build chunks)
+      const minutesOfDay = houseClockMinutes();
+      const isOffHours = minutesOfDay >= 240 && minutesOfDay < 245; // 4:00 AM - 4:05 AM
+      const uptimeHours = (Date.now() - mountedAt) / 3_600_000;
+
+      if (isOffHours && uptimeHours > 2) {
+        // Never reload while a chef has an active modal open
+        if (!confirming && !declining && !editingCutoff) {
+          window.location.reload();
+        }
+      }
+    }, 15_000);
+
+    return () => clearInterval(watchdogTimer);
+  }, [activeDate, confirming, declining, editingCutoff, isExplicitDate, load, mountedAt]);
+
+  // 4. Stale Connection & Recovery Watchdog
   useEffect(() => {
     const checkInterval = setInterval(() => {
       const referenceTime = lastUpdated ?? mountedAt;
-      if (Date.now() - referenceTime > STALE_THRESHOLD_MS) {
+      const staleDuration = Date.now() - referenceTime;
+      if (staleDuration > STALE_THRESHOLD_MS) {
         setIsDisconnected(true);
+      }
+      // If disconnected for > 15 minutes, recover by reloading once online and idle
+      if (staleDuration > 15 * 60 * 1000 && navigator.onLine) {
+        if (!confirming && !declining && !editingCutoff) {
+          window.location.reload();
+        }
       }
     }, 1_000);
     return () => clearInterval(checkInterval);
-  }, [lastUpdated, mountedAt]);
+  }, [confirming, declining, editingCutoff, lastUpdated, mountedAt]);
 
   async function patch(
     plate: Plate,
@@ -240,7 +327,7 @@ export function KitchenQueue({
         {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ date, [m]: change }),
+          body: JSON.stringify({ date: activeDate, [m]: change }),
         },
       );
       const json = (await res.json()) as { ok?: boolean; message?: string };
@@ -302,7 +389,15 @@ export function KitchenQueue({
               role="tab"
               aria-selected={view === 'plates'}
               className={`kq-view-btn${view === 'plates' ? ' active' : ''}`}
-              onClick={() => setView('plates')}
+              onClick={() => {
+                if (!isExplicitDate) {
+                  const liveDate = todayInEastern();
+                  if (liveDate !== activeDate) {
+                    setActiveDate(liveDate);
+                  }
+                }
+                setView('plates');
+              }}
             >
               <span className="kq-view-icon">🍽️</span>
               <span>Late Plates</span>
@@ -314,7 +409,15 @@ export function KitchenQueue({
               role="tab"
               aria-selected={view === 'menus'}
               className={`kq-view-btn${view === 'menus' ? ' active' : ''}`}
-              onClick={() => setView('menus')}
+              onClick={() => {
+                if (!isExplicitDate) {
+                  const liveDate = todayInEastern();
+                  if (liveDate !== activeDate) {
+                    setActiveDate(liveDate);
+                  }
+                }
+                setView('menus');
+              }}
             >
               <span className="kq-view-icon">📋</span>
               <span>Menu</span>
@@ -353,7 +456,7 @@ export function KitchenQueue({
       </header>
 
       {view === 'menus' ? (
-        <MenuEditor device={device} todayIso={date} />
+        <MenuEditor device={device} todayIso={activeDate} />
       ) : (
         <div className="kq-queue-view">
           {error && <div className="kq-error">{error}</div>}

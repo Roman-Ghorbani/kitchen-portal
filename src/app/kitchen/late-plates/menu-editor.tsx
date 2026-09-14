@@ -111,6 +111,37 @@ export function MenuEditor({ device, todayIso }: MenuEditorProps) {
     }
   }, [device]);
 
+  // Sync with live today if todayIso changes (e.g., date boundary crossed or tab re-opened)
+  useEffect(() => {
+    const liveToday = todayIso || todayInEastern();
+    const liveMonday = mondayOf(liveToday);
+    if (!isDirtyRef.current) {
+      setSelectedDate(liveToday);
+      setWeekStart(liveMonday);
+    }
+  }, [todayIso]);
+
+  // When screen wakes up or gains focus while on menu tab, refresh menus and align current week
+  useEffect(() => {
+    const onWake = () => {
+      if (document.visibilityState === 'visible') {
+        const liveToday = todayIso || todayInEastern();
+        const liveMonday = mondayOf(liveToday);
+        if (!isDirtyRef.current) {
+          setSelectedDate(liveToday);
+          setWeekStart(liveMonday);
+        }
+        loadMenus(liveMonday);
+      }
+    };
+    document.addEventListener('visibilitychange', onWake);
+    window.addEventListener('focus', onWake);
+    return () => {
+      document.removeEventListener('visibilitychange', onWake);
+      window.removeEventListener('focus', onWake);
+    };
+  }, [loadMenus, todayIso]);
+
   useEffect(() => {
     loadMenus(weekStart);
   }, [loadMenus, weekStart]);
@@ -231,8 +262,9 @@ export function MenuEditor({ device, todayIso }: MenuEditorProps) {
     if (isDirtyRef.current) {
       performSave(selectedDateRef.current);
     }
-    setWeekStart(currentWeekMonday);
-    setSelectedDate(actualToday);
+    const liveToday = todayIso || todayInEastern();
+    setWeekStart(mondayOf(liveToday));
+    setSelectedDate(liveToday);
     setSaveStatus(null);
   };
 

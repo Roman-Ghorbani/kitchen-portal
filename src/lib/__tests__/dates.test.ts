@@ -13,6 +13,8 @@ import {
   lastChapterOnOrBefore,
   weekDueForPosting,
   defaultScheduleMonday,
+  todayInEastern,
+  houseClockMinutes,
 } from '../dates.ts';
 
 describe('day indexing', () => {
@@ -166,5 +168,27 @@ describe('defaultScheduleMonday rollover', () => {
     // Monday Aug 24 2026, 8:00 AM EDT (12:00 UTC Aug 24)
     const monMorning = new Date('2026-08-24T12:00:00Z');
     assert.equal(defaultScheduleMonday(monMorning), '2026-08-24');
+  });
+});
+
+describe('todayInEastern and houseClockMinutes', () => {
+  test('todayInEastern computes date in US Eastern Time correctly regardless of UTC day', () => {
+    // 11:30 PM EDT on Sep 11 (03:30 UTC on Sep 12) -> should still be Sep 11 in Eastern
+    const lateFriday = new Date('2026-09-12T03:30:00Z');
+    assert.equal(todayInEastern(lateFriday), '2026-09-11');
+
+    // 12:01 AM EDT on Sep 14 (04:01 UTC on Sep 14) -> should be Sep 14 in Eastern
+    const earlyMonday = new Date('2026-09-14T04:01:00Z');
+    assert.equal(todayInEastern(earlyMonday), '2026-09-14');
+  });
+
+  test('houseClockMinutes computes accurate minutes from Eastern midnight', () => {
+    // 4:00 AM EDT on Sep 14 (08:00 UTC on Sep 14) -> 240 minutes
+    const fourAm = new Date('2026-09-14T08:00:00Z');
+    assert.equal(houseClockMinutes(fourAm), 240);
+
+    // 4:04 AM EDT -> 244 minutes (within 4:00-4:05 AM window)
+    const fourOhFourAm = new Date('2026-09-14T08:04:00Z');
+    assert.equal(houseClockMinutes(fourOhFourAm), 244);
   });
 });
