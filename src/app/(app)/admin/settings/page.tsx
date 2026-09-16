@@ -2,12 +2,10 @@ import { redirect } from 'next/navigation';
 
 import { getSession } from '../../../../lib/session.ts';
 import { getActiveSemester } from '../../../../lib/week-service.ts';
-import { DEFAULT_LATE_PLATE_DAYS, type MealDayConfig, type Meal } from '../../../../lib/types.ts';
+import { type MealDayConfig, type Meal } from '../../../../lib/types.ts';
 import { AppShell } from '../../shell.tsx';
+import Link from 'next/link';
 import { MealGrid } from './meal-grid.tsx';
-import { LatePlateMealGrid } from './late-plate-meal-grid.tsx';
-import { LatePlateToggle } from './late-plate-toggle.tsx';
-import { LatePlateSettingsForm } from './late-plate-settings-form.tsx';
 import { KioskLink } from './kiosk-link.tsx';
 
 export const dynamic = 'force-dynamic';
@@ -15,13 +13,11 @@ export const dynamic = 'force-dynamic';
 export default async function SettingsPage() {
   const session = await getSession();
   if (!session) redirect('/signin');
-  if (session.role !== 'admin') redirect('/my-shifts');
+  if (session.role !== 'admin') redirect('/');
 
   const semester = await getActiveSemester();
   const mealDays = semester.mealDays as MealDayConfig;
-  const latePlateDays = (semester.latePlateDays ?? DEFAULT_LATE_PLATE_DAYS) as MealDayConfig;
   const slotSizes = semester.slotSizes as Record<Meal, number>;
-  const latePlatesEnabled = semester.latePlatesEnabled ?? true;
 
   return (
     <AppShell
@@ -43,32 +39,29 @@ export default async function SettingsPage() {
 
       <div className="card card-pad" style={{ marginTop: 16 }}>
         <h2 className="section-title" style={{ marginTop: 0 }}>
-          Late plate schedule
+          Late plates
         </h2>
         <p style={{ fontSize: 13, color: 'var(--ink-400)', marginTop: 0 }}>
-          Configure which days and meals brothers are allowed to request late plates.
-          For example, turn off Sundays and Saturdays if the house does not cook or prepare late plates on weekends (even if duty shifts or kitchen cleanup are assigned).
+          Which days requests are open, whether the tool is on at all, and the
+          banner the house sees now live on the Late plates page, next to the
+          queue they affect.
         </p>
-        <LatePlateMealGrid initial={latePlateDays} />
+        <Link className="btn sm" href="/admin/late-plates">
+          Go to Late plates &rarr;
+        </Link>
       </div>
 
       <div className="card card-pad" style={{ marginTop: 16 }}>
         <h2 className="section-title" style={{ marginTop: 0 }}>
-          Late plate tool
+          Kitchen TV
         </h2>
         <p style={{ fontSize: 13, color: 'var(--ink-400)', marginTop: 0 }}>
-          Control brother access to the late plate request system. Keep paused
-          while testing live so brothers can see where the tool is without
-          submitting requests before the kitchen is ready.
+          The dining room board: panels, announcements and display calibration.
+          Opens the console outside this app.
         </p>
-        <LatePlateToggle initialEnabled={latePlatesEnabled} />
-        
-        <hr style={{ margin: '24px 0', borderColor: 'var(--line-strong)' }} />
-        
-        <LatePlateSettingsForm 
-          defaultMessage={semester.latePlateMessage} 
-          defaultLogo={semester.logoUrl} 
-        />
+        <a className="btn sm" href="/tv/admin.html">
+          Open the TV console &rarr;
+        </a>
       </div>
 
       <div className="card card-pad" style={{ marginTop: 16 }}>

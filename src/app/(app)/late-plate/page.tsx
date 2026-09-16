@@ -8,7 +8,8 @@
 
 import { redirect } from 'next/navigation';
 
-import { getSession } from '../../../lib/session.ts';
+import { getSession, getViewAs } from '../../../lib/session.ts';
+import { getMemberById } from '../../../lib/member-queries.ts';
 import {
   addDays,
   todayInEastern,
@@ -64,16 +65,22 @@ function clock(hhmm: string): string {
 export default async function LatePlatePage() {
   const session = await getSession();
   if (!session) redirect('/signin');
-  if (session.role === 'admin') redirect('/admin');
+
+  const viewAs = await getViewAs();
+  if (session.role === 'admin' && !viewAs) redirect('/admin');
+  const memberId = viewAs ?? session.sub;
+  const readOnly = session.role === 'admin';
+
+  const previewed = readOnly ? await getMemberById(memberId) : null;
 
   const today = todayInEastern();
   const dates = Array.from({ length: HORIZON_DAYS }, (_, i) => addDays(today, i));
 
   const [windows, mine, dietary, recurring, menus, semester] = await Promise.all([
     mealWindowsForRange(dates),
-    myLatePlatesInRange(session.sub, dates[0], dates[dates.length - 1]),
-    getMemberDietary(session.sub),
-    getMemberRecurringPlates(session.sub),
+    myLatePlatesInRange(memberId, dates[0], dates[dates.length - 1]),
+    getMemberDietary(memberId),
+    getMemberRecurringPlates(memberId),
     // Fetch menus for all days in the horizon so every meal shows what's cooking
     Promise.all(dates.map((d) => getDayMenu(d))),
     getActiveSemester().catch(() => null),
@@ -108,6 +115,7 @@ export default async function LatePlatePage() {
     <AppShell
       session={session}
       active="/late-plate"
+      viewingAs={previewed?.name ?? null}
       title="Late Plate Dashboard"
       subtitle="Browse menus, schedule recurring late plates, and track pickup in the student fridge"
     >
@@ -144,7 +152,7 @@ export default async function LatePlatePage() {
           <img src={semester.logoUrl} alt="Logo" style={{ width: 64, height: 64, objectFit: 'contain', borderRadius: 8 }} />
         )}
         <div>
-          <h2 style={{ fontSize: 22, margin: '0 0 8px' }}>Hello, {session.name.split(' ')[0]}!</h2>
+          <h2 style={{ fontSize: 22, margin: '0 0 8px' }}>Hello, {(readOnly ? 'there' : session.name.split(' ')[0])}!</h2>
           <div style={{ fontSize: 15, color: 'var(--ink-400)' }}>
             {todayActivePlate ? (
               <span>
@@ -200,7 +208,7 @@ export default async function LatePlatePage() {
                     request={request}
                     dietary={dietary}
                     menu={todayMenu}
-                    latePlatesEnabled={latePlatesEnabled}
+                    latePlatesEnabled={latePlatesEnabled && !readOnly}
                     isToday
                     prominent
                   />
@@ -239,7 +247,7 @@ export default async function LatePlatePage() {
                       request={request}
                       dietary={dietary}
                       menu={dayMenu}
-                      latePlatesEnabled={latePlatesEnabled}
+                      latePlatesEnabled={latePlatesEnabled && !readOnly}
                       isToday={false}
                     />
                   ))}

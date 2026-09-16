@@ -54,7 +54,7 @@ fi
 # ---- rollback ------------------------------------------------------------
 if [ "$ROLLBACK" = true ]; then
   step "Rolling back to the previous version"
-  $SSH_CMD "$DROPLET" "cd $APP_DIR && git reset --hard HEAD@{1} && npm ci --silent && npm run build && sudo systemctl restart $SERVICE_NAME"
+  $SSH_CMD "$DROPLET" "cd $APP_DIR && git reset --hard HEAD@{1} && npm ci --silent && npm run build && pm2 restart all"
   sleep 4
   code=$(curl -s -o /dev/null -w '%{http_code}' "$SITE/schedule" || echo 000)
   [ "$code" = "200" ] && ok "rolled back, site is up" || die "rolled back but site returns $code"
@@ -90,7 +90,7 @@ ok "pushed $BRANCH ($(git rev-parse --short HEAD))"
 
 # ---- 3. back up the live database first ----------------------------------
 step "Backing up the live database"
-$SSH_CMD "$DROPLET" "sudo /usr/local/bin/kitchen-backup" >/dev/null 2>&1 \
+$SSH_CMD "$DROPLET" "cd $APP_DIR && node scripts/backup.cjs" >/dev/null 2>&1 \
   && ok "snapshot taken" \
   || warn "backup step failed - continuing, but check the droplet"
 

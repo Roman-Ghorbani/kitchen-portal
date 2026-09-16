@@ -6,9 +6,10 @@
  *   npm run db:restore -- /custom/source/kitchen.db
  */
 
-import { existsSync, mkdirSync, copyFileSync, readdirSync, unlinkSync } from 'node:fs';
+import { existsSync, mkdirSync, copyFileSync, readdirSync, unlinkSync, statSync, writeFileSync, rmSync, readFileSync } from 'node:fs';
 import { resolve, dirname, join } from 'node:path';
 import { execSync } from 'node:child_process';
+import { gunzipSync } from 'node:zlib';
 
 import Database from 'better-sqlite3';
 
@@ -33,15 +34,46 @@ if (!existsSync(SOURCE_DB)) {
   process.exit(1);
 }
 
-// Check if source is a gzip archive
+// Check if source is an archive
 let actualDb = SOURCE_DB;
-if (SOURCE_DB.endsWith('.gz')) {
+let tempExtractDir: string | null = null;
+
+if (SOURCE_DB.endsWith('.tar.gz') || SOURCE_DB.endsWith('.tgz')) {
+  tempExtractDir = join(HERE, '.restore-temp-' + Date.now());
+  mkdirSync(tempExtractDir, { recursive: true });
+  try {
+    execSync(`tar -xzf "${SOURCE_DB}" -C "${tempExtractDir}"`, { stdio: 'pipe' });
+    const extractedDb = join(tempExtractDir, 'latest', 'kitchen.db');
+    if (existsSync(extractedDb)) {
+      actualDb = extractedDb;
+    } else {
+      const findDb = (dir: string): string | null => {
+        for (const f of readdirSync(dir)) {
+          const fp = join(dir, f);
+          if (statSync(fp).isDirectory()) {
+            const found = findDb(fp);
+            if (found) return found;
+          } else if (f.endsWith('.db')) {
+            return fp;
+          }
+        }
+        return null;
+      };
+      actualDb = findDb(tempExtractDir) ?? SOURCE_DB;
+    }
+  } catch (err) {
+    console.error(`[kitchen-tracker restore] ERROR: Failed to extract tar archive ${SOURCE_DB}:`, err);
+    process.exit(1);
+  }
+} else if (SOURCE_DB.endsWith('.gz')) {
   const uncompressed = SOURCE_DB.slice(0, -3);
   try {
-    execSync(`gzip -dc "${SOURCE_DB}" > "${uncompressed}"`, { stdio: 'pipe' });
+    const compressedData = readFileSync(SOURCE_DB);
+    const decompressedData = gunzipSync(compressedData);
+    writeFileSync(uncompressed, decompressedData);
     actualDb = uncompressed;
   } catch (err) {
-    console.error(`[kitchen-tracker restore] ERROR: Failed to decompress ${SOURCE_DB}`, err);
+    console.error(`[kitchen-tracker restore] ERROR: Failed to decompress ${SOURCE_DB}:`, err);
     process.exit(1);
   }
 }
@@ -97,6 +129,10 @@ for (const envFile of ['.env.production', '.env.local', '.env']) {
     copyFileSync(srcEnv, dstEnv);
     console.log(`[kitchen-tracker restore] Restored environment file: ${envFile}`);
   }
+}
+
+if (tempExtractDir && existsSync(tempExtractDir)) {
+  try { rmSync(tempExtractDir, { recursive: true, force: true }); } catch {}
 }
 
 console.log(`[kitchen-tracker restore] Restore completed successfully.`);

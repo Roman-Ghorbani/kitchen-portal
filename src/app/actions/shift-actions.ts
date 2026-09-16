@@ -18,7 +18,8 @@ import type { AssignmentStatus } from '../../lib/types.ts';
 
 function refresh() {
   revalidatePath('/schedule');
-  revalidatePath('/my-shifts');
+  revalidatePath('/');
+  revalidatePath('/standings');
   revalidatePath('/admin');
   revalidatePath('/admin/attendance');
 }

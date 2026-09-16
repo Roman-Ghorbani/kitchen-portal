@@ -10,6 +10,8 @@ import {
   getActiveSemester,
   getScheduleHorizon,
 } from '../../../lib/week-service.ts';
+import { getOpenShifts } from '../../../lib/shift-service.ts';
+import { formatPoints } from '../../../lib/types.ts';
 import { mondayOf, addDays, parseISO, todayInEastern, formatEasternTimestamp, defaultScheduleMonday } from '../../../lib/dates.ts';
 import { AppShell } from '../shell.tsx';
 import { CreateWeekButton } from './create-week.tsx';
@@ -30,21 +32,34 @@ import { CopyAnnouncementButton } from './copy-announcement.tsx';
 export default async function AdminPage() {
   const session = await getSession();
   if (!session) redirect('/signin');
-  if (session.role !== 'admin') redirect('/my-shifts');
+  if (session.role !== 'admin') redirect('/');
 
-  const [semester, roster, weekRows, recentEvents, horizon] = await Promise.all([
-    getActiveSemester(),
-    db.select().from(members).where(eq(members.active, true)),
-    getLiveWeeks(),
-    db.select().from(events).orderBy(desc(events.createdAt)).limit(8),
-    getScheduleHorizon(),
-  ]);
+  const [semester, roster, weekRows, recentEvents, horizon, openShifts] =
+    await Promise.all([
+      getActiveSemester(),
+      db.select().from(members).where(eq(members.active, true)),
+      getLiveWeeks(),
+      db.select().from(events).orderBy(desc(events.createdAt)).limit(8),
+      getScheduleHorizon(),
+      getOpenShifts(),
+    ]);
 
   const juniors = roster.filter((m) => m.classYear === 'junior');
   const sophomores = roster.filter((m) => m.classYear === 'sophomore');
   const exempt = roster.filter((m) => m.exempt);
   const withPin = roster.filter((m) => m.pinHash !== null);
   const owing = roster.filter((m) => m.makeupDebt > 0);
+
+  // These two used to live on their own pages. The point spread was the whole
+  // reason to open the roster, and the open-seat count was buried in the board.
+  const eligiblePoints = roster.filter((m) => !m.exempt).map((m) => m.points);
+  const spread =
+    eligiblePoints.length > 0
+      ? Math.max(...eligiblePoints) - Math.min(...eligiblePoints)
+      : 0;
+  const signedInPct =
+    roster.length > 0 ? Math.round((withPin.length / roster.length) * 100) : 0;
+  const unclaimed = openShifts.filter((o) => o.date >= todayInEastern()).length;
 
   const today = todayInEastern();
   const currentMonday = defaultScheduleMonday();
@@ -66,35 +81,56 @@ export default async function AdminPage() {
       title="Dashboard"
       subtitle={`${semester.name} · ${semester.startsOn} to ${semester.endsOn}`}
     >
-      <div className="stat-grid">
-        <div className="card card-pad stat-card">
+      {/* One row, not three. These six tiles used to be spread across the
+          dashboard, the roster and the stats page, with exempt and make-up
+          counts repeated on all three. */}
+      <div className="stat-grid six">
+        <Link className="card card-pad stat-card" href="/admin/roster">
           <div className="label">On duty</div>
           <div className="value mono">{roster.length}</div>
           <div className="foot">
             {juniors.length} juniors · {sophomores.length} sophomores
           </div>
-        </div>
-        <div className="card card-pad stat-card">
-          <div className="label">Signed up</div>
+        </Link>
+        <Link className="card card-pad stat-card" href="/admin/roster?view=readiness">
+          <div className="label">Signed in</div>
           <div className="value mono">
-            {withPin.length}
-            <span style={{ fontSize: 16, color: 'var(--ink-400)' }}>
-              /{roster.length}
-            </span>
+            {signedInPct}
+            <span className="stat-val-sub">%</span>
           </div>
-          <div className="foot">have set a PIN</div>
-        </div>
+          <div className="foot">{withPin.length} have set a PIN</div>
+        </Link>
         <div className="card card-pad stat-card">
-          <div className="label">Exempt</div>
-          <div className="value mono">{exempt.length}</div>
-          <div className="foot">excluded from rotation</div>
+          <div className="label">Point spread</div>
+          <div className="value mono">{formatPoints(spread)}</div>
+          <div className="foot">
+            {spread <= 1 ? 'even — nobody behind' : 'most to least served'}
+          </div>
         </div>
-        <div className="card card-pad stat-card">
+        <Link
+          className={`card card-pad stat-card${unclaimed > 0 ? ' warn' : ''}`}
+          href="/schedule"
+        >
+          <div className="label">Up for grabs</div>
+          <div className="value mono">{unclaimed}</div>
+          <div className="foot">
+            {unclaimed === 0 ? 'nothing outstanding' : 'nobody has taken them'}
+          </div>
+        </Link>
+        <Link
+          className={`card card-pad stat-card${owing.length > 0 ? ' bad' : ''}`}
+          href="/admin/roster"
+        >
           <div className="label">Owe make-up</div>
           <div className="value mono">{owing.length}</div>
           <div className="foot">
             {owing.length === 0 ? 'nobody behind' : 'forced to front of queue'}
           </div>
+        </Link>
+        <div className="card card-pad stat-card">
+          <div className="label">Exempt</div>
+          <div className="value mono">{exempt.length}</div>
+          <div className="foot">out of the rotation</div>
         </div>
       </div>
 
@@ -122,7 +158,7 @@ export default async function AdminPage() {
       ) : (
         <>
           {activeWeeks.map((w) => {
-            const locked = w.status === 'locked' || w.status === 'complete';
+            const finished = w.status === 'complete';
             return (
               <div key={w.id} className="shift-row">
                 <div className="shift-when">
@@ -130,13 +166,13 @@ export default async function AdminPage() {
                   <div className="shift-crew">
                     {w.weekStart === currentMonday ? 'Running now' : 'Upcoming'}
                     {' · '}
-                    {locked
-                      ? 'locked, no changes from brothers'
-                      : 'open for conflicts and pickups'}
+                    {finished
+                      ? 'finished'
+                      : 'anyone can put a shift up for grabs, or take one'}
                   </div>
                 </div>
-                <span className={`tag ${locked ? 'locked' : 'ok'}`}>
-                  {locked ? 'Locked' : 'Open'}
+                <span className={`tag ${finished ? 'locked' : 'ok'}`}>
+                  {finished ? 'Finished' : 'Posted'}
                 </span>
                 <Link className="btn sm" href={`/admin/week?week=${w.weekStart}`}>
                   Manage

@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 
-import { getSession } from '../../../lib/session.ts';
+import { getSession, getViewAs } from '../../../lib/session.ts';
 import { getMemberById } from '../../../lib/member-queries.ts';
 import { getMyConflicts } from '../../actions/availability-actions.ts';
 import { getActiveSemester } from '../../../lib/week-service.ts';
@@ -10,14 +10,22 @@ import { AvailabilityForm, type DayState } from './availability-form.tsx';
 
 export const dynamic = 'force-dynamic';
 
+const DAY_NAMES = [
+  'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday',
+];
+
 export default async function AvailabilityPage() {
   const session = await getSession();
   if (!session) redirect('/signin');
-  if (session.role === 'admin') redirect('/admin');
+
+  const viewAs = await getViewAs();
+  if (session.role === 'admin' && !viewAs) redirect('/admin');
+  const memberId = viewAs ?? session.sub;
+  const readOnly = session.role === 'admin';
 
   const [member, conflicts, semester] = await Promise.all([
-    getMemberById(session.sub),
-    getMyConflicts(),
+    getMemberById(memberId),
+    getMyConflicts(memberId),
     getActiveSemester(),
   ]);
 
@@ -38,6 +46,7 @@ export default async function AvailabilityPage() {
     <AppShell
       session={session}
       active="/availability"
+      viewingAs={readOnly ? (member?.name ?? null) : null}
       title="Weekly Availability"
       subtitle={`${member.name} · ${meal === 'lunch' ? 'Lunch' : 'Dinner'} duty`}
     >
@@ -48,7 +57,30 @@ export default async function AvailabilityPage() {
         </span>
       </div>
       <div className="card card-pad">
-        <AvailabilityForm initial={initial} mealLabel={meal} />
+        {readOnly ? (
+          <div className="preview-readonly">
+            {initial.filter((d) => d.blocked).length === 0 ? (
+              <span className="note">No days blocked.</span>
+            ) : (
+              <ul className="preview-days">
+                {initial
+                  .filter((d) => d.blocked)
+                  .map((d) => (
+                    <li key={d.dayIndex}>
+                      <strong>{DAY_NAMES[d.dayIndex]}</strong>
+                      {d.note ? ` — ${d.note}` : ''}
+                    </li>
+                  ))}
+              </ul>
+            )}
+            <span className="note">
+              Read only while you are looking through somebody else&apos;s
+              account. Change it from his record instead.
+            </span>
+          </div>
+        ) : (
+          <AvailabilityForm initial={initial} mealLabel={meal} />
+        )}
       </div>
     </AppShell>
   );

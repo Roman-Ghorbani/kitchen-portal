@@ -1,3 +1,8 @@
+# Normalize everything to LF. Without this, a Windows editor re-saving a file
+# rewrites every line as CRLF and the next `git diff` shows the whole file as
+# changed, which makes review impossible.
+* text=auto eol=lf
+
 # Shell scripts and unit files run on Linux. Git's autocrlf would give them
 # Windows line endings on checkout here, and bash on the droplet then fails
 # with an unhelpful "bad interpreter" error. Force LF for anything the server

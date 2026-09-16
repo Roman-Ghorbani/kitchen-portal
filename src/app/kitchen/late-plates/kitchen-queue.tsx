@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { todayInEastern, parseISO, houseClockMinutes } from '../../../lib/dates.ts';
 import { RememberToken } from './token-recovery.tsx';
-import { MenuEditor } from './menu-editor.tsx';
+import { MenuEditor, hasUnsavedMenu } from './menu-editor.tsx';
 
 type KioskView = 'plates' | 'menus';
 
@@ -117,6 +117,38 @@ function prettyMinutes(minutes: number): string {
   return `${h12}:${String(wrapped % 60).padStart(2, '0')} ${h24 < 12 ? 'AM' : 'PM'}`;
 }
 
+/** "2026-09-18" on the house clock, from an ISO string. */
+function houseDateOf(iso: string): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/New_York',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date(iso));
+}
+
+/**
+ * When a plate was asked for, in terms a chef can act on.
+ *
+ * A request for tonight may have been placed days ago - recurring plates and
+ * people asking ahead both do it - and a bare "4:42 PM" on one of those says
+ * nothing useful and quietly implies it came in today. So same-day requests
+ * keep the clock time, and anything older says how long ago instead, without
+ * naming a date nobody needs.
+ */
+function askedLabel(requestedAt: string, mealDate: string): string {
+  const asked = houseDateOf(requestedAt);
+  if (asked === mealDate) return `asked ${clockOf(requestedAt)}`;
+
+  const days = Math.round(
+    (Date.parse(`${mealDate}T12:00:00Z`) - Date.parse(`${asked}T12:00:00Z`)) /
+      86_400_000,
+  );
+  if (days === 1) return 'asked yesterday';
+  if (days > 1) return `asked ${days} days ago`;
+  return `asked ${clockOf(requestedAt)}`;
+}
+
 /** "4:42 PM" on the house clock, from an ISO string. */
 function clockOf(iso: string | null): string {
   if (!iso) return '';
@@ -153,12 +185,18 @@ export function KitchenQueue({
   const [declining, setDeclining] = useState<Plate | null>(null);
   const [declineText, setDeclineText] = useState('');
   const [showHandled, setShowHandled] = useState(false);
+  const [handledView, setHandledView] = useState<Status | 'all'>('all');
+  const [dismissedCancels, setDismissedCancels] = useState<string[]>([]);
   const [editingCutoff, setEditingCutoff] = useState<MealName | null>(null);
   const [draftMinutes, setDraftMinutes] = useState(0);
   const [savingSettings, setSavingSettings] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<number | null>(null);
   const [isDisconnected, setIsDisconnected] = useState(false);
   const [mountedAt] = useState(() => Date.now());
+  // Drives the cutoff countdown. Minute granularity: this hangs on a kitchen
+  // wall all day and a ticking seconds readout is just noise from two feet
+  // away, where the only question is "have we got time or not".
+  const [nowMinutes, setNowMinutes] = useState(() => houseClockMinutes());
 
   const STALE_THRESHOLD_MS = 120_000; // 2 minutes
 
@@ -254,8 +292,10 @@ export function KitchenQueue({
       const uptimeHours = (Date.now() - mountedAt) / 3_600_000;
 
       if (isOffHours && uptimeHours > 2) {
-        // Never reload while a chef has an active modal open
-        if (!confirming && !declining && !editingCutoff) {
+        // Never reload out from under a chef: not while a modal is open, and
+        // not while a menu is part-typed either - the autosave lands 1.5s after
+        // the last keystroke, so this only ever waits moments.
+        if (!confirming && !declining && !editingCutoff && !hasUnsavedMenu()) {
           window.location.reload();
         }
       }
@@ -263,6 +303,12 @@ export function KitchenQueue({
 
     return () => clearInterval(watchdogTimer);
   }, [activeDate, confirming, declining, editingCutoff, isExplicitDate, load, mountedAt]);
+
+  // 3b. Cutoff countdown tick
+  useEffect(() => {
+    const t = setInterval(() => setNowMinutes(houseClockMinutes()), 10_000);
+    return () => clearInterval(t);
+  }, []);
 
   // 4. Stale Connection & Recovery Watchdog
   useEffect(() => {
@@ -274,7 +320,7 @@ export function KitchenQueue({
       }
       // If disconnected for > 15 minutes, recover by reloading once online and idle
       if (staleDuration > 15 * 60 * 1000 && navigator.onLine) {
-        if (!confirming && !declining && !editingCutoff) {
+        if (!confirming && !declining && !editingCutoff && !hasUnsavedMenu()) {
           window.location.reload();
         }
       }
@@ -357,6 +403,21 @@ export function KitchenQueue({
   const forMeal = (data?.latePlates ?? []).filter((p) => p.meal === meal);
   const toMake = forMeal.filter((p) => p.status === 'waiting').sort(byRequestedAt);
   const handled = forMeal.filter((p) => p.status !== 'waiting').sort(byRequestedAt);
+
+  // A cancellation that lands after cooking has started is a wasted plate, and
+  // it used to sit inside a collapsed section where nobody would see it. It
+  // comes out in front until a chef says he has seen it.
+  const freshCancels = forMeal.filter(
+    (p) => p.status === 'cancelled' && !dismissedCancels.includes(p.id),
+  );
+
+  const handledCounts = {
+    ready: handled.filter((p) => p.status === 'ready').length,
+    declined: handled.filter((p) => p.status === 'declined').length,
+    cancelled: handled.filter((p) => p.status === 'cancelled').length,
+  };
+  const handledShown =
+    handledView === 'all' ? handled : handled.filter((p) => p.status === handledView);
   const counts = data?.meals?.[meal];
 
   const totalToMake =
@@ -377,7 +438,16 @@ export function KitchenQueue({
             <div className="kq-offline-banner" role="alert">
               <span className="kq-offline-dot" aria-hidden="true" />
               <span>
-                <strong>NO NETWORK CONNECTION</strong> — Not updated in over 2 minutes
+                Showing what we had at{' '}
+              <strong>
+                {lastUpdated
+                  ? new Date(lastUpdated).toLocaleTimeString('en-US', {
+                      hour: 'numeric',
+                      minute: '2-digit',
+                    })
+                  : 'start-up'}
+              </strong>{' '}
+              — trying to reconnect
               </span>
             </div>
           )}
@@ -463,6 +533,44 @@ export function KitchenQueue({
 
           {data === null && !error && <div className="kq-empty">Loading…</div>}
 
+      {freshCancels.length > 0 && (
+        <div className="kq-cancel-alert" role="alert">
+          <span className="kq-cancel-mark" aria-hidden="true">
+            ✕
+          </span>
+          <div className="kq-cancel-text">
+            <span className="kq-cancel-title">
+              {freshCancels.map((p) => p.name).join(', ')}{' '}
+              {freshCancels.length === 1 ? 'cancelled' : 'cancelled'} — do not
+              make {freshCancels.length === 1 ? 'this plate' : 'these plates'}
+            </span>
+            <span className="kq-cancel-sub">
+              {freshCancels.length === 1 && freshCancels[0].cancelledAt
+                ? `Cancelled at ${clockOf(freshCancels[0].cancelledAt)}, after asking.`
+                : 'Cancelled after asking.'}{' '}
+              If you have already boxed {freshCancels.length === 1 ? 'it' : 'them'}, {freshCancels.length === 1 ? 'it is' : 'they are'} spare.
+            </span>
+          </div>
+          <button
+            className="kq-btn ghost"
+            onClick={() => setDismissedCancels((v) => [...v, ...freshCancels.map((p) => p.id)])}
+          >
+            Got it
+          </button>
+        </div>
+      )}
+
+      {counts && (
+        <CutoffCountdown
+          meal={meal}
+          cutoff={counts.cutoff}
+          cutoff24={counts.cutoff24}
+          nowMinutes={nowMinutes}
+          closed={counts.closed}
+          served={counts.served}
+        />
+      )}
+
       {counts && (
         <div className="kq-mealbar">
           <div className="kq-mealbar-row">
@@ -536,7 +644,7 @@ export function KitchenQueue({
                 className={`kq-card${plate.hasAllergen ? ' has-allergen' : ''}`}
               >
                 <div className="kq-card-main">
-                  <PlateHead plate={plate} />
+                  <PlateHead plate={plate} mealDate={activeDate} />
                   <Restrictions plate={plate} />
                   {plate.note && <div className="kq-note">“{plate.note}”</div>}
                 </div>
@@ -570,20 +678,42 @@ export function KitchenQueue({
             onClick={() => setShowHandled((v) => !v)}
             aria-expanded={showHandled}
           >
-            Handled
+            Already handled
             <span className="kq-section-count">{handled.length}</span>
             <span className="kq-section-chevron">{showHandled ? '▾' : '▸'}</span>
           </button>
 
           {showHandled && (
+            <div className="kq-handled-filter" role="tablist" aria-label="Which outcome">
+              {([
+                ['all', 'All', handled.length],
+                ['ready', 'Ready', handledCounts.ready],
+                ['declined', 'Declined', handledCounts.declined],
+                ['cancelled', 'Cancelled', handledCounts.cancelled],
+              ] as const).map(([key, label, n]) => (
+                <button
+                  key={key}
+                  role="tab"
+                  aria-selected={handledView === key}
+                  className={`kq-handled-tab is-${key}${handledView === key ? ' active' : ''}`}
+                  onClick={() => setHandledView(key as Status | 'all')}
+                  disabled={n === 0 && key !== 'all'}
+                >
+                  {label} <span className="kq-handled-n">{n}</span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {showHandled && (
             <div className="kq-list is-handled">
-              {handled.map((plate) => (
+              {handledShown.map((plate) => (
                 <article
                   key={plate.id}
                   className={`kq-card small is-${plate.status}`}
                 >
                   <div className="kq-card-main">
-                    <PlateHead plate={plate} />
+                    <PlateHead plate={plate} mealDate={activeDate} />
 
                     {plate.status === 'cancelled' ? (
                       <div className="kq-cancelled">
@@ -797,11 +927,85 @@ export function KitchenQueue({
   );
 }
 
-function PlateHead({ plate }: { plate: Plate }) {
+/**
+ * How long is left before requests close for this meal.
+ *
+ * The chefs check the kiosk at the cutoff and then make every plate in one go.
+ * They have started ten minutes early before now and left out somebody who got
+ * his request in just before the deadline, so the screen has to say plainly
+ * that the list is not final yet - and, just as importantly, say when it is.
+ */
+function CutoffCountdown({
+  meal,
+  cutoff,
+  cutoff24,
+  nowMinutes,
+  closed,
+  served,
+}: {
+  meal: MealName;
+  cutoff: string;
+  cutoff24: string;
+  nowMinutes: number;
+  closed: boolean;
+  served: boolean;
+}) {
+  if (!served) return null;
+
+  const cutoffMinutes = parseHHMM(cutoff24);
+  const left = cutoffMinutes - nowMinutes;
+
+  if (closed) {
+    return (
+      <div className="kq-countdown is-shut">
+        <span className="kq-countdown-lead">
+          {meal} is shut for the night. Nothing more can come in.
+        </span>
+      </div>
+    );
+  }
+
+  if (left <= 0) {
+    return (
+      <div className="kq-countdown is-closed">
+        <span className="kq-countdown-title">
+          Requests closed at {cutoff}. This is everyone.
+        </span>
+        <span className="kq-countdown-lead">
+          Nothing more can come in for {meal} — safe to start.
+        </span>
+      </div>
+    );
+  }
+
+  const hh = Math.floor(left / 60);
+  const mm = left % 60;
+  const big = hh > 0 ? `${hh}h ${String(mm).padStart(2, '0')}m` : `${mm}m`;
+  const words =
+    left === 1 ? '1 more minute' : hh > 0 ? `${hh}h ${mm}m to go` : `${left} minutes to go`;
+
+  return (
+    <div className="kq-countdown is-open">
+      <div className="kq-countdown-text">
+        <span className="kq-countdown-title">
+          {meal} requests close in {words}
+          <span className="kq-countdown-at">{cutoff}</span>
+        </span>
+        <span className="kq-countdown-lead">
+          More can still come in. Wait for this to run out before you start
+          plating — the list is not final yet.
+        </span>
+      </div>
+      <span className="kq-countdown-big">{big}</span>
+    </div>
+  );
+}
+
+function PlateHead({ plate, mealDate }: { plate: Plate; mealDate: string }) {
   return (
     <div className="kq-head-row">
       <span className="kq-name">{plate.name}</span>
-      <span className="kq-asked">asked {clockOf(plate.requestedAt)}</span>
+      <span className="kq-asked">{askedLabel(plate.requestedAt, mealDate)}</span>
     </div>
   );
 }

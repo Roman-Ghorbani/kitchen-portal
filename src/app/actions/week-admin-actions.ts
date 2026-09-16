@@ -4,8 +4,6 @@ import { revalidatePath } from 'next/cache';
 
 import { requireAdmin } from '../../lib/session.ts';
 import {
-  lockWeek,
-  unlockWeek,
   deleteWeek,
   reassignShift,
   removeFromShift,
@@ -20,21 +18,8 @@ function refresh() {
   revalidatePath('/admin');
   revalidatePath('/admin/week');
   revalidatePath('/schedule');
-  revalidatePath('/my-shifts');
-}
-
-export async function adminLockWeek(weekId: string): Promise<AdminResult> {
-  const admin = await requireAdmin();
-  const res = await lockWeek(weekId, admin.name);
-  if (res.ok) refresh();
-  return res;
-}
-
-export async function adminUnlockWeek(weekId: string): Promise<AdminResult> {
-  const admin = await requireAdmin();
-  const res = await unlockWeek(weekId, admin.name);
-  if (res.ok) refresh();
-  return res;
+  revalidatePath('/');
+  revalidatePath('/standings');
 }
 
 export async function adminDeleteWeek(weekId: string): Promise<AdminResult> {

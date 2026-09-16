@@ -7,6 +7,7 @@ import { parseISO, formatEasternTimestamp } from '../../../../../lib/dates.ts';
 import { formatPoints } from '../../../../../lib/types.ts';
 import { AppShell } from '../../../shell.tsx';
 import { AdminAvailabilityEditor } from './admin-availability.tsx';
+import { ViewAsButton } from './view-as-button.tsx';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,7 +35,7 @@ export default async function MemberDossierPage({
 }) {
   const session = await getSession();
   if (!session) redirect('/signin');
-  if (session.role !== 'admin') redirect('/my-shifts');
+  if (session.role !== 'admin') redirect('/');
 
   const { id } = await params;
   const dossier = await getMemberDossier(id);
@@ -50,9 +51,12 @@ export default async function MemberDossierPage({
       title={member.name}
       subtitle={`${member.classYear} · ${member.classYear === 'junior' ? 'lunch' : 'dinner'} duty`}
     >
-      <Link className="btn sm" href="/admin/roster">
-        ← Back to roster
-      </Link>
+      <div className="row-actions" style={{ marginBottom: 4 }}>
+        <Link className="btn sm" href="/admin/roster">
+          ← Back to roster
+        </Link>
+        <ViewAsButton memberId={member.id} name={member.name} />
+      </div>
 
       <div className="dossier-stats">
         {[
@@ -140,7 +144,6 @@ export default async function MemberDossierPage({
                     {s.noticeDays !== null
                       ? `${s.noticeDays} day${s.noticeDays === 1 ? '' : 's'} notice`
                       : 'notice unknown'}
-                    {s.locksAt && ` · flagging closed ${stamp(s.locksAt)}`}
                   </span>
                 </div>
 

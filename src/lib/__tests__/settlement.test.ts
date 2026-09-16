@@ -61,12 +61,27 @@ describe('what a shift is worth', () => {
     });
   });
 
-  test('an unresolved flag settles to nothing', () => {
+  test('a shift put up for grabs is still his until somebody takes it', () => {
+    // Asking for cover opens the seat but does not release him, so the point
+    // stays exactly where it was. It moves only on an actual cover, and comes
+    // back only when he is marked absent.
     assert.deepEqual(desiredOutcome(input({ status: 'flagged' })), {
-      recipientId: null,
-      points: 0,
+      recipientId: ALICE,
+      points: 1,
       debt: 0,
     });
+  });
+
+  test('putting a raised-rate shift up for grabs keeps its rate', () => {
+    assert.deepEqual(desiredOutcome(input({ status: 'flagged', multiplier: 2 })), {
+      recipientId: ALICE,
+      points: 2,
+      debt: 0,
+    });
+  });
+
+  test('nobody owes a make-up merely for asking', () => {
+    assert.equal(desiredOutcome(input({ status: 'flagged' })).debt, 0);
   });
 
   test('a bounty multiplier is what the coverer earns', () => {

@@ -54,88 +54,6 @@ function today(): string {
 /* ------------------------------------------------------------------ */
 
 /**
- * Locks a week: no more conflict flags, no more picking shifts up.
- *
- * Deliberately a manual switch rather than something that happens on a
- * schedule. The lock is what makes "you had a week to say something" true, so
- * the kitchen manager should be the one who decides the moment it falls, and
- * should be able to see plainly whether it has.
- */
-export async function lockWeek(
-  weekId: string,
-  actorName: string,
-): Promise<AdminResult> {
-  const w = await loadWeek(weekId);
-  if (!w) return { ok: false, message: 'No such week.' };
-  if (w.status === 'locked' || w.status === 'complete') {
-    return { ok: true, message: 'That week is already locked.' };
-  }
-
-  await db
-    .update(weeks)
-    .set({ status: 'locked', lockedAt: new Date() })
-    .where(eq(weeks.id, weekId));
-
-  const stillOpen = await db
-    .select({ id: assignmentsTable.id })
-    .from(assignmentsTable)
-    .innerJoin(slotsTable, eq(assignmentsTable.slotId, slotsTable.id))
-    .where(
-      and(eq(slotsTable.weekId, weekId), eq(assignmentsTable.status, 'flagged')),
-    );
-
-  await db.insert(events).values({
-    action: 'week.locked',
-    entityType: 'week',
-    entityId: weekId,
-    actorName,
-    summary:
-      `${actorName} locked the week of ${w.weekStart}` +
-      (stillOpen.length > 0
-        ? ` with ${stillOpen.length} shift(s) still needing cover`
-        : ''),
-    payload: { weekStart: w.weekStart, unresolved: stillOpen.length },
-  });
-
-  return {
-    ok: true,
-    message:
-      `Week of ${w.weekStart} is locked — no more flagging or pickups.` +
-      (stillOpen.length > 0
-        ? ` ${stillOpen.length} shift(s) still need cover; put somebody on them yourself.`
-        : ''),
-  };
-}
-
-/** Reopens a locked week for flagging and pickups. */
-export async function unlockWeek(
-  weekId: string,
-  actorName: string,
-): Promise<AdminResult> {
-  const w = await loadWeek(weekId);
-  if (!w) return { ok: false, message: 'No such week.' };
-  if (w.status === 'posted') {
-    return { ok: true, message: 'That week is already open.' };
-  }
-
-  await db
-    .update(weeks)
-    .set({ status: 'posted', lockedAt: null })
-    .where(eq(weeks.id, weekId));
-
-  await db.insert(events).values({
-    action: 'week.unlocked',
-    entityType: 'week',
-    entityId: weekId,
-    actorName,
-    summary: `${actorName} reopened the week of ${w.weekStart} for flagging`,
-    payload: { weekStart: w.weekStart },
-  });
-
-  return { ok: true, message: `Week of ${w.weekStart} is open again.` };
-}
-
-/**
  * Deletes a week outright. There is no hidden or half-posted state: a week is
  * either on the board or it does not exist.
  *
@@ -238,6 +156,14 @@ export async function reassignShift(
 
   if (next.id === ctx.assignment.memberId) {
     return { ok: false, message: 'They are already on this shift.' };
+  }
+
+  const expectedYear = YEAR_FOR_MEAL[ctx.slot.meal];
+  if (!opts.allowAnyClassYear && next.classYear !== expectedYear) {
+    return {
+      ok: false,
+      message: `${next.name} is a ${next.classYear} — ${ctx.slot.meal} is for ${expectedYear}s. Check allow wrong year if you are sure.`,
+    };
   }
 
   const clash = await db
@@ -366,6 +292,14 @@ export async function addToShift(
 
   if (existing.some((a) => a.memberId === memberId)) {
     return { ok: false, message: `${person.name} is already on this shift.` };
+  }
+
+  const expectedYear = YEAR_FOR_MEAL[slot.meal];
+  if (!opts.allowAnyClassYear && person.classYear !== expectedYear) {
+    return {
+      ok: false,
+      message: `${person.name} is a ${person.classYear} — ${slot.meal} is for ${expectedYear}s. Check allow wrong year if you are sure.`,
+    };
   }
 
   if (existing.length >= slot.size && !opts.allowOverfill) {

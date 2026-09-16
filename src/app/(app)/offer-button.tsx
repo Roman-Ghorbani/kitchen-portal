@@ -3,31 +3,22 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 
-import { flagMyShift } from '../../actions/shift-actions.ts';
+import { flagMyShift } from '../actions/shift-actions.ts';
 
-export function FlagButton({
-  assignmentId,
-  disabled,
-  disabledReason,
-}: {
-  assignmentId: string;
-  disabled: boolean;
-  disabledReason: string;
-}) {
+/**
+ * Puts your own shift up for grabs.
+ *
+ * Always available - there is no week lock and no deadline to be inside of.
+ * The copy has one job: make it obvious that this posts the seat to the board
+ * by itself and does not send a request to the kitchen manager for approval.
+ */
+export function OfferShiftButton({ assignmentId }: { assignmentId: string }) {
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState('');
   const [message, setMessage] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
   const [pending, startTransition] = useTransition();
   const router = useRouter();
-
-  if (disabled) {
-    return (
-      <span className="tag locked" title={disabledReason}>
-        {disabledReason}
-      </span>
-    );
-  }
 
   function submit() {
     startTransition(async () => {
@@ -45,13 +36,13 @@ export function FlagButton({
     <div className="flag-wrap">
       {!open ? (
         <button className="btn sm danger" onClick={() => setOpen(true)}>
-          Report Conflict / Can&apos;t Make It
+          Put this up for grabs
         </button>
       ) : (
         <div className="flag-form">
           <input
             className="field"
-            placeholder="Reason why you can't make it (e.g. Midterm exam)"
+            placeholder="Why, so the house knows (e.g. away game)"
             value={reason}
             autoFocus
             onChange={(e) => setReason(e.target.value)}
@@ -68,11 +59,13 @@ export function FlagButton({
               disabled={pending || !reason.trim()}
             >
               {pending && <span className="spinner" />}
-              {pending ? 'Sending…' : 'Submit Conflict to Roman'}
+              {pending ? 'Posting…' : 'Post it to the board'}
             </button>
           </div>
           <div className="note" style={{ marginTop: 8 }}>
-            Submits your conflict message to Roman. Your shift is opened for replacement while Roman reviews it.
+            Posts it straight to the board &mdash; anyone in the house can claim
+            it themselves. Worth 1&times; unless the kitchen manager raises it.
+            It stays yours until somebody takes it.
           </div>
         </div>
       )}

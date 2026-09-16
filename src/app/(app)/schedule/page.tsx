@@ -89,14 +89,14 @@ export default async function SchedulePage({
       <AppShell
         session={session}
         active="/schedule"
-        title="Duty Schedule"
+        title="The board"
         subtitle="Nothing posted yet"
       >
         <div className="alert warn">
           <span className="alert-title">No schedule posted yet</span>
           <span className="alert-body">
             {session?.role === 'admin'
-              ? 'Generate and post the first week from the dashboard.'
+              ? 'Draw and post the first week from the dashboard.'
               : 'Check back after Sunday chapter.'}
           </span>
         </div>
@@ -155,7 +155,7 @@ export default async function SchedulePage({
     <AppShell
       session={session}
       active="/schedule"
-      title="Duty Schedule"
+      title="The board"
       subtitle={
         lastDay
           ? `${shortDate(week.weekStart)} – ${shortDate(lastDay)}`
@@ -166,40 +166,12 @@ export default async function SchedulePage({
         <div className="alert info">
           <span className="alert-title">You are viewing as a guest</span>
           <span className="alert-body">
-            Anyone can see the schedule. Sign in to see your own shifts
-            highlighted, flag a conflict, or pick one up.
+            Anyone can see the board. Sign in to see your own shifts
+            highlighted, take a spare seat, or put one of yours up for grabs.
           </span>
           <Link className="btn gold sm" href="/signin">
             Sign in
           </Link>
-        </div>
-      )}
-
-      {session?.role === 'brother' && (
-        <div className="my-status-hero">
-          <div className="hero-left">
-            <div className="hero-greeting">
-              <span className="hero-welcome-text">Signed in as <strong>{session.name}</strong></span>
-              <span className="hero-points">
-                {dossier?.member.points ?? 0} kitchen pts
-              </span>
-            </div>
-            {myNextShift ? (
-              <div className="hero-shift-info">
-                <strong>Next Shift:</strong> {shortDate(myNextShift.date)} ({myNextShift.meal === 'lunch' ? 'Lunch Cleanup' : 'Dinner Cleanup'})
-              </div>
-            ) : (
-              <div className="hero-shift-info ok">
-                No remaining assigned shifts scheduled for today or upcoming!
-              </div>
-            )}
-          </div>
-          <div className="hero-right">
-            <CalendarSyncButton memberId={session.sub} />
-            <Link className="btn primary sm" href="/my-shifts">
-              My Shifts & History →
-            </Link>
-          </div>
         </div>
       )}
 
@@ -211,8 +183,7 @@ export default async function SchedulePage({
             {openCount} shift{openCount === 1 ? '' : 's'} still need cover
           </span>
           <span className="alert-body">
-            Anyone can take these and keep the point — look for the red
-            &ldquo;needs cover&rdquo; markers below.
+            Anyone can take these and keep the point, whatever their year.
           </span>
         </div>
       )}
@@ -237,8 +208,8 @@ export default async function SchedulePage({
         )}
 
         <div className="week-bar-right">
-          <span className={`tag ${week.status === 'posted' ? 'ok' : 'locked'}`}>
-            {week.status === 'posted' ? 'Open for conflicts' : 'Locked'}
+          <span className={`tag ${week.status === 'complete' ? 'locked' : 'ok'}`}>
+            {week.status === 'complete' ? 'Finished' : 'Posted'}
           </span>
           {/* Admin only: the group-chat post should come from Roman, not
               from whoever happens to open the page. */}

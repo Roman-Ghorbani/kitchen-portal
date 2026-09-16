@@ -60,8 +60,10 @@ export interface SettleDelta {
  *             stay in the pool at their current total
  * - no-show   nobody earns; the assignee owes a make-up shift
  * - excused   nobody earns and nothing is owed
- * - flagged   they handed it back in time, so the point returns with it;
- *             nothing is owed and they rejoin the pool at their old total
+ * - flagged   he has asked for cover but nobody has taken it yet, so the
+ *             shift is still his and the point stays with him. It moves only
+ *             when somebody actually covers, or comes back when he is marked
+ *             absent. Asking is not the same as being released.
  */
 export function desiredOutcome(input: SettleInput): SettleOutcome {
   switch (input.status) {
@@ -78,8 +80,11 @@ export function desiredOutcome(input: SettleInput): SettleOutcome {
     case 'no-show':
       return { recipientId: null, points: 0, debt: 1 };
 
-    case 'excused':
     case 'flagged':
+      // Open for anyone to take, but still his until they do.
+      return { recipientId: input.memberId, points: input.multiplier, debt: 0 };
+
+    case 'excused':
       return { recipientId: null, points: 0, debt: 0 };
   }
 }

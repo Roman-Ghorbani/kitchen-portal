@@ -19,11 +19,11 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  // Brothers check this on their phones; match the chrome to the app.
-  themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#f2f4f9' },
-    { media: '(prefers-color-scheme: dark)', color: '#0b1526' },
-  ],
+  // Brothers check this on their phones; match the chrome to the app. The app
+  // is dark whatever the phone is set to, so this is a single colour rather
+  // than a light/dark pair.
+  colorScheme: 'dark',
+  themeColor: '#0f1113',
 };
 
 export default function RootLayout({
@@ -44,7 +44,7 @@ export default function RootLayout({
           crossOrigin="anonymous"
         />
         <link
-          href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;600;700&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Public+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap"
           rel="stylesheet"
         />
       </head>

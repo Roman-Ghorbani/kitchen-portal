@@ -19,11 +19,17 @@ const common = {
 
 export function NavIcon({ name }: { name: string }) {
   switch (name) {
-    case 'my-shifts':
+    case 'home':
       return (
         <svg {...common} aria-hidden="true">
-          <path d="M9 11.5l2 2 4-4" />
-          <path d="M12 3l8 3.5v5c0 4.6-3.2 7.9-8 8.5-4.8-.6-8-3.9-8-8.5v-5z" />
+          <path d="M3 10.5 12 3l9 7.5" />
+          <path d="M5 9.8V20h14V9.8" />
+        </svg>
+      );
+    case 'standings':
+      return (
+        <svg {...common} aria-hidden="true">
+          <path d="M4 6h10M4 12h16M4 18h7" />
         </svg>
       );
     case 'late-plate':

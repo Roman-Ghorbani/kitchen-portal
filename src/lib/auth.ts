@@ -30,8 +30,18 @@ export function isValidPinFormat(pin: string): boolean {
 }
 
 /**
- * PINs that are trivially guessable by someone standing next to you. Blocking
- * these costs nothing and removes the most common impersonation shortcut.
+ * Deliberately allows everything, including 1234 and 0000.
+ *
+ * This used to reject guessable PINs, and the comment here still claimed it
+ * did long after the body had been emptied - which is worse than either
+ * behaviour, because it tells the next reader the opposite of the truth.
+ *
+ * Kept as a hook rather than deleted so the check has somewhere to go if the
+ * house ever wants it. It is off on purpose: a PIN here exists to make an
+ * action attributable, not to protect anything worth protecting, and the
+ * rejection was costing more in "it won't let me pick mine" than it saved.
+ * `auth.test.ts` asserts weak PINs are accepted, so the intent is recorded in
+ * the tests too.
  */
 export function isWeakPin(_pin: string): boolean {
   return false;

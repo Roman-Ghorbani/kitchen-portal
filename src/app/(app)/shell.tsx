@@ -1,24 +1,33 @@
 import Link from 'next/link';
 
 import { signOut } from '../actions/auth-actions.ts';
+import { stopViewingAs } from '../actions/preview-actions.ts';
 import type { SessionPayload } from '../../lib/auth.ts';
 import { NavIcon } from './nav-icons.tsx';
 
+/*
+ * Four destinations, and every one of them answers a different question.
+ * Availability is deliberately not here: it is set once a semester, so it
+ * lives on Home as a card rather than spending a permanent slot.
+ */
 const BROTHER_NAV = [
-  { href: '/schedule', label: 'Schedule', icon: 'schedule' },
-  { href: '/availability', label: 'Availability', icon: 'availability' },
-  { href: '/my-shifts', label: 'My Shifts', icon: 'my-shifts' },
-  { href: '/late-plate', label: 'Late Plate', icon: 'late-plate' },
+  { href: '/', label: 'Home', icon: 'home' },
+  { href: '/schedule', label: 'Board', icon: 'schedule' },
+  { href: '/late-plate', label: 'Plate', icon: 'late-plate' },
+  { href: '/standings', label: 'Standings', icon: 'standings' },
 ];
 
+/*
+ * Five, down from eight. The three that went were duplicates: Stats and the
+ * roster's own tiles both folded into the dashboard, week creation folded into
+ * Weeks, and the TV console moved under Settings where the rest of the
+ * hardware lives.
+ */
 const ADMIN_NAV = [
   { href: '/admin', label: 'Dashboard', icon: 'dashboard' },
-  { href: '/admin/late-plates', label: 'Late Plates', icon: 'late-plate' },
-  { href: '/tv/admin.html', label: 'TV Board', icon: 'settings' },
+  { href: '/admin/week', label: 'Weeks', icon: 'schedule' },
   { href: '/admin/roster', label: 'Roster', icon: 'roster' },
-  { href: '/admin/stats', label: 'Stats', icon: 'stats' },
-  { href: '/schedule', label: 'Schedule', icon: 'schedule' },
-  { href: '/admin/week', label: 'Manage week', icon: 'manage' },
+  { href: '/admin/late-plates', label: 'Late plates', icon: 'late-plate' },
   { href: '/admin/settings', label: 'Settings', icon: 'settings' },
 ];
 
@@ -30,19 +39,26 @@ export function AppShell({
   active,
   title,
   subtitle,
+  viewingAs,
   children,
 }: {
   session: SessionPayload | null;
   active: string;
   title: string;
   subtitle?: string;
+  /** Set when a manager is looking through a brother's account. */
+  viewingAs?: string | null;
   children: React.ReactNode;
 }) {
+  // While previewing, the manager gets the brother's four tabs - the point is
+  // to see what the house sees, and his own sidebar would defeat that.
   const nav = !session
     ? PUBLIC_NAV
-    : session.role === 'admin'
+    : session.role === 'admin' && !viewingAs
       ? ADMIN_NAV
-      : BROTHER_NAV;
+      : session.role === 'admin'
+        ? BROTHER_NAV
+        : BROTHER_NAV;
 
   return (
     <div className="shell">
@@ -77,6 +93,21 @@ export function AppShell({
       </nav>
 
       <div className="main">
+        {viewingAs && (
+          <div className="preview-bar">
+            <span className="preview-dot" aria-hidden="true" />
+            <span className="preview-text">
+              You are looking at <strong>{viewingAs}</strong>&apos;s account.
+              Nothing here can be changed.
+            </span>
+            <form action={stopViewingAs}>
+              <button className="btn sm" type="submit">
+                Back to the dashboard
+              </button>
+            </form>
+          </div>
+        )}
+
         <header className="topbar">
           <div>
             <h1>{title}</h1>

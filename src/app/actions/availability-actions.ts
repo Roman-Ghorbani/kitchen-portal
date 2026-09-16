@@ -100,11 +100,20 @@ export async function setStandingConflict(
   };
 }
 
-export async function getMyConflicts(): Promise<
-  { dayIndex: number; note: string | null }[]
-> {
+/**
+ * `forMemberId` is only ever passed by a manager looking through somebody's
+ * eyes; it is checked against the admin role here rather than trusted, so a
+ * brother cannot read another brother's conflicts by passing an id.
+ */
+export async function getMyConflicts(
+  forMemberId?: string,
+): Promise<{ dayIndex: number; note: string | null }[]> {
   const session = await getSession();
-  if (!session || session.role !== 'brother') return [];
+  if (!session) return [];
+
+  const memberId =
+    forMemberId && session.role === 'admin' ? forMemberId : session.sub;
+  if (session.role !== 'brother' && memberId === session.sub) return [];
 
   const semester = await getActiveSemester();
   const rows = await db
@@ -112,7 +121,7 @@ export async function getMyConflicts(): Promise<
     .from(standingConflicts)
     .where(
       and(
-        eq(standingConflicts.memberId, session.sub),
+        eq(standingConflicts.memberId, memberId),
         eq(standingConflicts.semesterId, semester.id),
       ),
     );

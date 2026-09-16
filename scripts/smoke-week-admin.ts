@@ -12,7 +12,7 @@ import assert from 'node:assert/strict';
 
 import { db } from '../src/db/index.ts';
 import { generateAndSaveWeek } from '../src/lib/week-service.ts';
-import { addDays } from '../src/lib/dates.ts';
+import { addDays, todayInEastern, mondayOf } from '../src/lib/dates.ts';
 import {
   members,
   weeks,
@@ -21,8 +21,6 @@ import {
   events,
 } from '../src/db/schema.ts';
 import {
-  lockWeek,
-  unlockWeek,
   deleteWeek,
   reassignShift,
   removeFromShift,
@@ -43,28 +41,24 @@ function check(label: string, fn: () => void) {
 async function main() {
   const allWeeks = await db.select().from(weeks);
   if (allWeeks.length === 0) throw new Error('no weeks - create one first');
-  const week = allWeeks[0];
+  const allSlots = await db.select().from(slotsTable);
+  const allAsg = await db.select().from(assignmentsTable);
+  const roster = await db.select().from(members);
+  const rosterById = new Map(roster.map((m) => [m.id, m]));
 
-  const slotRows = await db
-    .select()
-    .from(slotsTable)
-    .where(eq(slotsTable.weekId, week.id));
+  const lunch = allSlots.find((s) => {
+    if (s.meal !== 'lunch') return false;
+    const asgs = allAsg.filter((a) => a.slotId === s.id);
+    return asgs.length === s.size && asgs.every((a) => rosterById.get(a.memberId)?.classYear === 'junior');
+  }) ?? allSlots.find((s) => s.meal === 'lunch')!;
 
-  const lunchSlots = slotRows.filter((s) => s.meal === 'lunch').sort((x, y) => x.date.localeCompare(y.date));
-  const lunch = lunchSlots[0];
-  const dinner = slotRows.find((s) => s.meal === 'dinner')!;
-  void dinner;
+  const week = allWeeks.find((w) => w.id === lunch.weekId)!;
 
   const lunchAsg = await db
     .select()
     .from(assignmentsTable)
     .where(eq(assignmentsTable.slotId, lunch.id));
-  const dinnerAsg = await db
-    .select()
-    .from(assignmentsTable)
-    .where(eq(assignmentsTable.slotId, dinner.id));
 
-  const roster = await db.select().from(members);
   const onLunch = new Set(lunchAsg.map((a) => a.memberId));
 
   // Scheduled people hold points at rest, so assert the total is unchanged
@@ -75,7 +69,9 @@ async function main() {
   const spareJunior = roster.find(
     (m) => m.active && m.classYear === 'junior' && !onLunch.has(m.id),
   )!;
-  const aSophomore = roster.find((m) => m.active && m.classYear === 'sophomore')!;
+  const aSophomore = roster.find(
+    (m) => m.active && m.classYear === 'sophomore' && !onLunch.has(m.id),
+  )!;
 
   const target = lunchAsg[0];
   const originalMemberId = target.memberId;
@@ -144,24 +140,28 @@ async function main() {
   console.log('\nweek-level');
 
   // Lock and unlock the real week - both are reversible.
-  const locked = await lockWeek(week.id, 'Smoke');
-  check('locks the week', () => assert.ok(locked.ok, locked.message));
-  const afterLock = await db.select().from(weeks).where(eq(weeks.id, week.id));
-  check('status is locked', () => assert.equal(afterLock[0].status, 'locked'));
-  check('lock time recorded', () => assert.ok(afterLock[0].lockedAt !== null));
-
-  const unlocked = await unlockWeek(week.id, 'Smoke');
-  check('unlocks it again', () => assert.ok(unlocked.ok, unlocked.message));
+  // The week lock is gone: a week is posted or finished, and a brother can put
+  // a shift up for grabs at any time. What replaces the old lock assertions is
+  // the rule that asking does not release him.
+  const stillPosted = await db
+    .select({ status: weeks.status })
+    .from(weeks)
+    .where(eq(weeks.id, week.id));
+  check('a week is only ever posted or finished', () =>
+    assert.ok(['posted', 'complete'].includes(stillPosted[0].status)),
+  );
   const afterUnlock = await db.select().from(weeks).where(eq(weeks.id, week.id));
   check('status is open', () => assert.equal(afterUnlock[0].status, 'posted'));
 
   // Deletion is tested on a week this script creates, never on a real one.
   // An earlier version of this test deleted whichever week it found first and
   // destroyed a posted schedule.
-  const throwawayStart = addDays(
-    allWeeks.map((w) => w.weekStart).sort().at(-1)!,
-    7,
-  );
+  const latestStart = allWeeks.map((w) => w.weekStart).sort().at(-1)!;
+  let throwawayStart = addDays(latestStart, 7);
+  const curMon = mondayOf(todayInEastern());
+  if (throwawayStart <= curMon) {
+    throwawayStart = addDays(curMon, 7);
+  }
   const throwaway = await generateAndSaveWeek(throwawayStart);
   check('created a throwaway week to test deletion on', () =>
     assert.ok(throwaway.week.id),

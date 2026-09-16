@@ -13,8 +13,8 @@
     "db:studio": "node --env-file-if-exists=.env.production --env-file-if-exists=.env.local ./node_modules/drizzle-kit/bin.cjs studio",
     "db:backup": "node --env-file-if-exists=.env.production --env-file-if-exists=.env.local --experimental-strip-types scripts/backup-local.ts",
     "db:restore": "node --env-file-if-exists=.env.production --env-file-if-exists=.env.local --experimental-strip-types scripts/restore-local.ts",
-    "backup": "node scripts/backup.js",
-    "restore": "node scripts/restore.js"
+    "backup": "node scripts/backup.cjs",
+    "restore": "node scripts/restore.cjs"
   },
   "keywords": [],
   "author": "",

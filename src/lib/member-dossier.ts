@@ -37,7 +37,6 @@ export interface DossierShift {
   /** When the week carrying this shift went on the board. */
   postedAt: Date | null;
   /** When flagging closed for it. */
-  locksAt: Date | null;
   weekStatus: string;
   /** How much notice they had, in days, between posting and the shift. */
   noticeDays: number | null;
@@ -130,7 +129,6 @@ export async function getMemberDossier(memberId: string): Promise<Dossier | null
           ? (nameById.get(r.assignment.coveredByMemberId) ?? null)
           : null,
       postedAt: r.week.postedAt,
-      locksAt: r.week.locksAt,
       weekStatus: r.week.status,
       noticeDays: r.week.postedAt
         ? daysBetweenDates(r.week.postedAt, r.slot.date)

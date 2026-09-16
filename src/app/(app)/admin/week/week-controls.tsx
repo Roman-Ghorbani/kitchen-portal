@@ -4,8 +4,6 @@ import { useState, useTransition, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 
 import {
-  adminLockWeek,
-  adminUnlockWeek,
   adminDeleteWeek,
   adminRemove,
   adminAdd,
@@ -92,7 +90,7 @@ export function WeekControls({
   const { pending, msg, bad, run } = useAction();
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  const locked = status === 'locked' || status === 'complete';
+  const finished = status === 'complete';
 
   return (
     <div className="card card-pad wk-panel">
@@ -100,49 +98,33 @@ export function WeekControls({
         <div>
           <div className="wk-title">{weekLabel}</div>
           <div className="wk-sub">
-            {locked
-              ? 'Locked — nobody can flag a conflict or pick a shift up.'
-              : 'Open — brothers can flag conflicts and pick up shifts.'}
-            {hasStarted && ' This week has already started.'}
+            {finished
+              ? 'Finished — every shift on it has been and gone.'
+              : 'Posted. Brothers can put a shift up for grabs at any time, and anyone can take one.'}
+            {hasStarted && !finished && ' This week has already started.'}
           </div>
         </div>
-        <span className={`wk-state ${locked ? 'locked' : 'open'}`}>
-          {locked ? 'Locked' : 'Open'}
+        <span className={`wk-state ${finished ? 'locked' : 'open'}`}>
+          {finished ? 'Finished' : 'Posted'}
         </span>
       </div>
 
-      {unresolved > 0 && !locked && (
+      {unresolved > 0 && !finished && (
         <div className="alert bad" style={{ marginTop: 14, marginBottom: 0 }}>
           <span className="alert-title">
-            {unresolved} shift{unresolved === 1 ? '' : 's'} still need cover
+            {unresolved} seat{unresolved === 1 ? '' : 's'} nobody has taken
           </span>
           <span className="alert-body">
-            Locking now leaves {unresolved === 1 ? 'it' : 'them'} uncovered.
-            Put somebody on {unresolved === 1 ? 'it' : 'them'} first, or offer
-            more points.
+            {unresolved === 1 ? 'It is' : 'They are'} still the original
+            brother&apos;s until somebody claims{' '}
+            {unresolved === 1 ? 'it' : 'them'}. Put somebody on{' '}
+            {unresolved === 1 ? 'it' : 'them'} yourself, or raise what{' '}
+            {unresolved === 1 ? 'it is' : 'they are'} worth.
           </span>
         </div>
       )}
 
       <div className="row-actions">
-        {locked ? (
-          <button
-            className="btn"
-            disabled={pending}
-            onClick={() => run(() => adminUnlockWeek(weekId))}
-          >
-            Unlock — let people flag again
-          </button>
-        ) : (
-          <button
-            className="btn primary"
-            disabled={pending}
-            onClick={() => run(() => adminLockWeek(weekId))}
-          >
-            Lock this week
-          </button>
-        )}
-
         {!hasStarted &&
           (!confirmDelete ? (
             <button

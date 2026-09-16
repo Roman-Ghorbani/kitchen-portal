@@ -35,7 +35,6 @@ export interface MyShift {
   /** Points actually credited for it so far. */
   pointsAwarded: number;
   weekStatus: string;
-  weekLocksAt: Date | null;
   /** Who else is on that shift, so they know who to coordinate with. */
   crew: string[];
 }
@@ -131,7 +130,6 @@ export async function getMyShifts(memberId: string): Promise<MyShift[]> {
         multiplier: a.multiplier,
         pointsAwarded: a.pointsAwarded,
         weekStatus: week.status,
-        weekLocksAt: week.locksAt,
         // Whoever is actually turning up, which is the coverer where there is
         // one - the person you need to coordinate with is the one who shows up.
         crew: crewRows

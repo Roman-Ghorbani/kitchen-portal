@@ -68,9 +68,18 @@ async function memberName(id: string): Promise<string> {
 /* ------------------------------------------------------------------ */
 
 /**
- * A brother raises a conflict against his own shift while the week is still
- * open. This opens the seat to the whole house rather than removing the
- * obligation - if nobody takes it, it lands in the approvals queue.
+ * A brother puts his own shift up for grabs.
+ *
+ * Available on any shift at any time - there is no window and no deadline,
+ * because there is no longer a week lock for one to hang off. Asking posts the
+ * seat to the board for anyone in the house to claim at whatever the shift is
+ * worth, which is 1x unless the kitchen manager has raised it.
+ *
+ * Asking does NOT release him. The shift stays his, and the point stays with
+ * him, until somebody actually takes it. If nobody does and he does not serve,
+ * it is a no-show with make-up debt exactly as before. Without that rule a
+ * request five minutes before service costs nothing and the kitchen goes
+ * uncleaned.
  */
 export async function flagConflict(
   assignmentId: string,
@@ -82,21 +91,6 @@ export async function flagConflict(
 
   if (ctx.assignment.memberId !== actorMemberId) {
     return { ok: false, message: 'You can only flag your own shift.' };
-  }
-
-  if (ctx.week.status !== 'posted') {
-    return {
-      ok: false,
-      message:
-        'This week is locked — flagging closed at chapter. Contact Roman directly.',
-    };
-  }
-
-  if (ctx.week.locksAt && new Date() > ctx.week.locksAt) {
-    return {
-      ok: false,
-      message: 'The flag deadline for this week has passed.',
-    };
   }
 
   if (ctx.assignment.status !== 'assigned') {
@@ -122,9 +116,9 @@ export async function flagConflict(
     return { ok: false, message: 'That shift was just changed. Reload and retry.' };
   }
 
-  // Flagging gives the point back: they are no longer doing this shift.
-  // They owe nothing either - they said so in time - so they simply return
-  // to the pool at their previous total.
+  // Settlement is a no-op here by design: a shift put up for grabs is still
+  // his, so the point does not move. Re-running it keeps the recorded end
+  // state honest if a correction has touched this assignment before.
   await settleAssignment(assignmentId);
 
   const name = await memberName(actorMemberId);
@@ -136,21 +130,22 @@ export async function flagConflict(
     actorMemberId,
     actorName: name,
     summary:
-      `${name} flagged a conflict for ${ctx.slot.meal} on ${ctx.slot.date}` +
+      `${name} put his ${ctx.slot.meal} shift on ${ctx.slot.date} up for grabs` +
       (reason ? ` — "${reason}"` : ''),
     payload: {
       date: ctx.slot.date,
       meal: ctx.slot.meal,
       reason,
-      // Recorded so the log shows they flagged inside the window, not after.
-      flaggedAt: new Date().toISOString(),
-      deadline: ctx.week.locksAt?.toISOString() ?? null,
+      // There is no deadline to be inside of any more, so what the record
+      // needs is simply when he asked, and how much notice that gave.
+      askedAt: new Date().toISOString(),
     },
   });
 
   return {
     ok: true,
-    message: 'Flagged. The slot is now open for anyone to pick up.',
+    message:
+      'Posted. Anyone in the house can take it now — it stays yours until somebody does.',
   };
 }
 

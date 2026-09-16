@@ -14,10 +14,10 @@ export interface WeekActionResult {
 /**
  * Posts the first week of the semester.
  *
- * Called once. The normal cadence posts a week 8 days ahead at Sunday chapter,
- * but the semester begins the day after the first chapter, so week one cannot
- * get the full 7-day flag window. It is marked isBootstrap so the record shows
- * plainly that this week was an exception rather than the rule.
+ * Identical to any other week now. It used to be marked as a bootstrap,
+ * because the semester begins the day after the first chapter and week one
+ * therefore could not get the full 7-day flag window; with no lock there is no
+ * window to fall short of, so the exception no longer exists.
  */
 export async function postBootstrapWeek(
   weekStart: string,
@@ -27,7 +27,6 @@ export async function postBootstrapWeek(
   try {
     const { assignmentCount, result } = await generateAndSaveWeek(weekStart, {
       post: true,
-      isBootstrap: true,
     });
 
     revalidatePath('/admin');

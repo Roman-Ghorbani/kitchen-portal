@@ -20,6 +20,10 @@ import {
 import { getActiveSemester } from '../../../../lib/week-service.ts';
 import { AppShell } from '../../shell.tsx';
 import { LatePlateAdminClient } from './late-plate-admin-client.tsx';
+import { LatePlateMealGrid } from './late-plate-meal-grid.tsx';
+import { LatePlateToggle } from './late-plate-toggle.tsx';
+import { LatePlateSettingsForm } from './late-plate-settings-form.tsx';
+import { DEFAULT_LATE_PLATE_DAYS, type MealDayConfig } from '../../../../lib/types.ts';
 
 export const dynamic = 'force-dynamic';
 
@@ -90,6 +94,8 @@ export default async function AdminLatePlatesPage() {
 
   const hasTabletToken = Boolean(semester?.kioskToken || process.env.LATE_PLATE_DEVICE_TOKEN);
   const latePlatesEnabled = semester?.latePlatesEnabled ?? true;
+  const latePlateDays = (semester?.latePlateDays ??
+    DEFAULT_LATE_PLATE_DAYS) as MealDayConfig;
 
   // Last chef action
   const lastChefEvent = recentEvents.find((e) =>
@@ -166,6 +172,38 @@ export default async function AdminLatePlatesPage() {
         roster={activeRoster}
         today={today}
       />
+
+      {/* ---- what used to be stranded over on Settings ---- */}
+      <div className="card card-pad" style={{ marginBottom: 20 }}>
+        <h2 className="section-title" style={{ marginTop: 0 }}>
+          Late plate settings
+        </h2>
+        <p style={{ fontSize: 13, color: 'var(--ink-400)', marginTop: 0 }}>
+          These used to live on the Settings page, two clicks from the queue
+          they govern. Cutoffs themselves are still the chefs&apos; to set on
+          the kiosk &mdash; they run on 11:00 AM for lunch and 3:00 PM for
+          dinner and leave them alone.
+        </p>
+
+        <h3 className="section-title" style={{ fontSize: 15 }}>
+          Which days requests are open
+        </h3>
+        <LatePlateMealGrid initial={latePlateDays} />
+
+        <hr style={{ margin: '22px 0', borderColor: 'var(--line-strong)' }} />
+
+        <h3 className="section-title" style={{ fontSize: 15, marginTop: 0 }}>
+          Requesting
+        </h3>
+        <LatePlateToggle initialEnabled={latePlatesEnabled} />
+
+        <hr style={{ margin: '22px 0', borderColor: 'var(--line-strong)' }} />
+
+        <LatePlateSettingsForm
+          defaultMessage={semester?.latePlateMessage ?? null}
+          defaultLogo={semester?.logoUrl ?? null}
+        />
+      </div>
 
       {/* Recent Event Audit Log */}
       <div className="card card-pad" style={{ marginBottom: 20 }}>

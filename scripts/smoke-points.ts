@@ -24,7 +24,7 @@ import {
 } from '../src/db/schema.ts';
 import { generateAndSaveWeek } from '../src/lib/week-service.ts';
 import { deleteWeek } from '../src/lib/week-admin.ts';
-import { addDays } from '../src/lib/dates.ts';
+import { addDays, todayInEastern, mondayOf } from '../src/lib/dates.ts';
 
 const fails: string[] = [];
 function check(label: string, fn: () => void) {
@@ -47,7 +47,11 @@ async function main() {
   if (existing.length === 0) throw new Error('post a week first');
 
   const latest = existing.map((w) => w.weekStart).sort().at(-1)!;
-  const nextStart = addDays(latest, 7);
+  let nextStart = addDays(latest, 7);
+  const curMon = mondayOf(todayInEastern());
+  if (nextStart <= curMon) {
+    nextStart = addDays(curMon, 7);
+  }
 
   const pointsBefore = await totalPoints();
 
@@ -147,9 +151,8 @@ async function main() {
   );
 
   console.log('\ncleanup');
-  await db.update(weeks).set({ status: 'draft' }).where(eq(weeks.id, r.week.id));
   const d = await deleteWeek(r.week.id, 'points smoke');
-  check('draft week removed', () => assert.ok(d.ok, d.message));
+  check('week removed', () => assert.ok(d.ok, d.message));
 
   const restored = await totalPoints();
   check('deleting the week gives the points back', () =>

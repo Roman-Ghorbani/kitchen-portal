@@ -1,163 +1,106 @@
 /*
- * Design tokens.
+ * Design tokens - graphite and blue, dark only.
  *
- * Deep chapter-blue ink as the ground, brass as the single accent. Two rules
- * keep it from looking like a template:
+ * Two rules keep it from looking like a template:
  *
- *  1. Surfaces step in value rather than being separated by borders. The old
- *     palette put cards two percent away from the page and drew a line round
- *     everything to compensate, which reads as cheap. Here each level is a
- *     visible step up, and hairlines are a whisper on top.
+ *  1. Surfaces step in value rather than being separated by borders. Each
+ *     level is a visible step up from the one below it, and hairlines are a
+ *     whisper on top rather than the thing doing the work.
  *
- *  2. Semantic colours are muted and used sparingly. Full-saturation red and
- *     green next to a gold accent is a traffic light, not a design.
+ *  2. Blue is the only chroma on the page, so it always carries meaning - an
+ *     action, or something that belongs to you. Green, sand and red are
+ *     semantic marks on small areas and are never brand colour.
+ *
+ * There is no light theme for the brother and manager apps. The chef kiosk is
+ * the sole exception: it re-declares every one of these names inside
+ * `.kq-shell` further down this file and stays light permanently, because it
+ * lives on a wall tablet in a bright kitchen and the chefs should never see
+ * the interface change under them.
+ *
+ * The old navy/brass names are kept and repointed at the new palette rather
+ * than renamed. Renaming would have meant editing several thousand lines of
+ * rules for no visual gain, and would have drifted out of step with the
+ * kiosk's scoped block, which still uses these names for its own light values.
  */
 
 :root {
-  --font-display: 'Space Grotesk', 'Inter', -apple-system, BlinkMacSystemFont,
+  color-scheme: dark;
+
+  --font-display: 'Bricolage Grotesque', system-ui, -apple-system,
     'Segoe UI', Roboto, sans-serif;
-  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+  --font-body: 'Public Sans', system-ui, -apple-system, 'Segoe UI', Roboto,
     Helvetica, Arial, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas,
     monospace;
 
-  /* ---- ink: the chapter blue, used for the rail and headers ---- */
-  --navy-950: #0d1626;
-  --navy-900: #131f33;
-  --navy-800: #1b2b44;
-  --navy-700: #2b4166;
-  --navy-600: #3a5480;
+  /* ---- blue: the only accent. Actions, and anything that is yours. ---- */
+  --blue-hi: #8fbaea;
+  --blue: #6fa3dc;
+  --blue-dim: #4a7cb0;
+  --blue-wash: rgba(111, 163, 220, 0.13);
 
-  /* ---- brass: the one accent ---- */
-  --gold-600: #8a6a25;
-  --gold-500: #b78f3d;
-  --gold-400: #d9b269;
-  --gold-300: #e8c98f;
-  --gold-100: #f6edda;
+  /* The former brass names, repointed at the blue ramp. */
+  --gold-600: #4a7cb0;
+  --gold-500: #6fa3dc;
+  --gold-400: #8fbaea;
+  --gold-300: #a9ccf0;
+  --gold-100: #17232f;
 
-  /* ---- semantics, deliberately desaturated ---- */
-  --green-600: #2f7d55;
-  --green-100: #e4f2ea;
-  --red-600: #b04234;
-  --red-100: #fae9e6;
-  --amber-600: #a16520;
-  --amber-100: #f8ecdb;
-  --violet-600: #5f519b;
-  --violet-100: #eceaf6;
+  /* ---- semantics: small areas only, never a surface ---- */
+  --green-600: #7fb187;
+  --green-100: #16241e;
+  --red-600: #c4756b;
+  --red-100: #241716;
+  --amber-600: #c9a961;
+  --amber-100: #241f14;
+  --violet-600: #9095c2;
+  --violet-100: #1c1d28;
+
+  /* Readable aliases for the same three. */
+  --sage: #7fb187;
+  --clay: #c4756b;
+  --sand: #c9a961;
 
   /* ---- surfaces: each a visible step, not a hairline apart ---- */
-  --bg: #eef1f6;
-  --card: #ffffff;
-  --raised: #f7f9fc;
-  --sunken: #e6eaf2;
+  --bg: #0f1113;
+  --card: #17191c;
+  --surface: #17191c;
+  --raised: #212429;
+  --sunken: #0a0b0d;
 
-  --navy-100: #dde3ee;
-  --navy-50: #eef1f7;
+  --navy-950: #070809;
+  --navy-900: #0a0b0d;
+  --navy-800: #0f1113;
+  --navy-700: #6fa3dc;
+  --navy-600: #4a7cb0;
+  --navy-100: #212429;
+  --navy-50: #17191c;
 
-  --ink-900: #0f1828;
-  --ink-700: #33415c;
-  --ink-600: #4d5b76;
-  --ink-400: #7a869e;
-  --ink-300: #9aa4ba;
+  --ink-900: #eceef1;
+  --ink-700: #c3c8cf;
+  --ink-600: #9ba1a9;
+  --ink-400: #7c838c;
+  --ink-300: #656b73;
 
-  --line: rgba(15, 24, 40, 0.09);
-  --line-strong: rgba(15, 24, 40, 0.16);
+  /* Short aliases used by the newer components. */
+  --ink: #eceef1;
+  --ink-2: #9ba1a9;
+  --ink-3: #656b73;
+
+  --line: rgba(236, 238, 241, 0.08);
+  --line-strong: rgba(236, 238, 241, 0.17);
 
   --radius: 14px;
   --radius-sm: 10px;
   --radius-lg: 20px;
 
-  --shadow-sm: 0 1px 2px rgba(13, 22, 38, 0.06);
-  --shadow-md: 0 4px 16px rgba(13, 22, 38, 0.08);
-  --shadow-lg: 0 18px 48px rgba(13, 22, 38, 0.16);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 6px 22px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 22px 56px rgba(0, 0, 0, 0.6);
 
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
-    --gold-600: #e0bd7a;
-    --gold-500: #cfa858;
-    --gold-400: #e4c68d;
-    --gold-300: #f0dcb4;
-    --gold-100: #2e2410;
-
-    --green-600: #63c894;
-    --green-100: #12301f;
-    --red-600: #e08472;
-    --red-100: #34160f;
-    --amber-600: #dda45f;
-    --amber-100: #33220e;
-    --violet-600: #a99ae0;
-    --violet-100: #211c36;
-
-    /* Real separation between levels: the page is near-black, cards lift. */
-    --bg: #080d16;
-    --card: #121a29;
-    --raised: #1a2434;
-    --sunken: #0c121d;
-
-    --navy-100: #223047;
-    --navy-50: #161f2f;
-    --navy-900: #0f1827;
-    --navy-800: #17243a;
-    --navy-700: #8fb0e6;
-
-    --ink-900: #eef2f9;
-    --ink-700: #c2cbdb;
-    --ink-600: #a3aec3;
-    --ink-400: #78849b;
-    --ink-300: #616c82;
-
-    --line: rgba(255, 255, 255, 0.07);
-    --line-strong: rgba(255, 255, 255, 0.14);
-
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-    --shadow-md: 0 6px 22px rgba(0, 0, 0, 0.45);
-    --shadow-lg: 0 22px 56px rgba(0, 0, 0, 0.6);
-  }
-}
-
-:root[data-theme='dark'] {
-  --gold-600: #e0bd7a;
-  --gold-500: #cfa858;
-  --gold-400: #e4c68d;
-  --gold-300: #f0dcb4;
-  --gold-100: #2e2410;
-
-  --green-600: #63c894;
-  --green-100: #12301f;
-  --red-600: #e08472;
-  --red-100: #34160f;
-  --amber-600: #dda45f;
-  --amber-100: #33220e;
-  --violet-600: #a99ae0;
-  --violet-100: #211c36;
-
-  --bg: #080d16;
-  --card: #121a29;
-  --raised: #1a2434;
-  --sunken: #0c121d;
-
-  --navy-100: #223047;
-  --navy-50: #161f2f;
-  --navy-900: #0f1827;
-  --navy-800: #17243a;
-  --navy-700: #8fb0e6;
-
-  --ink-900: #eef2f9;
-  --ink-700: #c2cbdb;
-  --ink-600: #a3aec3;
-  --ink-400: #78849b;
-  --ink-300: #616c82;
-
-  --line: rgba(255, 255, 255, 0.07);
-  --line-strong: rgba(255, 255, 255, 0.14);
-
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 6px 22px rgba(0, 0, 0, 0.45);
-  --shadow-lg: 0 22px 56px rgba(0, 0, 0, 0.6);
-}
 
 * {
   box-sizing: border-box;
@@ -7062,3 +7005,772 @@ body:has(.kq-shell),
   gap: 12px;
 }
 
+
+/* ================================================================== */
+/* Standings                                                          */
+/* ================================================================== */
+
+/*
+ * Where everybody sits on points. Every affordance here is at least 44px
+ * because it is read on a phone, and the two "show more" controls are real
+ * buttons rather than passive labels - the whole point of collapsing the
+ * middle is that a brother can open it.
+ */
+
+.st-me {
+  background: linear-gradient(158deg, #1e2a38 0%, var(--card) 62%);
+  border: 1px solid rgba(111, 163, 220, 0.3);
+  border-radius: var(--radius-lg);
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.st-me-top {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.st-me-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.st-me-block.right {
+  align-items: flex-end;
+}
+
+.st-me-label {
+  font-size: 10.5px;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--blue-dim);
+}
+
+.st-me-value {
+  font-size: 34px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--blue);
+  font-variant-numeric: tabular-nums;
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+}
+
+.st-me-block.right .st-me-value {
+  font-size: 22px;
+  color: var(--ink-900);
+}
+
+.st-me-unit {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink-600);
+  font-family: var(--font-body);
+}
+
+.st-me-block.right .st-me-unit {
+  font-size: 13px;
+  font-family: var(--font-mono);
+}
+
+.st-bar {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--sunken);
+  overflow: hidden;
+}
+
+.st-bar-fill {
+  height: 100%;
+  background: var(--blue);
+  opacity: 0.6;
+}
+
+.st-bar-ends {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10.5px;
+  color: var(--ink-300);
+}
+
+/* ---- pool filter ---- */
+
+.st-pools {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 3px;
+  background: var(--sunken);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 3px;
+  margin-bottom: 14px;
+}
+
+.st-pool {
+  min-height: 44px;
+  border: none;
+  background: transparent;
+  border-radius: 9px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-400);
+  cursor: pointer;
+  transition: background 0.15s var(--ease);
+}
+
+.st-pool.active {
+  background: var(--raised);
+  color: var(--ink-900);
+  font-weight: 700;
+}
+
+/* ---- the list ---- */
+
+.st-list {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.st-row {
+  padding: 11px 14px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  border-bottom: 1px solid var(--line);
+}
+
+.st-row:last-child {
+  border-bottom: none;
+}
+
+.st-row.is-me {
+  background: var(--blue-wash);
+  border-left: 2px solid var(--blue);
+  padding-left: 12px;
+}
+
+.st-rank {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-300);
+  width: 24px;
+  text-align: right;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.st-row.is-me .st-rank {
+  color: var(--blue);
+}
+
+.st-name {
+  flex-grow: 1;
+  font-size: 13.5px;
+  font-weight: 600;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.st-row.is-me .st-name {
+  font-weight: 700;
+}
+
+.st-year {
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 5px;
+  padding: 2px 5px;
+  background: var(--raised);
+  color: var(--ink-300);
+  flex-shrink: 0;
+}
+
+.st-row.is-me .st-year {
+  background: rgba(111, 163, 220, 0.18);
+  color: var(--blue);
+}
+
+.st-pts {
+  font-size: 13.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.st-row.is-me .st-pts {
+  color: var(--blue);
+}
+
+/* ---- expanders ---- */
+
+.st-more {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 14px;
+  background: var(--sunken);
+  border: none;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-600);
+}
+
+.st-more:hover {
+  color: var(--ink-900);
+}
+
+.st-more-range {
+  font-size: 11.5px;
+  color: var(--ink-300);
+}
+
+.st-collapse {
+  margin-top: 10px;
+  min-height: 44px;
+  width: 100%;
+  border: 1px solid var(--line-strong);
+  background: var(--raised);
+  color: var(--ink-600);
+  border-radius: 11px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.st-foot {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin-top: 14px;
+  color: var(--ink-300);
+}
+
+.st-foot svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--blue-dim);
+}
+
+.st-foot span {
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+
+/* ---- Home: the tappable rows that replaced two whole nav slots ---- */
+
+.home-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 60px;
+  padding: 12px 15px;
+  margin-bottom: 10px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: inherit;
+  text-decoration: none;
+  transition: border-color 0.15s var(--ease), background 0.15s var(--ease);
+}
+
+.home-row:hover {
+  border-color: var(--line-strong);
+  background: var(--raised);
+}
+
+.home-row svg {
+  flex-shrink: 0;
+}
+
+.home-row-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex-grow: 1;
+  min-width: 0;
+}
+
+.home-row-title {
+  font-size: 13.5px;
+  font-weight: 700;
+}
+
+.home-row-sub {
+  font-size: 12px;
+  color: var(--ink-600);
+  line-height: 1.4;
+}
+
+.home-row-chev {
+  flex-shrink: 0;
+  color: var(--ink-300);
+  font-size: 15px;
+}
+
+/* The next-shift card grew a header row when the multiplier tag moved up. */
+.next-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+/* A stat tile that is also a link through to the standings. */
+a.stat-card {
+  color: inherit;
+  text-decoration: none;
+  transition: border-color 0.15s var(--ease);
+}
+
+a.stat-card:hover {
+  border-color: var(--line-strong);
+}
+
+.stat-val-sub {
+  font-size: 14px;
+  color: var(--ink-400);
+  font-family: var(--font-mono);
+}
+
+/* ---- looking through a brother's account ---- */
+
+.preview-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 20px;
+  background: var(--blue-wash);
+  border-bottom: 1px solid rgba(111, 163, 220, 0.3);
+}
+
+.preview-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--blue);
+  flex-shrink: 0;
+}
+
+.preview-text {
+  flex-grow: 1;
+  font-size: 13px;
+  color: var(--ink-700);
+}
+
+.preview-readonly {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.preview-days {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+}
+
+/* ---- admin sub-navigation, shared by roster and anything else with views ---- */
+
+.adm-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 18px;
+}
+
+.adm-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 15px 12px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink-400);
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.adm-tab:hover {
+  color: var(--ink-900);
+}
+
+.adm-tab.active {
+  color: var(--blue);
+  font-weight: 700;
+  border-bottom-color: var(--blue);
+}
+
+.adm-tab-count {
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 2px 8px;
+  background: var(--raised);
+  color: var(--ink-400);
+}
+
+.adm-tab.active .adm-tab-count {
+  background: var(--blue-wash);
+  color: var(--blue);
+}
+
+/* ---- day-by-day eligibility ---- */
+
+.elig-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.elig-day-name {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0 0 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.elig-day-pools {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.elig-pool {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.elig-pool-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.elig-pool-name {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--ink-700);
+}
+
+.elig-pool-count {
+  font-size: 11.5px;
+  color: var(--ink-400);
+  font-variant-numeric: tabular-nums;
+}
+
+.elig-bar {
+  height: 5px;
+  border-radius: 3px;
+  background: var(--sunken);
+  overflow: hidden;
+}
+
+.elig-bar-fill {
+  height: 100%;
+  background: var(--blue-dim);
+}
+
+.elig-bar-fill.thin {
+  background: var(--red-600);
+}
+
+.elig-none {
+  font-size: 12px;
+  color: var(--ink-400);
+}
+
+.elig-blocked {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.elig-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 7px;
+  padding: 5px 9px;
+  border-radius: 8px;
+  background: var(--raised);
+  border: 1px solid var(--line);
+  text-decoration: none;
+  color: inherit;
+}
+
+.elig-chip:hover {
+  border-color: var(--line-strong);
+}
+
+.elig-chip-name {
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.elig-chip-why {
+  font-size: 11px;
+  color: var(--ink-400);
+}
+
+/* Six tiles fit the manager's row without wrapping on a laptop. */
+.stat-grid.six {
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+}
+
+a.stat-card {
+  text-decoration: none;
+  color: inherit;
+}
+
+.stat-card.warn {
+  border-color: rgba(111, 163, 220, 0.32);
+  background: rgba(111, 163, 220, 0.07);
+}
+
+/* ==================================================================== */
+/* Kitchen kiosk additions                                              */
+/* ==================================================================== */
+
+/*
+ * Everything below lives inside .kq-shell, so it picks up the kiosk's own
+ * light token values declared further up rather than the dark app palette.
+ * Only kiosk token names are used here for that reason - no --blue, no --sand.
+ */
+
+/* ---- how long until requests close ---- */
+
+.kq-countdown {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 18px;
+  border-radius: 13px;
+  margin-bottom: 10px;
+  flex-shrink: 0;
+}
+
+.kq-countdown.is-open {
+  background: var(--amber-100);
+  border: 1px solid rgba(161, 101, 32, 0.32);
+}
+
+.kq-countdown.is-closed {
+  background: var(--green-100);
+  border: 1px solid rgba(47, 125, 85, 0.3);
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.kq-countdown.is-shut {
+  background: var(--sunken);
+  border: 1px solid var(--line-strong);
+}
+
+.kq-countdown-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex-grow: 1;
+  min-width: 0;
+}
+
+.kq-countdown-title {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+  text-transform: capitalize;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.kq-countdown.is-open .kq-countdown-title {
+  color: var(--amber-600);
+}
+
+.kq-countdown.is-closed .kq-countdown-title {
+  color: var(--green-600);
+}
+
+.kq-countdown-at {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 600;
+  text-transform: none;
+}
+
+.kq-countdown-lead {
+  font-size: 14px;
+  color: var(--ink-700);
+}
+
+.kq-countdown-big {
+  font-family: var(--font-mono);
+  font-size: 32px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--amber-600);
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- a cancellation is the most urgent thing on this screen ---- */
+
+.kq-cancel-alert {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 10px 16px;
+  border-radius: 13px;
+  background: var(--red-100);
+  border: 1px solid rgba(176, 66, 52, 0.3);
+  margin-bottom: 10px;
+  flex-shrink: 0;
+}
+
+.kq-cancel-mark {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--red-600);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.kq-cancel-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex-grow: 1;
+  min-width: 0;
+}
+
+.kq-cancel-title {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--red-600);
+}
+
+.kq-cancel-sub {
+  font-size: 13px;
+  color: var(--ink-700);
+}
+
+/* ---- handled, split by what actually happened ---- */
+
+.kq-handled-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.kq-handled-tab {
+  min-height: 40px;
+  padding: 0 15px;
+  border-radius: 10px;
+  border: 1px solid var(--line-strong);
+  background: var(--raised);
+  color: var(--ink-700);
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.kq-handled-tab:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.kq-handled-n {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  opacity: 0.75;
+  margin-left: 4px;
+}
+
+.kq-handled-tab.active.is-ready {
+  background: var(--green-100);
+  color: var(--green-600);
+  border-color: rgba(47, 125, 85, 0.3);
+}
+
+.kq-handled-tab.active.is-cancelled {
+  background: var(--red-100);
+  color: var(--red-600);
+  border-color: rgba(176, 66, 52, 0.3);
+}
+
+.kq-handled-tab.active.is-declined,
+.kq-handled-tab.active.is-all {
+  background: var(--navy-100);
+  color: var(--navy-700);
+  border-color: var(--line-strong);
+}
+
+/* ---- menu day strip: weekday kept, count shown ---- */
+
+.kq-menu-date-btn {
+  position: relative;
+}
+
+.kq-menu-today-flag {
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  background: var(--gold-400);
+  color: var(--navy-900);
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  padding: 2px 9px;
+  white-space: nowrap;
+}
+
+.kq-menu-date-count {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--green-600);
+  margin-top: 3px;
+}
+
+.kq-menu-date-count.empty {
+  color: var(--amber-600);
+}

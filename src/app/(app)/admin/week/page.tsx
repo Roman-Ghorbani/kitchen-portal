@@ -39,7 +39,7 @@ export default async function ManageWeekPage({
 }) {
   const session = await getSession();
   if (!session) redirect('/signin');
-  if (session.role !== 'admin') redirect('/my-shifts');
+  if (session.role !== 'admin') redirect('/');
 
   const params = await searchParams;
   const allWeeks = await getLiveWeeks();

@@ -11,6 +11,7 @@ import {
   setActive,
 } from '../../../actions/roster-actions.ts';
 import { resetMemberPin } from '../../../actions/auth-actions.ts';
+import { formatPoints } from '../../../../lib/types.ts';
 
 export interface RosterRow {
   id: string;
@@ -244,7 +245,7 @@ export function RosterTable({ rows }: { rows: RosterRow[] }) {
               </span>
 
               <span className="roster-pts mono" title="Kitchen points">
-                {r.points} pts
+                {formatPoints(r.points)} pts
               </span>
 
               {r.makeupDebt > 0 && (
@@ -311,7 +312,7 @@ export function RosterTable({ rows }: { rows: RosterRow[] }) {
                       −1 Point
                     </button>
                     <span className="roster-pts mono" style={{ fontSize: 16, fontWeight: 700 }}>
-                      {r.points} pts
+                      {formatPoints(r.points)} pts
                     </span>
                     <button
                       className="btn sm"

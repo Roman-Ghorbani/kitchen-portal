@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function SignInPage() {
   const session = await getSession();
-  if (session) redirect(session.role === 'admin' ? '/admin' : '/my-shifts');
+  if (session) redirect(session.role === 'admin' ? '/admin' : '/');
 
   const rows = await db
     .select({

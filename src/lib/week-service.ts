@@ -26,7 +26,7 @@ import {
   type MealDayConfig,
   type DayIndex,
 } from './types.ts';
-import { weekDates, chapterLockFor, addDays, todayInEastern } from './dates.ts';
+import { weekDates, addDays, todayInEastern } from './dates.ts';
 
 /* ------------------------------------------------------------------ */
 /* Reading the roster                                                  */
@@ -97,8 +97,6 @@ export async function getActiveSemester() {
 
 export interface GenerateOptions {
   post?: boolean;
-  isBootstrap?: boolean;
-  locksAt?: Date;
   disabledDays?: number[];
   customMealDays?: MealDayConfig;
 }
@@ -200,8 +198,7 @@ export async function generateAndSaveWeek(
     slotSizes: semester.slotSizes as Record<Meal, number>,
   });
 
-  const locksAt =
-    options.locksAt ?? new Date(`${chapterLockFor(weekStart)}T23:59:59Z`);
+
 
   const [week] = await db
     .insert(weeks)
@@ -211,8 +208,6 @@ export async function generateAndSaveWeek(
       status: 'posted',
       seed: weekStart,
       postedAt: new Date(),
-      locksAt,
-      isBootstrap: options.isBootstrap ?? false,
     })
     .returning();
 
@@ -262,7 +257,6 @@ export async function generateAndSaveWeek(
       weekStart,
       assignments: assignmentValues.length,
       unfilled: result.unfilled,
-      isBootstrap: options.isBootstrap ?? false,
     },
   });
 
@@ -299,8 +293,6 @@ export interface DisplayWeek {
   weekStart: string;
   status: string;
   postedAt: Date | null;
-  locksAt: Date | null;
-  isBootstrap: boolean;
   days: { date: string; lunch: DisplaySlot | null; dinner: DisplaySlot | null }[];
 }
 
@@ -389,8 +381,6 @@ export async function getWeek(weekStart: string): Promise<DisplayWeek | null> {
     weekStart: week.weekStart,
     status: week.status,
     postedAt: week.postedAt,
-    locksAt: week.locksAt,
-    isBootstrap: week.isBootstrap,
     days,
   };
 }

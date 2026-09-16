@@ -48,15 +48,49 @@ if (!fs.existsSync(SOURCE_DB)) {
   process.exit(1);
 }
 
-// Check if source is a gzip archive
+const zlib = require('zlib');
+
+// Check if source is an archive
 let actualDb = SOURCE_DB;
-if (SOURCE_DB.endsWith('.gz')) {
+let tempExtractDir = null;
+
+if (SOURCE_DB.endsWith('.tar.gz') || SOURCE_DB.endsWith('.tgz')) {
+  tempExtractDir = path.join(HERE, '.restore-temp-' + Date.now());
+  fs.mkdirSync(tempExtractDir, { recursive: true });
+  try {
+    execSync(`tar -xzf "${SOURCE_DB}" -C "${tempExtractDir}"`, { stdio: 'pipe' });
+    const extractedDb = path.join(tempExtractDir, 'latest', 'kitchen.db');
+    if (fs.existsSync(extractedDb)) {
+      actualDb = extractedDb;
+    } else {
+      // Find any .db file
+      const findDb = (dir) => {
+        for (const f of fs.readdirSync(dir)) {
+          const fp = path.join(dir, f);
+          if (fs.statSync(fp).isDirectory()) {
+            const found = findDb(fp);
+            if (found) return found;
+          } else if (f.endsWith('.db')) {
+            return fp;
+          }
+        }
+        return null;
+      };
+      actualDb = findDb(tempExtractDir) || SOURCE_DB;
+    }
+  } catch (err) {
+    console.error(`[kitchen-tracker restore] ERROR: Failed to extract tar archive ${SOURCE_DB}:`, err);
+    process.exit(1);
+  }
+} else if (SOURCE_DB.endsWith('.gz')) {
   const uncompressed = SOURCE_DB.slice(0, -3);
   try {
-    execSync(`gzip -dc "${SOURCE_DB}" > "${uncompressed}"`, { stdio: 'pipe' });
+    const compressedData = fs.readFileSync(SOURCE_DB);
+    const decompressedData = zlib.gunzipSync(compressedData);
+    fs.writeFileSync(uncompressed, decompressedData);
     actualDb = uncompressed;
   } catch (err) {
-    console.error(`[kitchen-tracker restore] ERROR: Failed to decompress ${SOURCE_DB}`, err);
+    console.error(`[kitchen-tracker restore] ERROR: Failed to decompress ${SOURCE_DB}:`, err);
     process.exit(1);
   }
 }
@@ -102,6 +136,10 @@ for (const envFile of ['.env.production', '.env.local', '.env']) {
     console.log(`[kitchen-tracker restore] Restored environment file: ${envFile}`);
     break;
   }
+}
+
+if (tempExtractDir && fs.existsSync(tempExtractDir)) {
+  try { fs.rmSync(tempExtractDir, { recursive: true, force: true }); } catch {}
 }
 
 console.log(`[kitchen-tracker restore] Restore completed successfully.`);

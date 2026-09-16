@@ -31,7 +31,11 @@ import {
 const CLASS_YEARS = ['sophomore', 'junior'] as const;
 const MEALS = ['lunch', 'dinner'] as const;
 const EXEMPT_REASONS = ['officer', 'medical', 'off-campus', 'other'] as const;
-const WEEK_STATUSES = ['draft', 'posted', 'locked', 'complete'] as const;
+/**
+ * A week is on the board or it is finished. There is no lock: brothers can ask
+ * for cover on any shift at any time, so there is no window for a lock to close.
+ */
+const WEEK_STATUSES = ['posted', 'complete'] as const;
 const ASSIGNMENT_STATUSES = [
   'assigned',
   'flagged', // conflict raised; slot open to volunteers
@@ -221,15 +225,14 @@ export const weeks = sqliteTable(
     seed: text('seed').notNull(),
 
     postedAt: integer('posted_at', { mode: 'timestamp' }),
-    /** Server-anchored deadline. Never trust a phone clock for this. */
-    locksAt: integer('locks_at', { mode: 'timestamp' }),
-    lockedAt: integer('locked_at', { mode: 'timestamp' }),
 
     /**
-     * True for the one-time first week of a semester, which cannot get the
-     * normal full 7-day flag window because the semester starts the day after
-     * the first chapter.
+     * Retired with the week lock. Kept as columns because dropping one in
+     * SQLite means rebuilding the table, and there is live semester data in
+     * here; nothing reads or writes them any more.
      */
+    locksAt: integer('locks_at', { mode: 'timestamp' }),
+    lockedAt: integer('locked_at', { mode: 'timestamp' }),
     isBootstrap: integer('is_bootstrap', { mode: 'boolean' })
       .notNull()
       .default(false),

@@ -53,15 +53,14 @@ function pretty(iso: string): string {
   });
 }
 
-/** Announces a freshly posted week and when flagging closes. */
+/** Announces a freshly posted week. */
 export async function announceWeekPosted(
   weekStart: string,
-  locksAt: string,
   appUrl: string,
 ): Promise<SlackResult> {
   const text =
     `Kitchen duty for the week of ${pretty(weekStart)} is up. ` +
-    `Flag conflicts before chapter on ${pretty(locksAt)}.`;
+    `Can't make a shift? Put it up for grabs in the app.`;
 
   return post(text, [
     {
@@ -74,9 +73,9 @@ export async function announceWeekPosted(
         type: 'mrkdwn',
         text:
           `*Week of ${pretty(weekStart)}*\n` +
-          `Check your shifts and flag any conflict *before chapter on ` +
-          `${pretty(locksAt)}*. After that the week locks and you'll need to ` +
-          `find your own cover.`,
+          `Check your shifts. If you can't make one, put it up for grabs in ` +
+          `the app and anyone in the house can take it — but it stays yours ` +
+          `until somebody does.`,
       },
     },
     {
@@ -85,7 +84,7 @@ export async function announceWeekPosted(
         {
           type: 'button',
           text: { type: 'plain_text', text: 'See my shifts', emoji: true },
-          url: `${appUrl}/my-shifts`,
+          url: `${appUrl}/`,
           style: 'primary',
         },
       ],
@@ -111,7 +110,7 @@ export async function announceDeadlineSoon(
         text:
           `⏳ *${hoursLeft} hours left* to flag a conflict for the week of ` +
           `${pretty(weekStart)}.\n` +
-          `After chapter the week locks — <${appUrl}/my-shifts|check your shifts>.`,
+          `Can't make it? <${appUrl}/|Put it up for grabs> and anyone can take it.`,
       },
     },
   ]);

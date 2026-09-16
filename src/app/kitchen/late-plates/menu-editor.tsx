@@ -15,6 +15,18 @@ interface MenuEditorProps {
   todayIso: string;
 }
 
+/**
+ * Whether a menu is part-typed right now.
+ *
+ * Module scope on purpose: the kiosk shell reloads itself at 4am and again
+ * after a long outage, and both of those would otherwise throw away whatever a
+ * chef had half-written. They check this before pulling the rug.
+ */
+let menuIsDirty = false;
+export function hasUnsavedMenu(): boolean {
+  return menuIsDirty;
+}
+
 function parseDishes(text: string): string[] {
   return (text || '')
     .split('\n')
@@ -59,6 +71,9 @@ export function MenuEditor({ device, todayIso }: MenuEditorProps) {
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'unsaved' | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // "Saved" used to fade after three seconds. On a screen nobody ever reloads,
+  // a chef who typed and walked away then has no way to tell it landed.
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
 
   const draftsRef = useRef(draftsByDate);
   draftsRef.current = draftsByDate;
@@ -111,14 +126,29 @@ export function MenuEditor({ device, todayIso }: MenuEditorProps) {
     }
   }, [device]);
 
-  // Sync with live today if todayIso changes (e.g., date boundary crossed or tab re-opened)
+  /*
+   * Follow the real today.
+   *
+   * This used to run only when `todayIso` changed, and skipped entirely if
+   * anything was part-typed. A chef who left a half-written menu open pinned
+   * the kiosk to a stale day for good - and since the kiosk is never reloaded,
+   * the next morning it was still sitting on yesterday. It now keeps checking,
+   * so the moment the draft saves itself the screen catches up on its own.
+   */
   useEffect(() => {
-    const liveToday = todayIso || todayInEastern();
-    const liveMonday = mondayOf(liveToday);
-    if (!isDirtyRef.current) {
-      setSelectedDate(liveToday);
-      setWeekStart(liveMonday);
-    }
+    const settle = () => {
+      if (isDirtyRef.current) return;
+      const liveToday = todayIso || todayInEastern();
+      setSelectedDate((cur) => (cur === liveToday ? cur : liveToday));
+      setWeekStart((cur) => {
+        const liveMonday = mondayOf(liveToday);
+        return cur === liveMonday ? cur : liveMonday;
+      });
+    };
+
+    settle();
+    const timer = setInterval(settle, 30_000);
+    return () => clearInterval(timer);
   }, [todayIso]);
 
   // When screen wakes up or gains focus while on menu tab, refresh menus and align current week
@@ -185,7 +215,10 @@ export function MenuEditor({ device, todayIso }: MenuEditorProps) {
         }));
 
         isDirtyRef.current = false;
+        menuIsDirty = false;
+        setLastSavedAt(new Date());
         setSaveStatus('saved');
+        // The transient tick fades, but the "Saved 6:24 PM" stamp stays.
         setTimeout(() => {
           setSaveStatus((current) => (current === 'saved' ? null : current));
         }, 3000);
@@ -213,6 +246,7 @@ export function MenuEditor({ device, todayIso }: MenuEditorProps) {
     }));
 
     isDirtyRef.current = true;
+    menuIsDirty = true;
     setSaveStatus('unsaved');
 
     if (autoSaveTimerRef.current) {
@@ -346,16 +380,14 @@ export function MenuEditor({ device, todayIso }: MenuEditorProps) {
               className={`kq-menu-date-btn${isSelected ? ' active' : ''}${isToday ? ' is-today' : ''}`}
               onClick={() => handleSelectDate(iso)}
             >
-              <div className="kq-menu-date-label">
-                {isToday ? 'Today' : dayName}
-              </div>
+              {/* The weekday stays put. Replacing it with the word "Today"
+                  took the day name away from the one day that matters most. */}
+              {isToday && <span className="kq-menu-today-flag">TODAY</span>}
+              <div className="kq-menu-date-label">{dayName}</div>
               <div className="kq-menu-date-sub">{shortDate}</div>
-              {hasDishes && (
-                <div
-                  className="kq-menu-date-dot"
-                  title={`${totalDishes} dish${totalDishes === 1 ? '' : 'es'} configured`}
-                />
-              )}
+              <div className={`kq-menu-date-count${hasDishes ? '' : ' empty'}`}>
+                {hasDishes ? `${totalDishes} dish${totalDishes === 1 ? '' : 'es'}` : 'Not set'}
+              </div>
             </button>
           );
         })}
@@ -380,9 +412,13 @@ export function MenuEditor({ device, todayIso }: MenuEditorProps) {
               Saving…
             </span>
           )}
-          {saveStatus === 'saved' && (
+          {saveStatus !== 'saving' && saveStatus !== 'unsaved' && lastSavedAt && (
             <span className="kq-sync-indicator saved">
-              ✓ Saved
+              ✓ Saved{' '}
+              {lastSavedAt.toLocaleTimeString('en-US', {
+                hour: 'numeric',
+                minute: '2-digit',
+              })}
             </span>
           )}
           {saveStatus === 'unsaved' && (
