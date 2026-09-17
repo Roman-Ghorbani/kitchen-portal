@@ -6439,6 +6439,14 @@ body:has(.kq-shell),
   color: var(--ink-900);
 }
 
+.kq-switch-btn.active.is-lunch .kq-switch-label {
+  color: var(--amber-600);
+}
+
+.kq-switch-btn.active.is-dinner .kq-switch-label {
+  color: var(--violet-600);
+}
+
 .kq-switch-label {
   font-family: var(--font-display);
   font-size: 16px;
@@ -6630,6 +6638,14 @@ body:has(.kq-shell),
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.kq-mealbar.is-lunch {
+  border-left: 5px solid var(--amber-600);
+}
+
+.kq-mealbar.is-dinner {
+  border-left: 5px solid var(--violet-600);
 }
 
 .kq-mealbar-row {
@@ -7575,13 +7591,37 @@ a.stat-card {
   border-radius: 13px;
   margin-bottom: 10px;
   flex-shrink: 0;
+  border: 1px solid transparent;
 }
 
-.kq-countdown.is-open {
+/* Lunch: warm daylight amber / golden sun */
+.kq-countdown.is-open.is-lunch,
+.kq-countdown.is-open:not(.is-dinner) {
   background: var(--amber-100);
-  border: 1px solid rgba(161, 101, 32, 0.32);
+  border-color: rgba(161, 101, 32, 0.32);
+  border-left: 5px solid var(--amber-600);
 }
 
+.kq-countdown.is-open.is-lunch .kq-countdown-title,
+.kq-countdown.is-open.is-lunch .kq-countdown-big,
+.kq-countdown.is-open:not(.is-dinner) .kq-countdown-title,
+.kq-countdown.is-open:not(.is-dinner) .kq-countdown-big {
+  color: var(--amber-600);
+}
+
+/* Dinner: cool twilight indigo / evening violet */
+.kq-countdown.is-open.is-dinner {
+  background: var(--violet-100);
+  border-color: rgba(95, 81, 155, 0.32);
+  border-left: 5px solid var(--violet-600);
+}
+
+.kq-countdown.is-open.is-dinner .kq-countdown-title,
+.kq-countdown.is-open.is-dinner .kq-countdown-big {
+  color: var(--violet-600);
+}
+
+/* Closed state */
 .kq-countdown.is-closed {
   background: var(--green-100);
   border: 1px solid rgba(47, 125, 85, 0.3);
@@ -7590,9 +7630,25 @@ a.stat-card {
   gap: 2px;
 }
 
+.kq-countdown.is-closed.is-lunch {
+  border-left: 5px solid var(--amber-600);
+}
+
+.kq-countdown.is-closed.is-dinner {
+  border-left: 5px solid var(--violet-600);
+}
+
 .kq-countdown.is-shut {
   background: var(--sunken);
   border: 1px solid var(--line-strong);
+}
+
+.kq-countdown.is-shut.is-lunch {
+  border-left: 5px solid var(--amber-600);
+}
+
+.kq-countdown.is-shut.is-dinner {
+  border-left: 5px solid var(--violet-600);
 }
 
 .kq-countdown-text {
@@ -7611,10 +7667,6 @@ a.stat-card {
   display: flex;
   align-items: baseline;
   gap: 10px;
-}
-
-.kq-countdown.is-open .kq-countdown-title {
-  color: var(--amber-600);
 }
 
 .kq-countdown.is-closed .kq-countdown-title {
@@ -7638,7 +7690,6 @@ a.stat-card {
   font-size: 32px;
   font-weight: 600;
   line-height: 1;
-  color: var(--amber-600);
   flex-shrink: 0;
   font-variant-numeric: tabular-nums;
 }

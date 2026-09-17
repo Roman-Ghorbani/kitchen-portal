@@ -505,7 +505,7 @@ export function KitchenQueue({
                     key={m}
                     role="tab"
                     aria-selected={meal === m}
-                    className={`kq-switch-btn${meal === m ? ' active' : ''}`}
+                    className={`kq-switch-btn is-${m}${meal === m ? ' active' : ''}`}
                     onClick={() => {
                       setMeal(m);
                       setShowHandled(false);
@@ -572,7 +572,7 @@ export function KitchenQueue({
       )}
 
       {counts && (
-        <div className="kq-mealbar">
+        <div className={`kq-mealbar is-${meal}`}>
           <div className="kq-mealbar-row">
             <span className="kq-mealbar-title">{meal}</span>
             <label className="kq-toggle">
@@ -957,9 +957,9 @@ function CutoffCountdown({
 
   if (closed) {
     return (
-      <div className="kq-countdown is-shut">
+      <div className={`kq-countdown is-shut is-${meal}`}>
         <span className="kq-countdown-lead">
-          {meal} is shut for the night. Nothing more can come in.
+          {meal === 'lunch' ? 'Lunch is closed for today.' : 'Dinner is shut for the night.'} Nothing more can come in.
         </span>
       </div>
     );
@@ -967,7 +967,7 @@ function CutoffCountdown({
 
   if (left <= 0) {
     return (
-      <div className="kq-countdown is-closed">
+      <div className={`kq-countdown is-closed is-${meal}`}>
         <span className="kq-countdown-title">
           Requests closed at {cutoff}. This is everyone.
         </span>
@@ -982,10 +982,16 @@ function CutoffCountdown({
   const mm = left % 60;
   const big = hh > 0 ? `${hh}h ${String(mm).padStart(2, '0')}m` : `${mm}m`;
   const words =
-    left === 1 ? '1 more minute' : hh > 0 ? `${hh}h ${mm}m to go` : `${left} minutes to go`;
+    left === 1
+      ? '1 minute'
+      : hh > 0
+        ? mm > 0
+          ? `${hh}h ${mm}m`
+          : `${hh} hour${hh > 1 ? 's' : ''}`
+        : `${left} minutes`;
 
   return (
-    <div className="kq-countdown is-open">
+    <div className={`kq-countdown is-open is-${meal}`}>
       <div className="kq-countdown-text">
         <span className="kq-countdown-title">
           {meal} requests close in {words}
