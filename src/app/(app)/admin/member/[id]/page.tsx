@@ -8,6 +8,7 @@ import { formatPoints } from '../../../../../lib/types.ts';
 import { AppShell } from '../../../shell.tsx';
 import { AdminAvailabilityEditor } from './admin-availability.tsx';
 import { ViewAsButton } from './view-as-button.tsx';
+import { MemberDebtControls } from './member-debt-controls.tsx';
 
 export const dynamic = 'force-dynamic';
 
@@ -80,11 +81,16 @@ export default async function MemberDossierPage({
       {(member.exempt || member.makeupDebt > 0 || !member.active) && (
         <div className="alert warn">
           <span className="alert-title">Flags on this member</span>
-          <span className="alert-body">
-            {member.exempt && `Exempt — ${member.exemptReason ?? 'no reason given'}. `}
-            {member.makeupDebt > 0 &&
-              `Owes ${member.makeupDebt} make-up shift${member.makeupDebt === 1 ? '' : 's'}. `}
-            {!member.active && 'Removed from the roster. '}
+          <span className="alert-body" style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+            <span>
+              {member.exempt && `Exempt — ${member.exemptReason ?? 'no reason given'}. `}
+              {member.makeupDebt > 0 &&
+                `Owes ${member.makeupDebt} make-up shift${member.makeupDebt === 1 ? '' : 's'}. `}
+              {!member.active && 'Removed from the roster. '}
+            </span>
+            {member.makeupDebt > 0 && (
+              <MemberDebtControls memberId={member.id} currentDebt={member.makeupDebt} />
+            )}
           </span>
         </div>
       )}

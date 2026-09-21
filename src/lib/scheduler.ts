@@ -100,6 +100,8 @@ interface WorkingMember {
   points: number;
   /** Make-up shifts still owed, decremented as we place them. */
   debt: number;
+  /** Initial make-up debt entering this generation run. */
+  initialDebt: number;
   /** Dates assigned within this week. */
   assignedDates: string[];
   /** Stable random tiebreak value for this run. */
@@ -133,7 +135,7 @@ function isEligible(w: WorkingMember, slot: Slot): boolean {
   if (m.classYear !== YEAR_FOR_MEAL[slot.meal]) return false;
   if (m.standingConflicts.includes(dayIndex(slot.date))) return false;
   if (w.assignedDates.includes(slot.date)) return false;
-  const allowance = 1 + w.debt;
+  const allowance = 1 + w.initialDebt;
   if (w.assignedDates.length >= allowance) return false;
   return true;
 }
@@ -173,6 +175,7 @@ export function generateWeek(input: ScheduleInput): ScheduleResult {
     member,
     points: member.points,
     debt: member.makeupDebt,
+    initialDebt: member.makeupDebt,
     assignedDates: [],
     jitter: rand(),
   }));
@@ -218,13 +221,14 @@ export function generateWeek(input: ScheduleInput): ScheduleResult {
 
     targetCandidates.sort((a, b) => comparePriority(a, b, open));
     const chosen = targetCandidates[0];
-    const viaMakeup = chosen.assignedDates.length >= 1 && chosen.debt > 0;
+    const isExtraShift = chosen.assignedDates.length >= 1;
+    const viaMakeup = chosen.debt > 0 || isExtraShift;
 
     target.assignments.push({
       memberId: chosen.member.id,
       status: 'assigned',
       multiplier: 1,
-      isMakeup: viaMakeup,
+      isMakeup: isExtraShift,
     });
 
     rationale.push({
@@ -242,7 +246,7 @@ export function generateWeek(input: ScheduleInput): ScheduleResult {
 
     chosen.assignedDates.push(target.date);
     chosen.points += 1;
-    if (viaMakeup) chosen.debt -= 1;
+    if (chosen.debt > 0) chosen.debt -= 1;
   }
 
   return { week: { weekStart, slots }, rationale, unfilled };
@@ -255,7 +259,7 @@ function describeShortfall(working: WorkingMember[], slot: Slot): string {
   const blocked = active.filter((w) =>
     w.member.standingConflicts.includes(dayIndex(slot.date)),
   );
-  const usedUp = active.filter((w) => w.assignedDates.length >= 1 + w.debt);
+  const usedUp = active.filter((w) => w.assignedDates.length >= 1 + w.initialDebt);
 
   return (
     active.length +

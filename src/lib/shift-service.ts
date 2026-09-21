@@ -515,6 +515,15 @@ export async function unsettleAssignment(assignmentId: string): Promise<void> {
       .where(eq(members.id, a.memberId));
   }
 
+  if (a.isMakeup) {
+    await db
+      .update(members)
+      .set({
+        makeupDebt: sql`${members.makeupDebt} + 1`,
+      })
+      .where(eq(members.id, a.memberId));
+  }
+
   await db
     .update(assignmentsTable)
     .set({

@@ -245,6 +245,20 @@ export async function generateAndSaveWeek(
   if (assignmentValues.length > 0) {
     await db.insert(assignmentsTable).values(assignmentValues);
     await creditNewAssignments(week.id);
+
+    // Decrement makeup debt for members who were assigned make-up shifts
+    const makeupCounts = new Map<string, number>();
+    for (const a of assignmentValues) {
+      if (a.isMakeup) {
+        makeupCounts.set(a.memberId, (makeupCounts.get(a.memberId) ?? 0) + 1);
+      }
+    }
+    for (const [memberId, count] of makeupCounts) {
+      await db
+        .update(membersTable)
+        .set({ makeupDebt: sql`MAX(0, ${membersTable.makeupDebt} - ${count})` })
+        .where(eq(membersTable.id, memberId));
+    }
   }
 
   await db.insert(events).values({

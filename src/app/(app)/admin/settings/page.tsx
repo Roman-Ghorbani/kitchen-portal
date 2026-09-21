@@ -2,11 +2,13 @@ import { redirect } from 'next/navigation';
 
 import { getSession } from '../../../../lib/session.ts';
 import { getActiveSemester } from '../../../../lib/week-service.ts';
+import { getTvSettings } from '../../../../lib/tv-service.ts';
 import { type MealDayConfig, type Meal } from '../../../../lib/types.ts';
 import { AppShell } from '../../shell.tsx';
 import Link from 'next/link';
 import { MealGrid } from './meal-grid.tsx';
 import { KioskLink } from './kiosk-link.tsx';
+import { SeniorMenuSettings } from './senior-menu-settings.tsx';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,7 +17,10 @@ export default async function SettingsPage() {
   if (!session) redirect('/signin');
   if (session.role !== 'admin') redirect('/');
 
-  const semester = await getActiveSemester();
+  const [semester, tv] = await Promise.all([
+    getActiveSemester(),
+    getTvSettings().catch(() => ({})),
+  ]);
   const mealDays = semester.mealDays as MealDayConfig;
   const slotSizes = semester.slotSizes as Record<Meal, number>;
 
@@ -63,6 +68,8 @@ export default async function SettingsPage() {
           Open the TV console &rarr;
         </a>
       </div>
+
+      <SeniorMenuSettings initialPassword={tv?.seniorMenuPassword || 'zbt2026'} />
 
       <div className="card card-pad" style={{ marginTop: 16 }}>
         <h2 className="section-title" style={{ marginTop: 0 }}>
