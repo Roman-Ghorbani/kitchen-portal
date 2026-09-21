@@ -1,5 +1,6 @@
 import { cookies, headers } from 'next/headers';
-import { getSession } from '../../lib/session.ts';
+import { getSession, getViewAs } from '../../lib/session.ts';
+import { getMemberById } from '../../lib/member-queries.ts';
 import {
   MENU_AUTH_COOKIE,
   verifyMenuToken,
@@ -10,10 +11,11 @@ import { getDayMenu } from '../../lib/menu-service.ts';
 import { defaultScheduleMonday, weekDates, todayInEastern } from '../../lib/dates.ts';
 import { MenuPasswordGate } from './menu-password-gate.tsx';
 import { SeniorWeekMenu } from './senior-week-menu.tsx';
+import { AppShell } from '../(app)/shell.tsx';
 
 export const dynamic = 'force-dynamic';
 
-export default async function SeniorMenuPage({
+export default async function MenuPage({
   searchParams,
 }: {
   searchParams: Promise<{ week?: string }>;
@@ -24,23 +26,6 @@ export default async function SeniorMenuPage({
     getSession(),
     searchParams,
   ]);
-
-  const menuToken = cookieStore.get(MENU_AUTH_COOKIE)?.value;
-  const isMenuAuthenticated = verifyMenuToken(menuToken);
-  const isUserAuthenticated = Boolean(session);
-
-  // If not authenticated via persistent menu cookie or user session, show password gate
-  if (!isMenuAuthenticated && !isUserAuthenticated) {
-    const clientIp = getClientIp(reqHeaders);
-    const limit = checkRateLimit(clientIp);
-
-    return (
-      <MenuPasswordGate
-        initialLocked={!limit.allowed}
-        initialRetryAfterMs={limit.retryAfterMs}
-      />
-    );
-  }
 
   const todayIso = todayInEastern();
   const currentMonday = defaultScheduleMonday();
@@ -56,8 +41,49 @@ export default async function SeniorMenuPage({
     menu: menus[idx],
   }));
 
+  // If user is signed in to the portal (brother or admin), show inside AppShell
+  if (session) {
+    const viewAs = await getViewAs();
+    const previewed = viewAs ? await getMemberById(viewAs) : null;
+
+    return (
+      <AppShell
+        session={session}
+        active="/menu"
+        viewingAs={previewed?.name ?? null}
+        title="Weekly Menu"
+        subtitle="At a glance view of lunch & dinner for the brotherhood"
+      >
+        <SeniorWeekMenu
+          mode="in-app"
+          weekStart={weekStart}
+          currentMonday={currentMonday}
+          todayIso={todayIso}
+          days={days}
+        />
+      </AppShell>
+    );
+  }
+
+  // If user is not logged into the portal (e.g. senior, parent, or guest)
+  const menuToken = cookieStore.get(MENU_AUTH_COOKIE)?.value;
+  const isMenuAuthenticated = verifyMenuToken(menuToken);
+
+  if (!isMenuAuthenticated) {
+    const clientIp = getClientIp(reqHeaders);
+    const limit = checkRateLimit(clientIp);
+
+    return (
+      <MenuPasswordGate
+        initialLocked={!limit.allowed}
+        initialRetryAfterMs={limit.retryAfterMs}
+      />
+    );
+  }
+
   return (
     <SeniorWeekMenu
+      mode="standalone"
       weekStart={weekStart}
       currentMonday={currentMonday}
       todayIso={todayIso}

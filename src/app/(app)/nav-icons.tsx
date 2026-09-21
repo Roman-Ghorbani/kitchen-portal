@@ -32,6 +32,13 @@ export function NavIcon({ name }: { name: string }) {
           <path d="M4 6h10M4 12h16M4 18h7" />
         </svg>
       );
+    case 'menu':
+      return (
+        <svg {...common} aria-hidden="true">
+          <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z" />
+          <path d="M8 7h8M8 11h8M8 15h5" />
+        </svg>
+      );
     case 'late-plate':
       return (
         <svg {...common} aria-hidden="true">

@@ -14,6 +14,7 @@ const BROTHER_NAV = [
   { href: '/', label: 'Home', icon: 'home' },
   { href: '/schedule', label: 'Board', icon: 'schedule' },
   { href: '/late-plate', label: 'Plate', icon: 'late-plate' },
+  { href: '/menu', label: 'Menu', icon: 'menu' },
   { href: '/standings', label: 'Standings', icon: 'standings' },
 ];
 

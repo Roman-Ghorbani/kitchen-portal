@@ -1,9 +1,7 @@
 'use client';
 
-import { useTransition } from 'react';
 import Link from 'next/link';
 import { parseISO, addDays } from '../../lib/dates.ts';
-import { lockMenuDevice } from '../actions/menu-auth-actions.ts';
 import type { DayMenu } from '../../lib/menu-service.ts';
 
 function shortDate(iso: string): string {
@@ -23,11 +21,13 @@ function fullDayHeading(iso: string): { weekday: string; dateStr: string } {
 }
 
 export function SeniorWeekMenu({
+  mode = 'standalone',
   weekStart,
   currentMonday,
   todayIso,
   days,
 }: {
+  mode?: 'standalone' | 'in-app';
   weekStart: string;
   currentMonday: string;
   todayIso: string;
@@ -38,8 +38,6 @@ export function SeniorWeekMenu({
     menu: DayMenu | null;
   }[];
 }) {
-  const [pending, startTransition] = useTransition();
-
   const prevWeek = addDays(weekStart, -7);
   const nextWeek = addDays(weekStart, 7);
   const isCurrentWeek = weekStart === currentMonday;
@@ -48,53 +46,66 @@ export function SeniorWeekMenu({
   const startLabel = shortDate(weekStart);
   const endLabel = shortDate(addDays(weekStart, 6));
 
+  const weekControls = (
+    <div className="senior-menu-nav">
+      <div className="week-toggle">
+        <Link
+          href={`/menu?week=${currentMonday}`}
+          className={isCurrentWeek ? 'active' : ''}
+        >
+          This week
+        </Link>
+        <Link
+          href={`/menu?week=${addDays(currentMonday, 7)}`}
+          className={isNextWeek ? 'active' : ''}
+        >
+          Next week
+        </Link>
+      </div>
+
+      <div className="senior-menu-arrows">
+        <Link
+          href={`/menu?week=${prevWeek}`}
+          className="btn sm"
+          title="Previous week"
+        >
+          ←
+        </Link>
+        <Link
+          href={`/menu?week=${nextWeek}`}
+          className="btn sm"
+          title="Next week"
+        >
+          →
+        </Link>
+      </div>
+    </div>
+  );
+
   return (
-    <div className="senior-menu-page">
-      <header className="senior-menu-header">
-        <div className="senior-menu-brand">
-          <div className="brand-mark">ZBT</div>
-          <div>
-            <h1 className="senior-menu-title">ZBT Kitchen Menu</h1>
-            <div className="senior-menu-sub">
-              {startLabel} – {endLabel} · Fall 2026
+    <div className={mode === 'standalone' ? 'senior-menu-page' : 'in-app-menu-container'}>
+      {mode === 'standalone' ? (
+        <header className="senior-menu-header">
+          <div className="senior-menu-brand">
+            <div className="brand-mark">ZBT</div>
+            <div>
+              <h1 className="senior-menu-title">ZBT Kitchen Menu</h1>
+              <div className="senior-menu-sub">
+                {startLabel} – {endLabel} · Fall 2026
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="senior-menu-nav">
-          <div className="week-toggle">
-            <Link
-              href={`/menu?week=${currentMonday}`}
-              className={isCurrentWeek ? 'active' : ''}
-            >
-              This week
-            </Link>
-            <Link
-              href={`/menu?week=${addDays(currentMonday, 7)}`}
-              className={isNextWeek ? 'active' : ''}
-            >
-              Next week
-            </Link>
+          {weekControls}
+        </header>
+      ) : (
+        <div className="in-app-menu-nav-bar">
+          <div className="in-app-menu-sub mono">
+            {startLabel} – {endLabel}
           </div>
-
-          <div className="senior-menu-arrows">
-            <Link
-              href={`/menu?week=${prevWeek}`}
-              className="btn sm"
-              title="Previous week"
-            >
-              ←
-            </Link>
-            <Link
-              href={`/menu?week=${nextWeek}`}
-              className="btn sm"
-              title="Next week"
-            >
-              →
-            </Link>
-          </div>
+          {weekControls}
         </div>
-      </header>
+      )}
 
       <main className="senior-menu-days">
         {days.map((day) => {
@@ -176,16 +187,8 @@ export function SeniorWeekMenu({
 
       <footer className="senior-menu-footer">
         <div className="senior-footer-note">
-          📍 Meals served at <strong>1000 David Ross Rd</strong>. Questions or dietary restrictions? Contact the kitchen manager.
+          Note that the chefs update the menu here themselves. They will post it here before they send it to me.
         </div>
-        <button
-          className="btn sm"
-          style={{ opacity: 0.7 }}
-          disabled={pending}
-          onClick={() => startTransition(() => lockMenuDevice())}
-        >
-          🔒 Lock device
-        </button>
       </footer>
     </div>
   );
