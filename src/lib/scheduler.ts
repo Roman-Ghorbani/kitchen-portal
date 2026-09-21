@@ -64,6 +64,7 @@ export interface ScheduleResult {
   week: WeekSchedule;
   rationale: PickRationale[];
   unfilled: UnfilledSlot[];
+  debtResolved?: Record<string, number>;
 }
 
 /* ------------------------------------------------------------------ */
@@ -249,7 +250,15 @@ export function generateWeek(input: ScheduleInput): ScheduleResult {
     if (chosen.debt > 0) chosen.debt -= 1;
   }
 
-  return { week: { weekStart, slots }, rationale, unfilled };
+  const debtResolved: Record<string, number> = {};
+  for (const w of working) {
+    const paid = w.initialDebt - w.debt;
+    if (paid > 0) {
+      debtResolved[w.member.id] = paid;
+    }
+  }
+
+  return { week: { weekStart, slots }, rationale, unfilled, debtResolved };
 }
 
 function describeShortfall(working: WorkingMember[], slot: Slot): string {

@@ -71,6 +71,13 @@
       "when": 1788111472934,
       "tag": "0009_organic_bucky",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1788123456789,
+      "tag": "0010_reconcile_member_debt",
+      "breakpoints": true
     }
   ]
 }
