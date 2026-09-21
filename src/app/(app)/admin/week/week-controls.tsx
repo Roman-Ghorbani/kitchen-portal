@@ -79,6 +79,7 @@ export function WeekControls({
   status,
   hasStarted,
   unresolved,
+  isArchived = false,
 }: {
   weekId: string;
   weekStart: string;
@@ -86,6 +87,7 @@ export function WeekControls({
   status: string;
   hasStarted: boolean;
   unresolved: number;
+  isArchived?: boolean;
 }) {
   const { pending, msg, bad, run } = useAction();
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -98,14 +100,16 @@ export function WeekControls({
         <div>
           <div className="wk-title">{weekLabel}</div>
           <div className="wk-sub">
-            {finished
-              ? 'Finished — every shift on it has been and gone.'
-              : 'Posted. Brothers can put a shift up for grabs at any time, and anyone can take one.'}
-            {hasStarted && !finished && ' This week has already started.'}
+            {isArchived
+              ? 'Archived record — all shifts have concluded. Shift history and attendance are preserved.'
+              : finished
+                ? 'Finished — every shift on it has been and gone.'
+                : 'Posted. Brothers can put a shift up for grabs at any time, and anyone can take one.'}
+            {hasStarted && !finished && !isArchived && ' This week has already started.'}
           </div>
         </div>
-        <span className={`wk-state ${finished ? 'locked' : 'open'}`}>
-          {finished ? 'Finished' : 'Posted'}
+        <span className={`wk-state ${isArchived || finished ? 'locked' : 'open'}`}>
+          {isArchived ? 'Archived' : finished ? 'Finished' : 'Posted'}
         </span>
       </div>
 

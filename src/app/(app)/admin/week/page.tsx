@@ -7,10 +7,11 @@ import { members, standingConflicts } from '../../../../db/schema.ts';
 import { getSession } from '../../../../lib/session.ts';
 import { getLiveWeeks, getActiveSemester } from '../../../../lib/week-service.ts';
 import { getWeekForManagement } from '../../../../lib/week-admin.ts';
-import { parseISO, weekDates, todayInEastern } from '../../../../lib/dates.ts';
+import { parseISO, weekDates, todayInEastern, defaultScheduleMonday } from '../../../../lib/dates.ts';
 import { AppShell } from '../../shell.tsx';
 import { WeekControls } from './week-controls.tsx';
 import { ManageDays } from './manage-client.tsx';
+import { WeekNav } from './week-nav.tsx';
 import type { Person, SlotView } from './week-controls.tsx';
 
 export const dynamic = 'force-dynamic';
@@ -65,7 +66,17 @@ export default async function ManageWeekPage({
     );
   }
 
-  const selected = params.week ?? allWeeks.at(-1)!.weekStart;
+  const currentMonday = defaultScheduleMonday();
+  const visibleActive = allWeeks.filter((w) => w.weekStart >= currentMonday);
+  const activeWeeks = visibleActive.length > 0 ? visibleActive : [allWeeks.at(-1)!];
+  const archivedWeeks = allWeeks.filter((w) => w.weekStart < currentMonday);
+
+  const defaultWeek =
+    activeWeeks.find((w) => w.weekStart === currentMonday)?.weekStart ??
+    activeWeeks[0]?.weekStart ??
+    allWeeks.at(-1)!.weekStart;
+
+  const selected = params.week ?? defaultWeek;
   const target = allWeeks.find((w) => w.weekStart === selected) ?? allWeeks.at(-1)!;
 
   const managed = await getWeekForManagement(target.id);
@@ -129,6 +140,8 @@ export default async function ManageWeekPage({
     slots: managed.slots.filter((s) => s.date === date) as SlotView[],
   }));
 
+  const isArchived = target.weekStart < currentMonday || target.status === 'complete';
+
   return (
     <AppShell
       session={session}
@@ -136,20 +149,37 @@ export default async function ManageWeekPage({
       title="Manage week"
       subtitle={`Week of ${shortDate(managed.week.weekStart)}`}
     >
-      <div className="week-toggle">
-        {allWeeks.map((w) => (
-          <Link
-            key={w.id}
-            href={`/admin/week?week=${w.weekStart}`}
-            className={w.weekStart === selected ? 'active' : ''}
+      <WeekNav
+        activeWeeks={activeWeeks}
+        archivedWeeks={archivedWeeks}
+        currentMonday={currentMonday}
+        selected={selected}
+      />
+
+      {target.weekStart < currentMonday && (
+        <div className="alert info archive-banner" style={{ marginBottom: 16 }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 12,
+              flexWrap: 'wrap',
+              width: '100%',
+            }}
           >
-            {shortDate(w.weekStart)}
-            <span className={`tag ${w.status === 'posted' ? 'ok' : 'locked'}`}>
-              {w.status === 'posted' ? 'open' : 'locked'}
-            </span>
-          </Link>
-        ))}
-      </div>
+            <div>
+              <span className="alert-title">📁 Viewing Archived Past Week</span>
+              <span className="alert-body">
+                This week concluded on {shortDate(lastDay ?? managed.week.weekStart)}. Shift history and attendance records are archived.
+              </span>
+            </div>
+            <Link className="btn sm gold" href="/admin/week">
+              ← Return to current week
+            </Link>
+          </div>
+        </div>
+      )}
 
       <WeekControls
         weekId={managed.week.id}
@@ -158,6 +188,7 @@ export default async function ManageWeekPage({
         status={managed.week.status}
         hasStarted={hasStarted}
         unresolved={unresolved}
+        isArchived={isArchived}
       />
 
       <h2 className="section-title">Shifts</h2>
