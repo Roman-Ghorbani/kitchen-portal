@@ -65,11 +65,6 @@ export function MenuPasswordGate({
         <div className="menu-gate-brand">
           <div className="brand-mark">ZBT</div>
           <div className="menu-gate-title">Kitchen Menu</div>
-          <div className="menu-gate-subtitle">Alpha Alpha Chapter · Fall 2026</div>
-        </div>
-
-        <div className="menu-gate-desc">
-          Enter the menu password to view this week&apos;s meal schedule. Once verified, this device will automatically remember your access.
         </div>
 
         {error && (
@@ -112,10 +107,6 @@ export function MenuPasswordGate({
             {pending ? 'Verifying...' : isLocked ? `Locked (${formatRemainingTime(lockoutMs)})` : 'Unlock Menu'}
           </button>
         </form>
-
-        <div className="menu-gate-foot">
-          Need the password? Ask any in-house brother or the kitchen manager.
-        </div>
       </div>
     </div>
   );
