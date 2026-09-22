@@ -8469,7 +8469,7 @@ a.stat-card {
 .mb-scrim {
   position: fixed;
   inset: 0;
-  z-index: 1100;
+  z-index: 99999;
   background: rgba(5, 6, 7, 0.62);
   display: flex;
   align-items: flex-end;
@@ -8483,7 +8483,7 @@ a.stat-card {
   background: var(--surface);
   border-top: 1px solid var(--line-strong);
   border-radius: 22px 22px 0 0;
-  padding: 10px 20px calc(26px + env(safe-area-inset-bottom));
+  padding: 10px 20px calc(26px + env(safe-area-inset-bottom, 0px));
   display: flex;
   flex-direction: column;
   gap: 15px;
@@ -8571,8 +8571,8 @@ a.stat-card {
   position: fixed;
   left: 16px;
   right: 16px;
-  bottom: calc(80px + env(safe-area-inset-bottom));
-  z-index: 1050;
+  bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+  z-index: 99990;
   background: var(--raised);
   border: 1px solid var(--line-strong);
   border-radius: 13px;
@@ -8589,6 +8589,10 @@ a.stat-card {
 .mb-toast .mb-link { font-size: 13px; }
 
 .mb-only-wide { display: none !important; }
+
+body:has(.mb-scrim) .mobile-bottom-nav {
+  display: none !important;
+}
 
 @keyframes mb-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes mb-up { from { transform: translateY(12px); opacity: 0; } to { transform: none; opacity: 1; } }

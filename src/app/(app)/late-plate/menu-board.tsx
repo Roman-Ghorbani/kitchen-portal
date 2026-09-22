@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -498,17 +499,7 @@ export function MenuBoard({
         </Dialog>
       )}
 
-      {toast && (
-        <div key={toast.key} className={`mb-toast tone-${toast.tone}`} role="status">
-          {toast.tone === 'ok' && <span className="mb-toast-icon">{I.check}</span>}
-          <span className="mb-toast-text">{toast.text}</span>
-          {toast.undo && (
-            <button type="button" className="mb-link" onClick={toast.undo} disabled={pending}>
-              Undo
-            </button>
-          )}
-        </div>
-      )}
+      {toast && <ToastView toast={toast} pending={pending} />}
     </div>
   );
 }
@@ -640,6 +631,28 @@ function MealCard({
 /* Dialog: bottom sheet on a phone, centred modal on a desk            */
 /* ------------------------------------------------------------------ */
 
+function ToastView({ toast, pending }: { toast: Toast; pending: boolean }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return null;
+
+  return createPortal(
+    <div key={toast.key} className={`mb-toast tone-${toast.tone}`} role="status">
+      {toast.tone === 'ok' && <span className="mb-toast-icon">{I.check}</span>}
+      <span className="mb-toast-text">{toast.text}</span>
+      {toast.undo && (
+        <button type="button" className="mb-link" onClick={toast.undo} disabled={pending}>
+          Undo
+        </button>
+      )}
+    </div>,
+    document.body,
+  );
+}
+
 function Dialog({
   eyebrow,
   title,
@@ -655,6 +668,11 @@ function Dialog({
   children: React.ReactNode;
   wide?: boolean;
 }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -663,7 +681,9 @@ function Dialog({
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  return (
+  if (!mounted) return null;
+
+  return createPortal(
     <div className="mb-scrim" onClick={onClose}>
       <div
         className={`mb-sheet${wide ? ' is-wide' : ''}`}
@@ -685,7 +705,8 @@ function Dialog({
         </div>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
