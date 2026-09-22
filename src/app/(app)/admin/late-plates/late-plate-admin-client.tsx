@@ -4,7 +4,6 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 
 import {
-  adminUnblockPlate,
   adminPlacePlate,
   adminUpdateStatus,
 } from '../../../actions/late-plate-actions.ts';
@@ -125,7 +124,7 @@ export function LatePlateAdminClient({
               Live Request Queue
             </h2>
             <div style={{ fontSize: 13, color: 'var(--ink-400)', marginTop: 2 }}>
-              Manage, override status, and unblock re-requests for today&apos;s late plates.
+              Manage and override status for today&apos;s late plates.
             </div>
           </div>
 
@@ -261,17 +260,6 @@ export function LatePlateAdminClient({
                     </button>
                   )}
 
-                  {p.status === 'cancelled' && (
-                    <button
-                      type="button"
-                      className="btn sm gold"
-                      disabled={pending}
-                      onClick={() => runAction(() => adminUnblockPlate(p.id))}
-                      title="Lifts day-of cancellation lock so member can request again"
-                    >
-                      🔓 Unblock Re-Request
-                    </button>
-                  )}
                 </div>
               </div>
             ))}

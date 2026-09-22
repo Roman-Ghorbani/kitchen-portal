@@ -49,20 +49,6 @@ export async function cancelPlate(id: string): Promise<LatePlateResult> {
   return res;
 }
 
-export async function adminUnblockPlate(id: string): Promise<LatePlateResult> {
-  const session = await getSession();
-  if (!session || session.role !== 'admin') {
-    return { ok: false, message: 'Admin access required.' };
-  }
-
-  const { unblockLatePlate } = await import('../../lib/late-plate-service.ts');
-  const res = await unblockLatePlate(id, session.name);
-  if (res.ok) {
-    refresh();
-    revalidatePath('/admin/late-plates');
-  }
-  return res;
-}
 
 export async function adminPlacePlate(
   memberId: string,
@@ -137,4 +123,17 @@ export async function removeRecurringLatePlate(id: string): Promise<LatePlateRes
   return res;
 }
 
+export async function updateMyDietary(
+  flags: string[],
+  other: string,
+): Promise<LatePlateResult> {
+  const session = await getSession();
+  if (!session || session.role !== 'brother') {
+    return { ok: false, message: 'Sign in first.' };
+  }
 
+  const { setMemberDietary } = await import('../../lib/late-plate-service.ts');
+  const res = await setMemberDietary(session.sub, flags, other);
+  if (res.ok) refresh();
+  return res;
+}

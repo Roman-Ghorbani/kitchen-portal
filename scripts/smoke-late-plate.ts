@@ -15,7 +15,7 @@
  * Delete the file afterwards; it is recreated from the migrations each run.
  */
 
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { eq } from 'drizzle-orm';
 
 import { sqlite, db } from '../src/db/index.ts';
@@ -42,12 +42,11 @@ if (!process.env.DATABASE_FILE?.includes('smoke')) {
   );
 }
 
-for (const file of [
-  'drizzle/0000_massive_lilandra.sql',
-  'drizzle/0001_exotic_sprite.sql',
-  'drizzle/0002_nasty_scarlet_spider.sql',
-  'drizzle/0003_white_mad_thinker.sql',
-]) {
+// Every migration, in order - a hand-kept list here went stale once already.
+for (const file of readdirSync('drizzle')
+  .filter((f) => f.endsWith('.sql'))
+  .sort()
+  .map((f) => `drizzle/${f}`)) {
   for (const stmt of readFileSync(file, 'utf8').split('--> statement-breakpoint')) {
     if (stmt.trim()) sqlite.exec(stmt);
   }
@@ -112,6 +111,12 @@ ok('re-requesting after a cancel succeeds', r.ok);
 const after = await myLatePlatesInRange(ben.id, tue, tue);
 ok('still exactly one row after the re-request', after.length === 1);
 ok('the new note replaced the old one', after[0].note === 'back on');
+
+/* Same day, again and again: cancel and ask again as often as he likes. */
+r = await cancelLatePlate(after[0].id, ben.id, at('11:40'));
+ok('a second same-day cancel succeeds', r.ok && r.message === 'Cancelled.');
+r = await requestLatePlate(ben.id, tue, 'dinner', 'actually yes', at('11:45'));
+ok('a second same-day re-request succeeds', r.ok);
 
 r = await setLatePlateStatus(after[0].id, 'ready', null, 'Kitchen tablet');
 ok('the kitchen can mark a plate ready after the cutoff', r.ok);

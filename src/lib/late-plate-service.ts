@@ -428,48 +428,6 @@ export async function listLatePlates(
 /* ------------------------------------------------------------------ */
 
 /**
- * Lifts the re-request restriction for a brother who cancelled a plate.
- * Removes the cancelled row so they (or an admin) can submit a fresh request.
- */
-export async function unblockLatePlate(
-  latePlateId: string,
-  adminName: string,
-): Promise<LatePlateResult> {
-  const [row] = await db
-    .select({
-      id: latePlates.id,
-      memberId: latePlates.memberId,
-      date: latePlates.date,
-      meal: latePlates.meal,
-      name: members.name,
-    })
-    .from(latePlates)
-    .innerJoin(members, eq(members.id, latePlates.memberId))
-    .where(eq(latePlates.id, latePlateId))
-    .limit(1);
-
-  if (!row) {
-    return { ok: false, message: 'Request not found.' };
-  }
-
-  await db.delete(latePlates).where(eq(latePlates.id, latePlateId));
-
-  await db.insert(events).values({
-    action: 'late-plate.unblocked',
-    entityType: 'late-plate',
-    entityId: latePlateId,
-    actorName: adminName,
-    summary: `${adminName} unblocked late plate re-requesting for ${row.name} (${row.date} ${row.meal})`,
-    payload: { memberId: row.memberId, date: row.date, meal: row.meal },
-  });
-
-  return {
-    ok: true,
-    message: `Re-requesting unblocked for ${row.name} on ${row.date} (${row.meal}).`,
-  };
-}
-
-/**
  * Allows a kitchen manager to manually request a late plate for any brother,
  * bypassing cutoffs and closed meal gates.
  */
@@ -734,8 +692,6 @@ export async function requestLatePlate(
     )
     .limit(1);
 
-  const today = todayInEastern(now);
-
   if (existing && OPEN_STATUSES.includes(existing.status as LatePlateStatus)) {
     return {
       ok: false,
@@ -743,13 +699,8 @@ export async function requestLatePlate(
     };
   }
 
-  // If cancelled on the day-of, one cannot re-request that meal today.
-  if (date === today && existing && existing.status === 'cancelled') {
-    return {
-      ok: false,
-      message: 'You already cancelled your late plate for this meal today. Re-requesting the same meal on the day of service is not permitted.',
-    };
-  }
+  // Asking again after a cancel is allowed, as often as he likes, until the
+  // cutoff (window.open above). The kitchen only ever sees the latest state.
 
   const values = {
     status: 'waiting' as const,
@@ -854,15 +805,7 @@ export async function cancelLatePlate(
     payload: { date: row.date, meal: row.meal },
   });
 
-  const today = todayInEastern(now);
-  const isDayOf = row.date === today;
-
-  return {
-    ok: true,
-    message: isDayOf
-      ? 'Cancelled. Since this was for today, you cannot request another plate for this meal today.'
-      : 'Cancelled.',
-  };
+  return { ok: true, message: 'Cancelled.' };
 }
 
 /**
@@ -965,6 +908,24 @@ export async function getMemberDietary(memberId: string): Promise<MemberDietary>
   const flags = normaliseFlags(row?.flags ?? []);
   const other = row?.other ?? null;
   return { flags, other, summary: summariseFlags(flags, other) };
+}
+
+/**
+ * A brother editing his standing allergies without asking for a plate.
+ * Only future requests pick this up - past requests keep their snapshot.
+ */
+export async function setMemberDietary(
+  memberId: string,
+  flags: readonly string[],
+  other: string | null,
+): Promise<LatePlateResult> {
+  const clean = normaliseFlags(flags);
+  const trimmed = other?.trim().slice(0, MAX_NOTE) || null;
+  await db
+    .update(members)
+    .set({ dietaryFlags: clean, dietaryOther: trimmed })
+    .where(eq(members.id, memberId));
+  return { ok: true, message: 'Saved.' };
 }
 
 /* ------------------------------------------------------------------ */

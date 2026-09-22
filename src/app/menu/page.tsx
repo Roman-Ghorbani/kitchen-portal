@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation';
 import { cookies, headers } from 'next/headers';
 import { getSession, getViewAs } from '../../lib/session.ts';
 import { getMemberById } from '../../lib/member-queries.ts';
@@ -44,6 +45,9 @@ export default async function MenuPage({
   // If user is signed in to the portal (brother or admin), show inside AppShell
   if (session) {
     const viewAs = await getViewAs();
+    // Brothers have the menu-first late plate page as their Menu tab; this
+    // weekly view stays for seniors without an account and for managers.
+    if (session.role === 'brother' || viewAs) redirect('/late-plate');
     const previewed = viewAs ? await getMemberById(viewAs) : null;
 
     return (

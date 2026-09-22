@@ -1,9 +1,11 @@
 /**
- * Late plates, brother side dashboard.
+ * Menu - the brother's late plate page, menu first.
  *
- * Fast, intuitive, and engaging dashboard for brothers to browse upcoming menus,
- * manage recurring weekly schedules, request late plates, and track preparation
- * status in real-time.
+ * The menu is the page; asking for a plate is one button on each meal card.
+ * The order follows how a brother decides: which day -> what is served ->
+ * can I still -> save me a plate. Everything is computed here on the server
+ * (house clock, cutoffs, what he already has) and handed to one client
+ * component that owns the day picker, the confirm sheet and the undo toast.
  */
 
 import { redirect } from 'next/navigation';
@@ -16,6 +18,11 @@ import {
   parseISO,
   parseClock,
   formatClock,
+  mondayOf,
+  weekDates,
+  dayIndex,
+  houseClockMinutes,
+  HOUSE_TIMEZONE,
 } from '../../../lib/dates.ts';
 import {
   mealWindowsForRange,
@@ -24,45 +31,52 @@ import {
   getMemberRecurringPlates,
   SERVE_TIMES,
   MEALS,
-  type MealWindow,
-  type LatePlateRow,
-  type MemberDietary,
 } from '../../../lib/late-plate-service.ts';
-import { getDayMenu, type DayMenu } from '../../../lib/menu-service.ts';
+import { getDayMenu } from '../../../lib/menu-service.ts';
 import { getActiveSemester } from '../../../lib/week-service.ts';
-import type { Meal } from '../../../lib/types.ts';
 import { AppShell } from '../shell.tsx';
-import { PlateButton } from './plate-button.tsx';
-import { StatusTracker } from './status-tracker.tsx';
-import { RecurringSchedules } from './recurring-schedules.tsx';
-import { InstallPrompt, InstallButton, LatePlateRefresher } from './install-prompt.tsx';
+import { LatePlateRefresher } from './install-prompt.tsx';
+import { MenuBoard, type BoardDay, type BoardMeal } from './menu-board.tsx';
 
 export const dynamic = 'force-dynamic';
 
-/** Today plus six. Far enough to cover a known trip, short enough to scan. */
-const HORIZON_DAYS = 7;
-
-function weekday(iso: string): string {
-  return parseISO(iso).toLocaleDateString('en-US', {
-    weekday: 'long',
-    timeZone: 'UTC',
-  });
-}
-
-function shortDate(iso: string): string {
-  return parseISO(iso).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    timeZone: 'UTC',
-  });
-}
+const WEEKDAY_NAMES = [
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+  'Sunday',
+];
 
 function clock(hhmm: string): string {
   const m = parseClock(hhmm);
   return m === null ? hhmm : formatClock(m);
 }
 
-export default async function LatePlatePage() {
+/** "2:49 PM" on the house clock, whatever timezone the server runs in. */
+function houseTime(d: Date | null): string | null {
+  if (!d) return null;
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone: HOUSE_TIMEZONE,
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(d);
+}
+
+function longDate(iso: string): string {
+  const d = parseISO(iso);
+  const weekday = WEEKDAY_NAMES[dayIndex(iso)];
+  const month = d.toLocaleDateString('en-US', { month: 'long', timeZone: 'UTC' });
+  return `${weekday} ${d.getUTCDate()} ${month}`;
+}
+
+export default async function MenuPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ week?: string }>;
+}) {
   const session = await getSession();
   if (!session) redirect('/signin');
 
@@ -70,382 +84,134 @@ export default async function LatePlatePage() {
   if (session.role === 'admin' && !viewAs) redirect('/admin');
   const memberId = viewAs ?? session.sub;
   const readOnly = session.role === 'admin';
-
   const previewed = readOnly ? await getMemberById(memberId) : null;
 
-  const today = todayInEastern();
-  const dates = Array.from({ length: HORIZON_DAYS }, (_, i) => addDays(today, i));
+  const params = await searchParams;
+  const now = new Date();
+  const today = todayInEastern(now);
+  const thisMonday = mondayOf(today);
+  // This week and next. Further out than that nobody has posted a menu, and
+  // a cutoff two weeks away is not something anyone needs a button for yet.
+  const weekOffset = params.week === 'next' ? 1 : 0;
+  const monday = addDays(thisMonday, weekOffset * 7);
+  const dates = weekDates(monday);
 
   const [windows, mine, dietary, recurring, menus, semester] = await Promise.all([
-    mealWindowsForRange(dates),
-    myLatePlatesInRange(memberId, dates[0], dates[dates.length - 1]),
+    mealWindowsForRange(dates, now),
+    myLatePlatesInRange(memberId, dates[0], dates[6]),
     getMemberDietary(memberId),
     getMemberRecurringPlates(memberId),
-    // Fetch menus for all days in the horizon so every meal shows what's cooking
     Promise.all(dates.map((d) => getDayMenu(d))),
     getActiveSemester().catch(() => null),
   ]);
 
-  const latePlatesEnabled = semester?.latePlatesEnabled ?? true;
-  const menuByDate = new Map<string, DayMenu | null>(
-    dates.map((d, i) => [d, menus[i]]),
-  );
-
+  const enabled = (semester?.latePlatesEnabled ?? true) && !readOnly;
   const byKey = new Map(mine.map((r) => [`${r.date}:${r.meal}`, r]));
+  const nowMinutes = houseClockMinutes(now);
 
-  const todayMenu = menuByDate.get(today) ?? null;
+  const days: BoardDay[] = dates.map((date, i) => {
+    const menu = menus[i];
+    const meals: BoardMeal[] = MEALS.map((meal) => {
+      const w = windows.get(`${date}:${meal}`)!;
+      const r = byKey.get(`${date}:${meal}`) ?? null;
+      const cutoffMinutes = parseClock(w.cutoff);
+      return {
+        meal,
+        served: w.served,
+        serves: clock(SERVE_TIMES[meal]),
+        items: menu?.[meal].items ?? [],
+        menuStale: Boolean(menu?.stale),
+        open: w.open,
+        cutoffLabel: clock(w.cutoff),
+        minutesLeft:
+          w.open && date === today && cutoffMinutes !== null
+            ? cutoffMinutes - nowMinutes
+            : null,
+        closedReason: w.closedReason,
+        request: r
+          ? {
+              id: r.id,
+              status: r.status,
+              askedAt: houseTime(r.requestedAt),
+              resolvedAt: houseTime(r.resolvedAt),
+              flagLines: r.flags.lines,
+              hasAllergen: r.flags.hasAllergen,
+              hasDietary: r.flags.dietary.length > 0,
+              note: r.note,
+              reason: r.reason,
+            }
+          : null,
+      };
+    }).filter((m) => m.served);
 
-  const todayWindows = MEALS.map((meal) => ({
-    meal,
-    window: windows.get(`${today}:${meal}`)!,
-    request: byKey.get(`${today}:${meal}`) ?? null,
-  })).filter((m) => m.window.served);
+    return {
+      date,
+      weekday: WEEKDAY_NAMES[dayIndex(date)],
+      short: WEEKDAY_NAMES[dayIndex(date)].slice(0, 3),
+      dayOfMonth: parseISO(date).getUTCDate(),
+      isToday: date === today,
+      isPast: date < today,
+      meals,
+    };
+  });
 
-  const later = dates.slice(1);
-
-  // Dashboard Stats Calculations
-  const todayActivePlate = mine.find(
-    (p) => p.date === today && (p.status === 'waiting' || p.status === 'ready'),
-  );
-  const weekActiveCount = mine.filter(
-    (p) => p.status === 'waiting' || p.status === 'ready',
-  ).length;
+  const firstMonth = parseISO(dates[0]).toLocaleDateString('en-US', {
+    month: 'short',
+    timeZone: 'UTC',
+  });
+  const lastMonth = parseISO(dates[6]).toLocaleDateString('en-US', {
+    month: 'short',
+    timeZone: 'UTC',
+  });
+  const rangeLabel =
+    firstMonth === lastMonth
+      ? `${parseISO(dates[0]).getUTCDate()}–${parseISO(dates[6]).getUTCDate()} ${lastMonth}`
+      : `${parseISO(dates[0]).getUTCDate()} ${firstMonth} – ${parseISO(dates[6]).getUTCDate()} ${lastMonth}`;
 
   return (
     <AppShell
       session={session}
       active="/late-plate"
       viewingAs={previewed?.name ?? null}
-      title="Late Plate Dashboard"
-      subtitle="Browse menus, schedule recurring late plates, and track pickup in the student fridge"
+      title="Menu"
+      subtitle={longDate(today)}
     >
-      <InstallPrompt />
       <LatePlateRefresher />
 
-      {/* Admin Custom Message Banner */}
       {semester?.latePlateMessage && (
         <div className="alert info" style={{ marginBottom: 16 }}>
           <div className="alert-body">
-            <div className="alert-title">📢 Announcement</div>
+            <div className="alert-title">Announcement</div>
             {semester.latePlateMessage}
           </div>
         </div>
       )}
 
-      {/* Testing Notice banner when Kitchen Manager has paused requesting */}
-      {!latePlatesEnabled && (
+      {semester && semester.latePlatesEnabled === false && (
         <div className="alert warn" style={{ marginBottom: 16 }}>
           <div className="alert-body">
-            <div className="alert-title">
-              Late Plate Tool Testing Notice
-            </div>
-            The late plate request tool is currently being tested live by the
-            kitchen manager. You can explore menus and upcoming meals below,
-            but requesting is temporarily paused until it officially opens.
+            <div className="alert-title">Late plate requests are paused</div>
+            The kitchen manager is testing the request tool. You can still see
+            the menu; saving a plate is switched off until it opens.
           </div>
         </div>
       )}
 
-      {/* Brother Welcome Header */}
-      <div className="lp-welcome-hero card card-pad" style={{ marginBottom: 20, display: 'flex', gap: 16, alignItems: 'center' }}>
-        {semester?.logoUrl && (
-          <img src={semester.logoUrl} alt="Logo" style={{ width: 64, height: 64, objectFit: 'contain', borderRadius: 8 }} />
-        )}
-        <div>
-          <h2 style={{ fontSize: 22, margin: '0 0 8px' }}>Hello, {(readOnly ? 'there' : session.name.split(' ')[0])}!</h2>
-          <div style={{ fontSize: 15, color: 'var(--ink-400)' }}>
-            {todayActivePlate ? (
-              <span>
-                Your {todayActivePlate.meal} late plate for today is 
-                <strong style={{ color: todayActivePlate.status === 'ready' ? '#10b981' : 'var(--gold-400)' }}>
-                  {todayActivePlate.status === 'ready' ? ' ready in the fridge' : ' currently in queue'}
-                </strong>.
-              </span>
-            ) : (
-              <span>You have no late plates requested for today. Check out the menu below!</span>
-            )}
-          </div>
-        </div>
-      </div>
-
-      <div className="lp-feed">
-        {/* Today's Meal Section */}
-        <div className="lp-today card card-pad">
-          <div className="lp-today-head">
-            <div>
-              <div className="lp-eyebrow">Service Schedule</div>
-              <h2 className="lp-today-title">Today — {weekday(today)}, {shortDate(today)}</h2>
-            </div>
-          </div>
-
-          {todayWindows.length === 0 ? (
-            <div className="note">No meals served today.</div>
-          ) : (
-            <div className="lp-meal-grid">
-              {todayWindows.map(({ meal, window, request }) => {
-                if (
-                  request &&
-                  (request.status === 'waiting' ||
-                    request.status === 'ready' ||
-                    request.status === 'declined')
-                ) {
-                  return (
-                    <StatusTracker
-                      key={meal}
-                      request={request}
-                      window={window}
-                      menu={todayMenu}
-                      isToday
-                    />
-                  );
-                }
-
-                return (
-                  <MealCell
-                    key={meal}
-                    meal={meal}
-                    window={window}
-                    request={request}
-                    dietary={dietary}
-                    menu={todayMenu}
-                    latePlatesEnabled={latePlatesEnabled && !readOnly}
-                    isToday
-                    prominent
-                  />
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* Rest of the week */}
-        <div className="section-title" style={{ marginTop: 32 }}>Upcoming this week</div>
-
-        <div className="lp-days">
-          {later.map((date) => {
-            const dayMenu = menuByDate.get(date) ?? null;
-            const cells = MEALS.map((meal) => ({
-              meal,
-              window: windows.get(`${date}:${meal}`)!,
-              request: byKey.get(`${date}:${meal}`) ?? null,
-            })).filter((c) => c.window.served);
-
-            if (cells.length === 0) return null;
-
-            return (
-              <div key={date} className="lp-day card card-pad">
-                <div className="lp-day-head">
-                  <span className="lp-day-name">{weekday(date)}</span>
-                  <span className="lp-day-date">{shortDate(date)}</span>
-                </div>
-                <div className="lp-meal-grid">
-                  {cells.map(({ meal, window, request }) => (
-                    <MealCell
-                      key={meal}
-                      meal={meal}
-                      window={window}
-                      request={request}
-                      dietary={dietary}
-                      menu={dayMenu}
-                      latePlatesEnabled={latePlatesEnabled && !readOnly}
-                      isToday={false}
-                    />
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Settings & Preferences Section at the bottom */}
-        <div className="section-title" style={{ marginTop: 40 }}>Settings & Preferences</div>
-        
-        <div style={{ marginTop: 16 }}>
-          <RecurringSchedules
-            schedules={recurring}
-            disabled={!latePlatesEnabled}
-          />
-        </div>
-
-        <div className="lp-profile-tab card card-pad" style={{ marginTop: 16 }}>
-          <div className="section-title">Your Dietary Profile</div>
-          <div style={{ margin: '12px 0 24px', fontSize: 15 }}>
-            {dietary.flags.length > 0 ? (
-              <span style={{ color: '#f87171', fontWeight: 600 }}>⚠️ {dietary.flags.join(', ')}</span>
-            ) : (
-              <span style={{ color: 'var(--ink-400)' }}>No allergies recorded</span>
-            )}
-            <div style={{ fontSize: 13, color: 'var(--ink-400)', marginTop: 4 }}>
-              These are automatically attached to all your late plate requests.
-            </div>
-          </div>
-            
-          <div className="section-title">How late plates work</div>
-          <div style={{ marginTop: 12, lineHeight: 1.5, fontSize: 14, color: 'var(--ink-900)' }}>
-            <ul style={{ paddingLeft: 20, margin: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <li>A late plate is boxed during service and placed in the student fridge.</li>
-              <li>You must request before the cutoff time.</li>
-              <li>You can pick it up whenever you return to the house.</li>
-              <li>Allergies and dietary restrictions travel with your request — the kitchen must confirm they have reviewed them before plating.</li>
-              <li>If you cancel a late plate on the day of service, you will not be able to re-request that same meal today.</li>
-            </ul>
-          </div>
-
-          <div className="section-title" style={{ marginTop: 24 }}>App Installation</div>
-          <div style={{ marginTop: 12 }}>
-            <InstallButton />
-          </div>
-        </div>
-      </div>
+      <MenuBoard
+        days={days}
+        today={today}
+        weekOffset={weekOffset}
+        weekLabel={`${weekOffset === 0 ? 'This week' : 'Next week'}`}
+        rangeLabel={rangeLabel}
+        enabled={enabled}
+        readOnly={readOnly}
+        dietary={{
+          flags: dietary.flags,
+          other: dietary.other ?? '',
+          lines: dietary.summary.lines,
+        }}
+        recurring={recurring}
+      />
     </AppShell>
   );
-}
-
-function MealCell({
-  meal,
-  window,
-  request,
-  dietary,
-  menu = null,
-  latePlatesEnabled = true,
-  isToday = false,
-  prominent = false,
-}: {
-  meal: Meal;
-  window: MealWindow;
-  request: LatePlateRow | null;
-  dietary: MemberDietary;
-  /** Menu from the kitchen TV Pi when available. */
-  menu?: DayMenu | null;
-  latePlatesEnabled?: boolean;
-  isToday?: boolean;
-  prominent?: boolean;
-}) {
-  const items = menu?.[meal].items ?? [];
-  const isCancelledToday = isToday && request?.status === 'cancelled';
-  const active =
-    request && (request.status === 'waiting' || request.status === 'ready');
-
-  return (
-    <div className={`lp-meal${prominent ? ' prominent' : ''}`}>
-      <div className="lp-meal-head">
-        <div className="lp-meal-title-wrap">
-          <span className="lp-meal-icon">{meal === 'lunch' ? '☀️' : '🌙'}</span>
-          <span className="lp-meal-name">{meal}</span>
-        </div>
-        <StatusTag request={request} window={window} isToday={isToday} />
-      </div>
-
-      <div className="lp-meal-times">
-        Serves {clock(SERVE_TIMES[meal])}
-        {window.latePlateAllowed !== false ? ` · requests close ${clock(window.cutoff)}` : ' · no late plates offered'}
-      </div>
-
-      {/* Menu Highlight Area */}
-      <div className="lp-menu-box">
-        <div className="lp-menu-label">
-          🍽️ On the menu{menu?.stale ? ' (last known)' : ''}
-        </div>
-        {items.length > 0 ? (
-          <div className="lp-menu-items">
-            {items.map((item, idx) => (
-              <span key={idx} className="lp-menu-pill">
-                {item}
-              </span>
-            ))}
-          </div>
-        ) : (
-          <div className="lp-menu-empty">
-            Menu not yet posted by the chef for this meal.
-          </div>
-        )}
-      </div>
-
-      {/* When cancelled on the day-of */}
-      {isCancelledToday && (
-        <div className="lp-cancelled-notice">
-          🚫 You cancelled this request earlier today. Re-requesting this meal on the day of service is not permitted.
-        </div>
-      )}
-
-      {request?.status === 'declined' && (
-        <div className="lp-declined">
-          Chefs declined{request.reason ? `: ${request.reason}` : '.'}
-        </div>
-      )}
-
-      {active ? (
-        <>
-          <div className="lp-submitted-time">
-            Requested at {formatClockTime(request.requestedAt)}
-          </div>
-          {request.flags.hasAny && (
-            <div
-              className={`lp-flags-back${request.flags.hasAllergen ? ' has-allergen' : ''}`}
-            >
-              <span className="lp-flags-label">
-                {request.acknowledgedAt
-                  ? 'Kitchen confirmed'
-                  : 'Kitchen will be shown'}
-              </span>
-              {request.flags.lines.join(' · ')}
-            </div>
-          )}
-          {request.note && <div className="lp-note-back">“{request.note}”</div>}
-          {request.status === 'waiting' && (
-            <PlateButton
-              mode="cancel"
-              id={request.id}
-              isDayOf={isToday}
-            />
-          )}
-          {request.status === 'ready' && (
-            <div style={{ marginTop: 10, fontSize: 13, color: '#10b981', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span>🧊</span>
-              <span>Ready for pickup in the student fridge!</span>
-            </div>
-          )}
-        </>
-      ) : !isCancelledToday && window.open ? (
-        <PlateButton
-          mode="request"
-          date={window.date}
-          meal={meal}
-          defaultFlags={dietary.flags}
-          defaultOther={dietary.other ?? ''}
-          disabled={!latePlatesEnabled}
-          disabledReason="Late plate requests are paused for testing."
-        />
-      ) : !isCancelledToday ? (
-        <div className="lp-closed">{window.closedReason}</div>
-      ) : null}
-    </div>
-  );
-}
-
-function StatusTag({
-  request,
-  window,
-  isToday = false,
-}: {
-  request: LatePlateRow | null;
-  window: MealWindow;
-  isToday?: boolean;
-}) {
-  if (request?.status === 'ready') return <span className="tag ok">Ready</span>;
-  if (request?.status === 'waiting') return <span className="tag jun">Requested</span>;
-  if (request?.status === 'declined') return <span className="tag bad">Declined</span>;
-  if (isToday && request?.status === 'cancelled') return <span className="tag locked">Cancelled</span>;
-  if (window.latePlateAllowed === false) return <span className="tag locked">No Late Plates</span>;
-  if (!window.open) return <span className="tag locked">Closed</span>;
-  return <span className="tag ok">Open</span>;
-}
-
-function formatClockTime(date: Date): string {
-  const hours = date.getHours();
-  const minutes = date.getMinutes();
-  const h = hours % 12 || 12;
-  const m = minutes.toString().padStart(2, '0');
-  const ampm = hours >= 12 ? 'PM' : 'AM';
-  return `${h}:${m} ${ampm}`;
 }

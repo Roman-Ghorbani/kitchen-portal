@@ -2,7 +2,7 @@
  * Kitchen Manager - Late Plate Admin Dashboard & Tablet Monitor.
  *
  * Provides real-time queue management, status overrides, manual plate placement,
- * re-request unblocking, chef tablet usage monitoring, and semester request analytics.
+ * chef tablet usage monitoring, and semester request analytics.
  */
 
 import { redirect } from 'next/navigation';
@@ -211,7 +211,7 @@ export default async function AdminLatePlatesPage() {
           Late Plate Audit Log
         </h2>
         <div style={{ fontSize: 13, color: 'var(--ink-400)', marginTop: 2 }}>
-          Recent actions, status changes, cancellations, and unblocks.
+          Recent actions, status changes, and cancellations.
         </div>
 
         <div className="lp-admin-table-wrap" style={{ marginTop: 12 }}>
