@@ -209,16 +209,20 @@ r = await setLatePlateStatus(plain.id, 'ready', null, 'Chris');
 ok('an unflagged plate needs no acknowledgement', r.ok);
 
 /* Omitting flags entirely means "use my usual", not "I have none". */
-r = await cancelLatePlate(acked.id, ben.id, atWed('10:30'));
-r = await requestLatePlate(ben.id, wed, 'dinner', { note: 'quick one' }, atWed('10:35'));
-const reused = (await myLatePlatesInRange(ben.id, wed, wed))[0];
+const fri = '2026-09-04';
+const atFri = (hhmm: string) => new Date(`${fri}T${hhmm}:00-04:00`);
+r = await requestLatePlate(ben.id, fri, 'dinner', { flags: ['peanuts'] }, atFri('10:00'));
+const friPlate = (await myLatePlatesInRange(ben.id, fri, fri))[0];
+r = await cancelLatePlate(friPlate.id, ben.id, atFri('10:30'));
+r = await requestLatePlate(ben.id, fri, 'dinner', { note: 'quick one' }, atFri('10:35'));
+const reused = (await myLatePlatesInRange(ben.id, fri, fri))[0];
 ok('omitting flags reuses his remembered ones', reused.flags.allergens.includes('Peanuts'));
 ok('a re-request clears the old acknowledgement', reused.acknowledgedAt === null);
 
 /* Passing an explicit empty array does mean "none today". */
-r = await cancelLatePlate(reused.id, ben.id, atWed('10:40'));
-r = await requestLatePlate(ben.id, wed, 'dinner', { flags: [], remember: false }, atWed('10:45'));
-const cleared = (await myLatePlatesInRange(ben.id, wed, wed))[0];
+r = await cancelLatePlate(reused.id, ben.id, atFri('10:40'));
+r = await requestLatePlate(ben.id, fri, 'dinner', { flags: [], remember: false }, atFri('10:45'));
+const cleared = (await myLatePlatesInRange(ben.id, fri, fri))[0];
 ok('an explicit empty array means none this time', !cleared.flags.hasAny);
 
 const [benAfter] = await db
@@ -267,15 +271,14 @@ ok('a chef cannot decline a cancelled plate', !r.ok);
 const untouched = (await myLatePlatesInRange(ben.id, thu, thu))[0];
 ok('and the row really did not move', untouched.status === 'cancelled');
 
-/* Cancelling a plate that was already made is allowed - the kitchen still
-   wants to know it will not be collected. */
+/* Cancelling a plate that was already made is disallowed */
 await requestLatePlate(sam.id, thu, 'dinner', { flags: [] }, atThu('09:00'));
 const samThu = (await myLatePlatesInRange(sam.id, thu, thu))[0];
 r = await setLatePlateStatus(samThu.id, 'ready', null, 'Chris');
 ok('his plate is made', r.ok);
 r = await cancelLatePlate(samThu.id, sam.id, atThu('19:30'));
-ok('he can still cancel an already-plated meal', r.ok);
-ok('and is told it was already made', /already plated/i.test(r.message));
+ok('he cannot cancel an already-plated meal', !r.ok);
+ok('and is told it is in the fridge', /already prepared/i.test(r.message));
 
 /* Cancelling twice is not a thing. */
 r = await cancelLatePlate(samThu.id, sam.id, atThu('19:31'));
