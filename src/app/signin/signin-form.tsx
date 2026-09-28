@@ -39,6 +39,7 @@ export function SignInForm({
   const [error, setError] = useState<string | null>(null);
   const [adminMode, setAdminMode] = useState(false);
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [totp, setTotp] = useState('');
   const [pending, startTransition] = useTransition();
 
@@ -85,15 +86,36 @@ export function SignInForm({
           {totpEnabled && ' Enter the six-digit code from your authenticator app.'}
         </p>
 
-        <input
-          className="field"
-          type="password"
-          placeholder="Password"
-          autoComplete="current-password"
-          value={password}
-          autoFocus
-          onChange={(e) => setPassword(e.target.value)}
-        />
+        <div style={{ position: 'relative', width: '100%' }}>
+          <input
+            className="field"
+            type={showPassword ? 'text' : 'password'}
+            placeholder="Password"
+            autoComplete="current-password"
+            value={password}
+            autoFocus
+            style={{ paddingRight: '4rem' }}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            style={{
+              position: 'absolute',
+              right: '0.8rem',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              background: 'none',
+              border: 'none',
+              color: 'var(--dim)',
+              fontSize: '0.85rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            {showPassword ? 'Hide' : 'Show'}
+          </button>
+        </div>
 
         {totpEnabled && (
           <input

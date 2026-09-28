@@ -243,7 +243,7 @@ export async function signInAdmin(password: string, totp: string): Promise<Actio
   const ok = passOk && totpOk;
 
   if (!ok) {
-    console.log(`[signInAdmin failed] passOk=${passOk}, totpOk=${totpOk}, totpLen=${totp.length}, step=${step}`);
+    console.log(`[signInAdmin failed] passOk=${passOk}, passLen=${password.length}, totpOk=${totpOk}, totpLen=${totp.length}, step=${step}`);
     const after = await recordFailure([
       ['admin', POLICIES.admin],
       [ipKey(ctx.ip), POLICIES.ip],
