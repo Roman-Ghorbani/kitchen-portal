@@ -258,7 +258,7 @@ export default async function HomePage() {
               {takeable.length} seat{takeable.length === 1 ? '' : 's'} going spare
             </span>
             <span className="home-row-sub">
-              Take one and the point is yours, whatever your year.
+              Take one and the point is yours, whichever crew you are on.
             </span>
           </div>
           <span className="home-row-chev">→</span>

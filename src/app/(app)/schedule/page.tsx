@@ -168,10 +168,10 @@ export default async function SchedulePage({
       {openCount > 0 && (
         <div className="alert bad">
           <span className="alert-title">
-            {openCount} shift{openCount === 1 ? '' : 's'} still need cover
+            {openCount} shift{openCount === 1 ? ' still needs' : 's still need'} cover
           </span>
           <span className="alert-body">
-            Anyone can take these and keep the point, whatever their year.
+            Anyone can take these and keep the point, whichever crew they are on.
           </span>
         </div>
       )}

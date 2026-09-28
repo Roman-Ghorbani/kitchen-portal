@@ -87,7 +87,7 @@ export default async function AdminPage() {
       <div className="stat-grid six">
         <Link className="card card-pad stat-card" href="/admin/roster">
           <div className="label">On duty</div>
-          <div className="value mono">{roster.length}</div>
+          <div className="value mono">{lunchCrew.length + dinnerCrew.length}</div>
           <div className="foot">
             {lunchCrew.length} lunch crew · {dinnerCrew.length} dinner crew
           </div>

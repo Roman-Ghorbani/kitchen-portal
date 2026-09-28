@@ -17,6 +17,20 @@ manager use it daily.
 | **Kitchen manager** (desktop) | Drawing and posting weeks, attendance, roster management (import, crews, exemptions, bulk points, setup codes), the kitchen tablet, the full audit log, and an in-app [handbook](docs/HANDBOOK.md) |
 | **Out-of-house seniors** | A read-only weekly menu behind a shared password |
 
+<p align="center">
+  <img src="docs/screenshots/phone-home.png" width="30%" alt="A brother's home screen: his next shift, points and standing">
+  <img src="docs/screenshots/phone-board.png" width="30%" alt="The week's duty board on a phone">
+  <img src="docs/screenshots/phone-menu.png" width="30%" alt="The day's menu, where late plates are requested">
+</p>
+
+![The manager's dashboard](docs/screenshots/dashboard.png)
+
+| Roster, with a bulk points change previewed | The chefs' late plate queue on the kitchen tablet |
+|---|---|
+| ![Roster](docs/screenshots/roster.png) | ![Kitchen tablet](docs/screenshots/kitchen-tablet.png) |
+
+<sub>Screenshots use the demo roster from `src/db/seed.ts --demo`; no real brothers appear.</sub>
+
 ---
 
 ## Architecture
