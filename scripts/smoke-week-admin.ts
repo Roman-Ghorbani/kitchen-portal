@@ -49,7 +49,7 @@ async function main() {
   const lunch = allSlots.find((s) => {
     if (s.meal !== 'lunch') return false;
     const asgs = allAsg.filter((a) => a.slotId === s.id);
-    return asgs.length === s.size && asgs.every((a) => rosterById.get(a.memberId)?.classYear === 'junior');
+    return asgs.length === s.size && asgs.every((a) => rosterById.get(a.memberId)?.rotation === 'lunch');
   }) ?? allSlots.find((s) => s.meal === 'lunch')!;
 
   const week = allWeeks.find((w) => w.id === lunch.weekId)!;
@@ -66,11 +66,11 @@ async function main() {
   const pointsBefore = roster.reduce((n, m) => n + m.points, 0);
   const debtBefore = roster.reduce((n, m) => n + m.makeupDebt, 0);
 
-  const spareJunior = roster.find(
-    (m) => m.active && m.classYear === 'junior' && !onLunch.has(m.id),
+  const spareLunch = roster.find(
+    (m) => m.active && !m.exempt && m.rotation === 'lunch' && !onLunch.has(m.id),
   )!;
-  const aSophomore = roster.find(
-    (m) => m.active && m.classYear === 'sophomore' && !onLunch.has(m.id),
+  const aDinner = roster.find(
+    (m) => m.active && !m.exempt && m.rotation === 'dinner' && !onLunch.has(m.id),
   )!;
 
   const target = lunchAsg[0];
@@ -78,36 +78,36 @@ async function main() {
   const originalName = roster.find((m) => m.id === originalMemberId)!.name;
 
   console.log(`\nweek ${week.weekStart} (${week.status}), lunch ${lunch.date}`);
-  console.log(`target: ${originalName} -> ${spareJunior.name}\n`);
+  console.log(`target: ${originalName} -> ${spareLunch.name}\n`);
 
   /* ---------- reassign ---------- */
   console.log('reassign');
-  const wrongYear = await reassignShift(target.id, aSophomore.id, 'Smoke', {});
-  check('rejects wrong class year by default', () => assert.ok(!wrongYear.ok));
-  check('explains why', () => assert.match(wrongYear.message, /sophomore/));
+  const wrongYear = await reassignShift(target.id, aDinner.id, 'Smoke', {});
+  check('rejects the other crew by default', () => assert.ok(!wrongYear.ok));
+  check('explains why', () => assert.match(wrongYear.message, /crew/i));
 
-  const forced = await reassignShift(target.id, aSophomore.id, 'Smoke', {
-    allowAnyClassYear: true,
+  const forced = await reassignShift(target.id, aDinner.id, 'Smoke', {
+    allowOtherCrew: true,
   });
-  check('allows wrong year when explicitly overridden', () =>
+  check('allows the other crew when explicitly overridden', () =>
     assert.ok(forced.ok, forced.message),
   );
 
-  const back = await reassignShift(target.id, spareJunior.id, 'Smoke', {});
-  check('reassigns to a valid junior', () => assert.ok(back.ok, back.message));
+  const back = await reassignShift(target.id, spareLunch.id, 'Smoke', {});
+  check('reassigns to someone on the lunch crew', () => assert.ok(back.ok, back.message));
 
   const after = await db
     .select()
     .from(assignmentsTable)
     .where(eq(assignmentsTable.id, target.id));
   check('the row now names the new person', () =>
-    assert.equal(after[0].memberId, spareJunior.id),
+    assert.equal(after[0].memberId, spareLunch.id),
   );
   check('reassign is a clean replace, not a coverage', () =>
     assert.equal(after[0].coveredByMemberId, null),
   );
 
-  const dupe = await reassignShift(target.id, spareJunior.id, 'Smoke', {});
+  const dupe = await reassignShift(target.id, spareLunch.id, 'Smoke', {});
   check('refuses to reassign to who is already on it', () => assert.ok(!dupe.ok));
 
   /* ---------- remove and add ---------- */
@@ -121,7 +121,7 @@ async function main() {
     .where(eq(assignmentsTable.slotId, lunch.id));
   check('the seat is now open', () => assert.equal(nowOn.length, lunch.size - 1));
 
-  const wrongAdd = await addToShift(lunch.id, aSophomore.id, 'Smoke', {});
+  const wrongAdd = await addToShift(lunch.id, aDinner.id, 'Smoke', {});
   check('add rejects wrong class year by default', () => assert.ok(!wrongAdd.ok));
 
   const added = await addToShift(lunch.id, originalMemberId, 'Smoke', {});
@@ -133,7 +133,7 @@ async function main() {
     .where(eq(assignmentsTable.slotId, lunch.id));
   check('slot is full again', () => assert.equal(full.length, lunch.size));
 
-  const overfill = await addToShift(lunch.id, spareJunior.id, 'Smoke', {});
+  const overfill = await addToShift(lunch.id, spareLunch.id, 'Smoke', {});
   check('refuses to overfill a full slot', () => assert.ok(!overfill.ok));
 
   /* ---------- week-level ---------- */

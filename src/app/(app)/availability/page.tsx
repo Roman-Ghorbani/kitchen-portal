@@ -4,7 +4,7 @@ import { getSession, getViewAs } from '../../../lib/session.ts';
 import { getMemberById } from '../../../lib/member-queries.ts';
 import { getMyConflicts } from '../../actions/availability-actions.ts';
 import { getActiveSemester } from '../../../lib/week-service.ts';
-import { MEAL_FOR_YEAR, type MealDayConfig } from '../../../lib/types.ts';
+import { type MealDayConfig } from '../../../lib/types.ts';
 import { AppShell } from '../shell.tsx';
 import { AvailabilityForm, type DayState } from './availability-form.tsx';
 
@@ -31,7 +31,7 @@ export default async function AvailabilityPage() {
 
   if (!member) redirect('/signin');
 
-  const meal = MEAL_FOR_YEAR[member.classYear];
+  const meal = member.rotation;
   const mealDays = semester.mealDays as MealDayConfig;
   const byDay = new Map(conflicts.map((c) => [c.dayIndex, c.note ?? '']));
 

@@ -22,6 +22,18 @@ described in [`.env.example`](../.env.example). The ones that matter most:
 - `BACKUP_PASSPHRASE` - **also keep it in a password manager.** A backup
   cannot be restored without it.
 
+## A new kitchen manager
+
+The day-to-day - weeks, the roster, semesters, points - is in the
+[Handbook](HANDBOOK.md), which is also in the app. The Pi side of a handover:
+
+1. `npm run admin:credentials` on the Pi (or a laptop with the repo) for the
+   new manager's password and authenticator; replace `ADMIN_PASSWORD_HASH`
+   and `ADMIN_TOTP_SECRET` in `.env.production`, then
+   `sudo systemctl restart kitchen-portal`. The old login stops working.
+2. Share the Pi with the new manager on Tailscale; remove the old one.
+3. Make sure the new manager has `BACKUP_PASSPHRASE` in a password manager.
+
 ## Deploying
 
 From a clean working tree on the laptop:

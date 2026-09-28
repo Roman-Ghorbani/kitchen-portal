@@ -115,8 +115,8 @@ async function main() {
   // ahead - that is the whole point of awarding 3x - so a wide spread can be
   // entirely correct. The invariant that must hold is the one below: the draw
   // never passes over somebody with fewer points.
-  for (const year of ['junior', 'sophomore'] as const) {
-    const pool = after.filter((m) => m.classYear === year && !m.exempt && m.active);
+  for (const year of ['lunch', 'dinner'] as const) {
+    const pool = after.filter((m) => m.rotation === year && !m.exempt && m.active);
     const pts = pool.map((m) => m.points);
     const bountied = pool.filter((m) => !Number.isInteger(m.points) || m.points > 1);
     console.log(
@@ -126,8 +126,8 @@ async function main() {
   }
 
   const drawnIds = new Set(a2.map((x) => x.memberId));
-  for (const year of ['junior', 'sophomore'] as const) {
-    const pool = after.filter((m) => m.classYear === year && !m.exempt && m.active);
+  for (const year of ['lunch', 'dinner'] as const) {
+    const pool = after.filter((m) => m.rotation === year && !m.exempt && m.active);
     const drawn = pool.filter((m) => drawnIds.has(m.id));
     const skipped = pool.filter((m) => !drawnIds.has(m.id));
     if (drawn.length === 0 || skipped.length === 0) continue;

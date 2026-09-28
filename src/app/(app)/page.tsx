@@ -28,7 +28,6 @@ import { AppShell } from './shell.tsx';
 import { HorizonNote } from './horizon-note.tsx';
 import { OfferShiftButton } from './offer-button.tsx';
 import { CalendarSyncButton } from './calendar-sync-button.tsx';
-import { AccountCard } from './account-card.tsx';
 import { calendarFeedToken } from '../../lib/calendar-feed.ts';
 import { HistoryList, type HistoryEntry } from './history-list.tsx';
 
@@ -338,7 +337,6 @@ export default async function HomePage() {
       </h2>
       <HistoryList entries={history} />
 
-      {!readOnly && <AccountCard />}
     </AppShell>
   );
 }

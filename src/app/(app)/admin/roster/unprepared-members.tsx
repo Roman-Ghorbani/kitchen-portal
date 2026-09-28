@@ -10,7 +10,7 @@ import { SetupCodes } from './setup-codes.tsx';
 export interface MemberPreparedness {
   id: string;
   name: string;
-  classYear: 'junior' | 'sophomore';
+  rotation: 'lunch' | 'dinner';
   exempt: boolean;
   hasPin: boolean;
   standingConflictsCount: number;
@@ -228,8 +228,8 @@ export function UnpreparedMembersSection({
                     {m.name}
                   </Link>
 
-                  <span className={`tag ${m.classYear === 'junior' ? 'jun' : 'soph'}`}>
-                    {m.classYear === 'junior' ? 'Junior · Lunch' : 'Sophomore · Dinner'}
+                  <span className={`tag ${m.exempt ? 'locked' : m.rotation === 'lunch' ? 'jun' : 'soph'}`}>
+                    {m.exempt ? 'Exempt' : m.rotation === 'lunch' ? 'Lunch crew' : 'Dinner crew'}
                   </span>
                 </div>
 

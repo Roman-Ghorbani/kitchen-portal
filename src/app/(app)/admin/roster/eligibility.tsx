@@ -3,8 +3,9 @@
  *
  * Moved here from the old /admin/stats page, which existed mostly to show this
  * one table and otherwise repeated tiles the dashboard already had. It belongs
- * next to the roster because everything that changes it - an exemption, a
- * standing conflict - is edited on the roster or in a member's record.
+ * next to the roster because everything that changes it - a crew, an
+ * exemption, a standing conflict - is edited on the roster or in a member's
+ * record. Exempt brothers are not in any pool, so they are not listed.
  */
 
 import Link from 'next/link';
@@ -65,8 +66,8 @@ export function EligibilityMatrix({ days }: { days: EligibilityDay[] }) {
         <div key={d.index} className="card card-pad elig-day">
           <h3 className="elig-day-name">{d.full}</h3>
           <div className="elig-day-pools">
-            <Pool label="Lunch · juniors" pool={d.lunch} />
-            <Pool label="Dinner · sophomores" pool={d.dinner} />
+            <Pool label="Lunch crew" pool={d.lunch} />
+            <Pool label="Dinner crew" pool={d.dinner} />
           </div>
         </div>
       ))}

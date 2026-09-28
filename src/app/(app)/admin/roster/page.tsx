@@ -1,14 +1,16 @@
 /**
  * Roster - everyone, and who can be drawn when.
  *
- * Absorbs the old /admin/stats page. Its stat tiles duplicated the dashboard's
- * (exempt and make-up counts appeared on three separate pages), so those moved
- * to the one row on the dashboard; what was actually worth keeping was the
- * day-by-day eligibility table and the app-readiness list, and both of those
- * belong beside the roster they are about.
+ *   Everyone     the list: filter, select, and act on one person or many
+ *   Day by day   who the draw can reach on each day of the week
+ *   Not ready    who has not claimed their account, with setup codes
+ *   Import       a whole roster from a spreadsheet or a pasted list
+ *                (its own page, /admin/roster/import)
+ *
+ * Per-person detail - profile, history, sign-in - lives on the member's own
+ * page, which every name here links to.
  */
 
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { and, asc, eq, gte } from 'drizzle-orm';
 
@@ -22,14 +24,13 @@ import {
 } from '../../../../db/schema.ts';
 import { getSession } from '../../../../lib/session.ts';
 import { getActiveSemester } from '../../../../lib/week-service.ts';
+import { getRosterDefaults } from '../../../../lib/roster-defaults.ts';
 import { todayInEastern } from '../../../../lib/dates.ts';
 import { AppShell } from '../../shell.tsx';
 import { RosterTable, type RosterRow } from './roster-table.tsx';
 import { EligibilityMatrix, type EligibilityDay } from './eligibility.tsx';
-import {
-  UnpreparedMembersSection,
-  type MemberPreparedness,
-} from './unprepared-members.tsx';
+import { UnpreparedMembersSection, type MemberPreparedness } from './unprepared-members.tsx';
+import { RosterTabs, type RosterView } from './roster-tabs.tsx';
 
 export const dynamic = 'force-dynamic';
 
@@ -43,8 +44,6 @@ const DAYS = [
   { index: 6, short: 'Sun', full: 'Sunday' },
 ];
 
-type View = 'everyone' | 'days' | 'readiness';
-
 export default async function RosterPage({
   searchParams,
 }: {
@@ -55,60 +54,52 @@ export default async function RosterPage({
   if (session.role !== 'admin') redirect('/');
 
   const params = await searchParams;
-  const view: View =
+  const view: RosterView =
     params.view === 'days' ? 'days' : params.view === 'readiness' ? 'readiness' : 'everyone';
 
   const semester = await getActiveSemester();
   const today = todayInEastern();
 
-  const [rows, conflicts, upcoming] = await Promise.all([
+  const [rows, conflicts, upcoming, defaults] = await Promise.all([
     db.select().from(members).orderBy(asc(members.name)),
-    db
-      .select()
-      .from(standingConflicts)
-      .where(eq(standingConflicts.semesterId, semester.id)),
+    db.select().from(standingConflicts).where(eq(standingConflicts.semesterId, semester.id)),
     db
       .select({ memberId: assignmentsTable.memberId })
       .from(assignmentsTable)
       .innerJoin(slotsTable, eq(assignmentsTable.slotId, slotsTable.id))
       .innerJoin(weeksTable, eq(slotsTable.weekId, weeksTable.id))
-      .where(
-        and(eq(weeksTable.semesterId, semester.id), gte(slotsTable.date, today)),
-      ),
+      .where(and(eq(weeksTable.semesterId, semester.id), gte(slotsTable.date, today))),
+    getRosterDefaults(),
   ]);
 
   const conflictCount = new Map<string, number>();
-  for (const c of conflicts) {
-    conflictCount.set(c.memberId, (conflictCount.get(c.memberId) ?? 0) + 1);
-  }
+  for (const c of conflicts) conflictCount.set(c.memberId, (conflictCount.get(c.memberId) ?? 0) + 1);
 
   const shiftCount = new Map<string, number>();
-  for (const a of upcoming) {
-    shiftCount.set(a.memberId, (shiftCount.get(a.memberId) ?? 0) + 1);
-  }
+  for (const a of upcoming) shiftCount.set(a.memberId, (shiftCount.get(a.memberId) ?? 0) + 1);
 
   const data: RosterRow[] = rows.map((r) => ({
     id: r.id,
     name: r.name,
     classYear: r.classYear,
+    rotation: r.rotation,
+    room: r.room,
     points: r.points,
     makeupDebt: r.makeupDebt,
     exempt: r.exempt,
     exemptReason: r.exemptReason,
-    exemptNotes: r.exemptNotes,
     hasPin: r.pinHash !== null,
     active: r.active,
     standingConflicts: conflictCount.get(r.id) ?? 0,
   }));
 
   const active = rows.filter((r) => r.active);
-  const juniors = active.filter((m) => m.classYear === 'junior');
-  const sophomores = active.filter((m) => m.classYear === 'sophomore');
+  const onDuty = active.filter((m) => !m.exempt);
 
   const readiness: MemberPreparedness[] = active.map((m) => ({
     id: m.id,
     name: m.name,
-    classYear: m.classYear,
+    rotation: m.rotation,
     exempt: m.exempt,
     hasPin: m.pinHash !== null,
     standingConflictsCount: conflictCount.get(m.id) ?? 0,
@@ -120,67 +111,47 @@ export default async function RosterPage({
     const blockedToday = new Map(
       conflicts.filter((c) => c.dayIndex === day.index).map((c) => [c.memberId, c.note]),
     );
-
-    const pool = (people: typeof active) => {
-      const blocked = people.filter((m) => m.exempt || blockedToday.has(m.id));
+    const pool = (people: typeof onDuty) => {
+      const blocked = people.filter((m) => blockedToday.has(m.id));
       return {
         total: people.length,
         available: people.length - blocked.length,
         blocked: blocked.map((m) => ({
           id: m.id,
           name: m.name,
-          reason: m.exempt
-            ? `Exempt · ${m.exemptReason ?? 'no reason given'}`
-            : blockedToday.get(m.id) || 'Standing conflict',
+          reason: blockedToday.get(m.id) || 'Standing conflict',
         })),
       };
     };
-
-    return { ...day, lunch: pool(juniors), dinner: pool(sophomores) };
+    return {
+      ...day,
+      lunch: pool(onDuty.filter((m) => m.rotation === 'lunch')),
+      dinner: pool(onDuty.filter((m) => m.rotation === 'dinner')),
+    };
   });
 
-  const tab = (key: View, label: string, count?: number) => (
-    <Link
-      href={key === 'everyone' ? '/admin/roster' : `/admin/roster?view=${key}`}
-      className={`adm-tab${view === key ? ' active' : ''}`}
-    >
-      {label}
-      {count !== undefined && <span className="adm-tab-count mono">{count}</span>}
-    </Link>
-  );
-
   const notSignedIn = readiness.filter((m) => !m.hasPin && !m.exempt).length;
+  const exemptCount = active.length - onDuty.length;
 
   return (
     <AppShell
       session={session}
       active="/admin/roster"
       title="Roster"
-      subtitle={`${active.length} on duty · ${semester.name}`}
+      subtitle={`${onDuty.length} on duty · ${exemptCount} exempt · ${semester.name}`}
     >
-      <div className="adm-tabs">
-        {tab('everyone', 'Everyone', data.length)}
-        {tab('days', 'Day by day')}
-        {tab('readiness', 'Not ready', notSignedIn)}
-      </div>
+      <RosterTabs view={view} counts={{ everyone: active.length, readiness: notSignedIn }} />
 
       {view === 'everyone' && (
-        <>
-          <RosterTable rows={data} />
-          <div className="note">
-            Tap anyone to change their duty year, adjust points, exempt them, or
-            reset a forgotten PIN. Every change here is written to the audit log
-            with your name on it. Points reset to zero each semester.
-          </div>
-        </>
+        <RosterTable rows={data} crewDefaults={defaults.crewForYear} />
       )}
 
       {view === 'days' && (
         <>
           <div className="note" style={{ marginTop: 0, marginBottom: 14 }}>
-            Who the draw can reach on each day, once exemptions and standing
-            conflicts are taken out. A thin bar is a day you will struggle to
-            fill.
+            Who the draw can reach on each day, once standing conflicts are
+            taken out. Exempt brothers are not counted. A thin bar is a day you
+            will struggle to fill.
           </div>
           <EligibilityMatrix days={eligibility} />
         </>

@@ -21,7 +21,8 @@ const BROTHER_NAV = [
 /*
  * The manager's six: run the week (Dashboard, Weeks), look after people
  * (Roster), the kitchen (Late plates), the record (Audit log), and the rare
- * stuff (Settings).
+ * stuff (Settings). The Handbook sits below them in the sidebar; on a phone it
+ * is reached from the dashboard and Settings, so the tab bar stays at six.
  */
 const ADMIN_NAV = [
   { href: '/admin', label: 'Dashboard', icon: 'dashboard' },
@@ -31,6 +32,8 @@ const ADMIN_NAV = [
   { href: '/admin/audit', label: 'Audit log', icon: 'audit' },
   { href: '/admin/settings', label: 'Settings', icon: 'settings' },
 ];
+
+const ADMIN_EXTRA = [{ href: '/admin/guide', label: 'Handbook', icon: 'guide' }];
 
 export async function AppShell({
   session,
@@ -76,6 +79,18 @@ export async function AppShell({
             </Link>
           ))}
 
+          {nav === ADMIN_NAV &&
+            ADMIN_EXTRA.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`nav-item nav-extra${active === item.href ? ' active' : ''}`}
+              >
+                <NavIcon name={item.icon} />
+                <span>{item.label}</span>
+              </Link>
+            ))}
+
           {!session && (
             <Link href="/signin" className="nav-item nav-signin">
               <NavIcon name="signin" />
@@ -108,11 +123,18 @@ export async function AppShell({
           </div>
 
           {session ? (
-            <form action={signOut}>
-              <button className="btn sm" type="submit">
-                {session.name} · Sign out
-              </button>
-            </form>
+            <div className="topbar-account">
+              {session.role === 'brother' && (
+                <Link className={`btn sm alt${active === '/profile' ? ' is-on' : ''}`} href="/profile">
+                  {session.name}
+                </Link>
+              )}
+              <form action={signOut}>
+                <button className="btn sm" type="submit">
+                  {session.role === 'brother' ? 'Sign out' : `${session.name} · Sign out`}
+                </button>
+              </form>
+            </div>
           ) : (
             <Link className="btn gold sm" href="/signin">
               Sign in

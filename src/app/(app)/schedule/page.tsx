@@ -228,7 +228,7 @@ export default async function SchedulePage({
         <span>
           <span className="legend-swatch open" /> Needs cover
         </span>
-        <span>Lunch is juniors · dinner is sophomores</span>
+        <span>Each brother is on the lunch or the dinner crew</span>
       </div>
     </AppShell>
   );

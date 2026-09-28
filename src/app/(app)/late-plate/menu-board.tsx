@@ -10,12 +10,8 @@ import {
   cancelPlate,
   updateMyDietary,
 } from '../../actions/late-plate-actions.ts';
-import {
-  ALLERGENS,
-  DIETARY,
-  OTHER_FLAG_ID,
-  summariseFlags,
-} from '../../../lib/dietary.ts';
+import { FlagPicker } from './flag-picker.tsx';
+import { summariseFlags } from '../../../lib/dietary.ts';
 import type { RecurringLatePlateRow } from '../../../lib/late-plate-service.ts';
 import type { Meal } from '../../../lib/types.ts';
 import { RecurringSchedules } from './recurring-schedules.tsx';
@@ -707,54 +703,6 @@ function Dialog({
       </div>
     </div>,
     document.body,
-  );
-}
-
-function FlagPicker({
-  flags,
-  other,
-  setFlags,
-  setOther,
-}: {
-  flags: string[];
-  other: string;
-  setFlags: (f: string[]) => void;
-  setOther: (s: string) => void;
-}) {
-  const toggle = (id: string) =>
-    setFlags(flags.includes(id) ? flags.filter((f) => f !== id) : [...flags, id]);
-
-  return (
-    <div className="mb-picker">
-      <div className="mb-picker-title">Allergies</div>
-      <div className="mb-picker-grid">
-        {ALLERGENS.map((f) => (
-          <label key={f.id} className={`mb-check${flags.includes(f.id) ? ' is-on' : ''}`}>
-            <input type="checkbox" checked={flags.includes(f.id)} onChange={() => toggle(f.id)} />
-            <span>{f.label}</span>
-          </label>
-        ))}
-      </div>
-      <div className="mb-picker-title">Dietary and religious</div>
-      <div className="mb-picker-grid">
-        {DIETARY.map((f) => (
-          <label key={f.id} className={`mb-check${flags.includes(f.id) ? ' is-on' : ''}`}>
-            <input type="checkbox" checked={flags.includes(f.id)} onChange={() => toggle(f.id)} />
-            <span>{f.label}</span>
-          </label>
-        ))}
-      </div>
-      {flags.includes(OTHER_FLAG_ID) && (
-        <input
-          className="mb-input"
-          placeholder="What should the chefs know?"
-          value={other}
-          maxLength={140}
-          onChange={(e) => setOther(e.target.value)}
-        />
-      )}
-      <div className="mb-picker-foot">Saved as yours, so they are ticked next time.</div>
-    </div>
   );
 }
 

@@ -21,7 +21,7 @@ export default async function SignInPage() {
     .select({
       id: members.id,
       name: members.name,
-      classYear: members.classYear,
+      rotation: members.rotation,
       pinHash: members.pinHash,
     })
     .from(members)
@@ -32,7 +32,7 @@ export default async function SignInPage() {
   const roster: PickerMember[] = rows.map((r) => ({
     id: r.id,
     name: r.name,
-    classYear: r.classYear,
+    rotation: r.rotation,
     hasPin: r.pinHash !== null,
   }));
 

@@ -145,7 +145,7 @@ function formatTvSlot(
       meal: mealType,
       mealLabel: mealType === 'lunch' ? 'Lunch Cleanup' : 'Dinner Cleanup',
       time: mealType === 'lunch' ? '2:30 PM – 3:00 PM' : '7:30 PM – 9:00 PM',
-      dutyGroup: mealType === 'lunch' ? 'Juniors' : 'Sophomores',
+      dutyGroup: mealType === 'lunch' ? 'Lunch crew' : 'Dinner crew',
       size: 0,
       coverBounty: 1,
       assignments: [],
@@ -157,7 +157,7 @@ function formatTvSlot(
     meal: slot.meal,
     mealLabel: mealType === 'lunch' ? 'Lunch Cleanup' : 'Dinner Cleanup',
     time: mealType === 'lunch' ? '2:30 PM – 3:00 PM' : '7:30 PM – 9:00 PM',
-    dutyGroup: mealType === 'lunch' ? 'Juniors' : 'Sophomores',
+    dutyGroup: mealType === 'lunch' ? 'Lunch crew' : 'Dinner crew',
     size: slot.size,
     coverBounty: slot.coverBounty,
     assignments: slot.assignments.map((a) => ({

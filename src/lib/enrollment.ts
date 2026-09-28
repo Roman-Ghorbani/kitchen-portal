@@ -81,7 +81,7 @@ export async function pendingEnrollment(memberIds: string[]): Promise<Map<string
 /** Active members who have never set a PIN. */
 export async function membersWithoutPin() {
   return db
-    .select({ id: members.id, name: members.name, classYear: members.classYear })
+    .select({ id: members.id, name: members.name, rotation: members.rotation })
     .from(members)
     .where(and(eq(members.active, true), isNull(members.pinHash)))
     .orderBy(members.name);

@@ -17,12 +17,12 @@ import { and, asc, desc, eq } from 'drizzle-orm';
 
 import { db } from '../db/index.ts';
 import { members } from '../db/schema.ts';
-import type { ClassYear } from './types.ts';
+import type { Meal } from './types.ts';
 
 export interface StandingRow {
   id: string;
   name: string;
-  classYear: ClassYear;
+  rotation: Meal;
   points: number;
   /** 1-based, most points first. Ties share the order the query returns. */
   rank: number;
@@ -44,7 +44,7 @@ export async function getStandings(viewerId: string | null): Promise<Standings> 
     .select({
       id: members.id,
       name: members.name,
-      classYear: members.classYear,
+      rotation: members.rotation,
       points: members.points,
     })
     .from(members)

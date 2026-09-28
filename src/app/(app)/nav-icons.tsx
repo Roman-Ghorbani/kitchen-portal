@@ -108,6 +108,13 @@ export function NavIcon({ name }: { name: string }) {
           <circle cx="8" cy="18" r="2" />
         </svg>
       );
+    case 'guide':
+      return (
+        <svg {...common} aria-hidden="true">
+          <path d="M4 5a2 2 0 012-2h13v16H6a2 2 0 00-2 2V5z" />
+          <path d="M4 19a2 2 0 012-2h13M9 7h6M9 11h4" />
+        </svg>
+      );
     case 'signin':
       return (
         <svg {...common} aria-hidden="true">

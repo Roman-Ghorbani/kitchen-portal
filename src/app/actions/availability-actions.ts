@@ -20,9 +20,9 @@ const DAY_NAMES = [
 /**
  * Sets a standing weekly conflict, or clears it.
  *
- * Because class year fixes the meal - juniors only ever do lunch, sophomores
- * only dinner - one day index per person is enough. Blocking Tuesday blocks
- * Tuesday lunch for a junior, and nothing else needs saying.
+ * Each brother is on one crew, so his crew fixes the meal and one day index
+ * per person is enough: blocking Tuesday blocks Tuesday lunch for someone on
+ * the lunch crew, and nothing else needs saying.
  *
  * This is the primary defence against last-minute drama: someone who sets a
  * recurring class conflict once is simply never scheduled then, so there is

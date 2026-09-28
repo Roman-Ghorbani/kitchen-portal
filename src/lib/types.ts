@@ -1,40 +1,52 @@
 /**
- * Core domain types for the ZBT Kitchen Portal.
+ * Core domain types for the Kitchen Portal.
  *
- * Modeled strictly from the problem statement. The domain has four entities:
- *   - Juniors serve lunch. Sophomores serve dinner.
+ *   - Every brother on the roster is on a crew: lunch or dinner. The crew
+ *     decides which meal he is drawn for. Class year is only a default for
+ *     the crew, because it does not always match (a senior living in, a
+ *     brother who rushed a year late).
+ *   - Exempt brothers are on the roster but never drawn.
  *   - Nobody serves more than once in a Mon-Sun week, EXCEPT to work off a
  *     make-up shift owed for a prior no-show.
  */
 
 export type Meal = 'lunch' | 'dinner';
 
-/** Only sophomores and juniors are on the duty roster. */
-export type ClassYear = 'sophomore' | 'junior';
+export type ClassYear = 'freshman' | 'sophomore' | 'junior' | 'senior' | 'fifth-year' | 'other';
+
+export const CLASS_YEAR_LABELS: Record<ClassYear, string> = {
+  freshman: 'Freshman',
+  sophomore: 'Sophomore',
+  junior: 'Junior',
+  senior: 'Senior',
+  'fifth-year': 'Fifth year',
+  other: 'Other',
+};
+
+export const CREW_LABELS: Record<Meal, string> = {
+  lunch: 'Lunch crew',
+  dinner: 'Dinner crew',
+};
 
 /** 0 = Monday ... 6 = Sunday. Weeks run Mon-Sun to match the posting cadence. */
 export type DayIndex = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
-export const MEAL_FOR_YEAR: Record<ClassYear, Meal> = {
-  junior: 'lunch',
-  sophomore: 'dinner',
-};
+export type ExemptReason = 'senior' | 'officer' | 'medical' | 'off-campus' | 'other';
 
-export const YEAR_FOR_MEAL: Record<Meal, ClassYear> = {
-  lunch: 'junior',
-  dinner: 'sophomore',
+export const EXEMPT_REASON_LABELS: Record<ExemptReason, string> = {
+  senior: 'Senior',
+  officer: 'House officer',
+  medical: 'Medical',
+  'off-campus': 'Living out',
+  other: 'Other',
 };
-
-export type ExemptReason =
-  | 'officer'
-  | 'medical'
-  | 'off-campus'
-  | 'other';
 
 export interface Member {
   id: string;
   name: string;
   classYear: ClassYear;
+  /** The meal he is drawn for. */
+  rotation: Meal;
   /**
    * Rotation priority score. Lower is picked first. Increments by 1 for a
    * normally served shift, or by the bounty multiplier (2 or 3) when the
@@ -46,9 +58,9 @@ export interface Member {
   exemptNotes?: string;
   /**
    * Day-of-week indices this member can never serve (standing semester
-   * conflicts, e.g. a Tuesday lab). Because class year fixes the meal, a
-   * single day index is enough - a junior blocking Tuesday is blocking
-   * Tuesday lunch.
+   * conflicts, e.g. a Tuesday lab). He is on one crew, so a single day index
+   * is enough - a lunch-crew brother blocking Tuesday is blocking Tuesday
+   * lunch.
    */
   standingConflicts: DayIndex[];
   /** ISO date (YYYY-MM-DD) of most recent served shift, for tie-breaking. */

@@ -61,11 +61,11 @@ export async function adminCreateWeek(
 export async function adminReassign(
   assignmentId: string,
   newMemberId: string,
-  allowAnyClassYear: boolean,
+  allowOtherCrew: boolean,
 ): Promise<AdminResult> {
   const admin = await requireAdmin();
   const res = await reassignShift(assignmentId, newMemberId, admin.name, {
-    allowAnyClassYear,
+    allowOtherCrew,
   });
   if (res.ok) refresh();
   return res;
@@ -84,11 +84,11 @@ export async function adminRemove(
 export async function adminAdd(
   slotId: string,
   memberId: string,
-  allowAnyClassYear: boolean,
+  allowOtherCrew: boolean,
 ): Promise<AdminResult> {
   const admin = await requireAdmin();
   const res = await addToShift(slotId, memberId, admin.name, {
-    allowAnyClassYear,
+    allowOtherCrew,
   });
   if (res.ok) refresh();
   return res;

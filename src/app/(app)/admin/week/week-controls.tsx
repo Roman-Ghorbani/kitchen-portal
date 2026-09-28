@@ -23,7 +23,7 @@ import { dayIndex } from '../../../../lib/dates.ts';
 export interface Person {
   id: string;
   name: string;
-  classYear: string;
+  rotation: string;
   points: number;
   exempt: boolean;
   makeupDebt?: number;
@@ -41,7 +41,7 @@ export interface SlotView {
     id: string;
     memberId: string;
     memberName: string;
-    classYear: string;
+    rotation: string;
     status: string;
     coveredByName: string | null;
     multiplier: number;
@@ -178,12 +178,12 @@ export function WeekControls({
 function engineCompare(
   a: Person,
   b: Person,
-  wantYear?: 'junior' | 'sophomore' | null,
+  wantCrew?: 'lunch' | 'dinner' | null,
   slotDayIdx?: number,
 ): number {
-  if (wantYear) {
-    const aMatch = a.classYear === wantYear ? 0 : 1;
-    const bMatch = b.classYear === wantYear ? 0 : 1;
+  if (wantCrew) {
+    const aMatch = a.rotation === wantCrew ? 0 : 1;
+    const bMatch = b.rotation === wantCrew ? 0 : 1;
     if (aMatch !== bMatch) return aMatch - bMatch;
   }
 
@@ -228,11 +228,11 @@ export function PersonPicker({
   const [q, setQ] = useState('');
 
   const slotDayIdx = slotDate ? dayIndex(slotDate) : -1;
-  const wantYear = slotMeal ? (slotMeal === 'lunch' ? 'junior' : 'sophomore') : null;
+  const wantCrew = slotMeal ?? null;
 
   const sortedRoster = useMemo(() => {
-    return [...roster].sort((a, b) => engineCompare(a, b, wantYear, slotDayIdx));
-  }, [roster, wantYear, slotDayIdx]);
+    return [...roster].sort((a, b) => engineCompare(a, b, wantCrew, slotDayIdx));
+  }, [roster, wantCrew, slotDayIdx]);
 
   const matches = useMemo(() => {
     const s = q.trim().toLowerCase();
@@ -298,10 +298,8 @@ export function PersonPicker({
                     ⚠️ Standing Conflict
                   </span>
                 )}
-                <span
-                  className={`tag ${m.classYear === 'junior' ? 'jun' : 'soph'}`}
-                >
-                  {m.classYear === 'junior' ? 'lunch' : 'dinner'}
+                <span className={`tag ${m.rotation === 'lunch' ? 'jun' : 'soph'}`}>
+                  {m.rotation === 'lunch' ? 'lunch crew' : 'dinner crew'}
                 </span>
                 <span className="roster-pts mono">{formatPoints(m.points)} pts</span>
                 {m.exempt && <span className="tag locked">exempt</span>}
@@ -334,7 +332,7 @@ export function SlotEditor({
   const { pending, msg, bad, run } = useAction();
   const [panel, setPanel] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
-  const [anyYear, setAnyYear] = useState(false);
+  const [otherCrew, setOtherCrew] = useState(false);
   const [bounty, setBounty] = useState<number>(1);
   const [openPanel, setOpenPanel] = useState<string | null>(null);
   const [offer, setOffer] = useState<number>(2);
@@ -605,12 +603,16 @@ export function SlotEditor({
                 placeholder="Who should be on this shift?"
                 onPick={(id) =>
                   run(async () => {
-                    const r = await adminAdd(slot.slotId, id, anyYear);
+                    const r = await adminAdd(slot.slotId, id, otherCrew);
                     if (r.ok) setAdding(false);
                     return r;
                   })
                 }
               />
+              <label className="check-inline">
+                <input type="checkbox" checked={otherCrew} onChange={(e) => setOtherCrew(e.target.checked)} />
+                Allow the other crew
+              </label>
               <button className="btn sm" onClick={() => setAdding(false)}>
                 Cancel
               </button>

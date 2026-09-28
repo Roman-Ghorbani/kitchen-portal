@@ -28,9 +28,10 @@ import {
   uniqueIndex,
 } from 'drizzle-orm/sqlite-core';
 
-const CLASS_YEARS = ['sophomore', 'junior'] as const;
+/** Academic standing. A profile fact only - it does not decide the meal. */
+export const CLASS_YEARS = ['freshman', 'sophomore', 'junior', 'senior', 'fifth-year', 'other'] as const;
 const MEALS = ['lunch', 'dinner'] as const;
-const EXEMPT_REASONS = ['officer', 'medical', 'off-campus', 'other'] as const;
+export const EXEMPT_REASONS = ['senior', 'officer', 'medical', 'off-campus', 'other'] as const;
 /**
  * A week is on the board or it is finished. There is no lock: brothers can ask
  * for cover on any shift at any time, so there is no window for a lock to close.
@@ -115,7 +116,24 @@ export const members = sqliteTable(
   {
     id: pk(),
     name: text('name').notNull(),
+
+    /** Academic year. Informational; the meal comes from `rotation`. */
     classYear: text('class_year', { enum: CLASS_YEARS }).notNull(),
+
+    /**
+     * Which duty crew he is drawn for: lunch or dinner. Set per person, so a
+     * brother whose class does not match his year - or a live-in senior who
+     * is not exempt - is placed correctly. New members get the default for
+     * their class year (Settings → Roster defaults).
+     */
+    rotation: text('rotation', { enum: MEALS }).notNull().default('dinner'),
+
+    /** Room number in the house; blank for anyone living out. */
+    room: text('room'),
+    /** Pledge class, as the chapter's own roster names it. */
+    pledgeClass: text('pledge_class'),
+    /** Private to the kitchen manager; handed down with the app. */
+    managerNotes: text('manager_notes'),
 
     /**
      * Rotation priority. Lower is scheduled sooner. Increments by the
@@ -178,13 +196,14 @@ export const members = sqliteTable(
   },
   (t) => [
     index('members_year_idx').on(t.classYear),
+    index('members_rotation_idx').on(t.rotation),
     index('members_priority_idx').on(t.points, t.lastServedDate),
   ],
 );
 
 /**
  * Standing weekly conflicts - the primary defence against last-minute drama.
- * Because class year fixes the meal, one day index per row is sufficient.
+ * A brother is on one crew, so one day index per row is sufficient.
  */
 export const standingConflicts = sqliteTable(
   'standing_conflicts',

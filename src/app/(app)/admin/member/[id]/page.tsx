@@ -4,11 +4,11 @@ import { redirect, notFound } from 'next/navigation';
 import { getSession } from '../../../../../lib/session.ts';
 import { getMemberDossier } from '../../../../../lib/member-dossier.ts';
 import { parseISO, formatEasternTimestamp } from '../../../../../lib/dates.ts';
-import { formatPoints } from '../../../../../lib/types.ts';
+import { formatPoints, CLASS_YEAR_LABELS, CREW_LABELS } from '../../../../../lib/types.ts';
 import { AppShell } from '../../../shell.tsx';
 import { AdminAvailabilityEditor } from './admin-availability.tsx';
 import { ViewAsButton } from './view-as-button.tsx';
-import { MemberDebtControls } from './member-debt-controls.tsx';
+import { MemberControls } from './member-controls.tsx';
 
 export const dynamic = 'force-dynamic';
 
@@ -50,7 +50,14 @@ export default async function MemberDossierPage({
       session={session}
       active="/admin/roster"
       title={member.name}
-      subtitle={`${member.classYear} · ${member.classYear === 'junior' ? 'lunch' : 'dinner'} duty`}
+      subtitle={[
+        CLASS_YEAR_LABELS[member.classYear],
+        member.exempt ? 'exempt' : CREW_LABELS[member.rotation].toLowerCase(),
+        member.room && `room ${member.room}`,
+        !member.active && 'off the roster',
+      ]
+        .filter(Boolean)
+        .join(' · ')}
     >
       <div className="row-actions" style={{ marginBottom: 4 }}>
         <Link className="btn sm" href="/admin/roster">
@@ -78,22 +85,26 @@ export default async function MemberDossierPage({
         ))}
       </div>
 
-      {(member.exempt || member.makeupDebt > 0 || !member.active) && (
-        <div className="alert warn">
-          <span className="alert-title">Flags on this member</span>
-          <span className="alert-body" style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
-            <span>
-              {member.exempt && `Exempt — ${member.exemptReason ?? 'no reason given'}. `}
-              {member.makeupDebt > 0 &&
-                `Owes ${member.makeupDebt} make-up shift${member.makeupDebt === 1 ? '' : 's'}. `}
-              {!member.active && 'Removed from the roster. '}
-            </span>
-            {member.makeupDebt > 0 && (
-              <MemberDebtControls memberId={member.id} currentDebt={member.makeupDebt} />
-            )}
-          </span>
-        </div>
-      )}
+      <MemberControls
+        member={{
+          id: member.id,
+          name: member.name,
+          classYear: member.classYear,
+          rotation: member.rotation,
+          room: member.room,
+          pledgeClass: member.pledgeClass,
+          slackUserId: member.slackUserId,
+          managerNotes: member.managerNotes,
+          exempt: member.exempt,
+          exemptReason: member.exemptReason,
+          exemptNotes: member.exemptNotes,
+          points: member.points,
+          makeupDebt: member.makeupDebt,
+          hasPin: member.pinHash !== null,
+          active: member.active,
+          deletable: shifts.length === 0,
+        }}
+      />
 
       <h2 className="section-title">
         Standing availability &amp; conflicts

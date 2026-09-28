@@ -4,8 +4,9 @@
  * Organised by what the manager is trying to do, one card each:
  *   Meal service     which days the house serves (drives week generation)
  *   Senior Week menu the shareable menu link and its password
+ *   Roster defaults  which crew each class year joins when added or imported
  *   Security         how the manager account is protected, and a kill switch
- *   Semester         what term this is
+ *   Semester         what term this is, and starting the next one
  *   House rules      how the scheduler decides, for reference
  *
  * Late-plate settings and the kitchen tablet live on the Late plates page,
@@ -25,6 +26,9 @@ import { signOutEverywhere } from '../../../actions/auth-actions.ts';
 import { AppShell } from '../../shell.tsx';
 import { MealGrid } from './meal-grid.tsx';
 import { SeniorMenuSettings } from './senior-menu-settings.tsx';
+import { RosterDefaultsForm, NextSemesterForm } from './roster-settings.tsx';
+import { getRosterDefaults } from '../../../../lib/roster-defaults.ts';
+import { suggestNextSemester } from '../../../../lib/semester-service.ts';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,9 +37,10 @@ export default async function SettingsPage() {
   if (!session) redirect('/signin');
   if (session.role !== 'admin') redirect('/');
 
-  const [semester, menuPasswordSet] = await Promise.all([
+  const [semester, menuPasswordSet, rosterDefaults] = await Promise.all([
     getActiveSemester(),
     seniorMenuPasswordSet(),
+    getRosterDefaults(),
   ]);
   const mealDays = semester.mealDays as MealDayConfig;
   const slotSizes = semester.slotSizes as Record<Meal, number>;
@@ -73,6 +78,17 @@ export default async function SettingsPage() {
           apply to weeks created from now on.
         </p>
         <MealGrid initial={mealDays} />
+      </section>
+
+      <section className="card card-pad settings-card" id="roster-defaults">
+        <h2 className="section-title">Roster defaults</h2>
+        <p className="settings-lede">
+          Which crew someone joins when you add or import him, by class year.
+          Only a starting point: anyone can be moved to either crew, or
+          exempted, from the <Link href="/admin/roster">Roster</Link>. Changing
+          these never moves anybody already on the roster.
+        </p>
+        <RosterDefaultsForm initial={rosterDefaults.crewForYear} />
       </section>
 
       <SeniorMenuSettings passwordSet={menuPasswordSet} />
@@ -117,9 +133,16 @@ export default async function SettingsPage() {
           </span>
         </div>
         <p className="settings-hint">
-          Points reset at the start of each semester. Starting the next term is
-          a deliberate action, not automatic.
+          Points carry over from semester to semester - they are how the draw
+          stays fair over a brother’s whole time in the house. To shrink big
+          numbers without changing anyone’s place, use <em>Rebase</em> under
+          Roster → Adjust points.
         </p>
+        <p className="settings-hint">
+          Starting a new term? The <Link href="/admin/guide#semester">start-of-semester
+          checklist</Link> in the Handbook walks through everything in order.
+        </p>
+        <NextSemesterForm suggestion={suggestNextSemester(semester)} />
       </section>
 
       <section className="card card-pad settings-card">
@@ -128,7 +151,9 @@ export default async function SettingsPage() {
         <dl className="rules">
           <dt>Staffing</dt>
           <dd>
-            {slotSizes.lunch} juniors on lunch, {slotSizes.dinner} sophomores on dinner.
+            {slotSizes.lunch} from the lunch crew at each lunch, {slotSizes.dinner} from
+            the dinner crew at each dinner. Each brother is on one crew, set on the
+            Roster; exempt brothers are never drawn.
           </dd>
 
           <dt>Frequency</dt>

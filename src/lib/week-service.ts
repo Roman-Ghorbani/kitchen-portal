@@ -59,6 +59,7 @@ export async function loadSchedulingRoster(semesterId: string): Promise<Member[]
     id: r.id,
     name: r.name,
     classYear: r.classYear,
+    rotation: r.rotation,
     points: r.points,
     exempt: r.exempt,
     exemptReason: r.exemptReason ?? undefined,

@@ -18,6 +18,8 @@ function makeMember(
     id: String(id),
     name: `${classYear === 'junior' ? 'Jr' : 'So'} ${id}`,
     classYear,
+    // The house's usual default; crew and year are independent (see below).
+    rotation: classYear === 'junior' ? 'lunch' : 'dinner',
     points: 0,
     exempt: false,
     standingConflicts: [],
@@ -85,7 +87,7 @@ describe('hard constraints', () => {
     }
   });
 
-  test('juniors only ever take lunch, sophomores only dinner', () => {
+  test('each crew only ever takes its own meal', () => {
     const members = makeRoster();
     const byId = new Map(members.map((m) => [m.id, m]));
     const result = generateWeek({ weekStart: WEEK, members });
@@ -93,10 +95,25 @@ describe('hard constraints', () => {
     for (const slot of result.week.slots) {
       for (const a of slot.assignments) {
         const m = byId.get(a.memberId)!;
-        const expected = slot.meal === 'lunch' ? 'junior' : 'sophomore';
-        assert.equal(m.classYear, expected, `${m.name} on ${slot.meal}`);
+        assert.equal(m.rotation, slot.meal, `${m.name} on ${slot.meal}`);
       }
     }
+  });
+
+  test('the crew decides the meal, not the class year', () => {
+    // A sophomore by class who serves with the juniors, and a live-in senior
+    // who is on the dinner crew rather than exempt.
+    const lateRusher = makeMember(1, 'sophomore', { rotation: 'lunch' });
+    const senior = makeMember(2, 'junior', { classYear: 'senior', rotation: 'dinner' });
+    const result = generateWeek({
+      weekStart: WEEK,
+      members: [lateRusher, senior],
+      slotSizes: { lunch: 1, dinner: 1 },
+    });
+    const meals = (id: string) =>
+      result.week.slots.filter((s) => s.assignments.some((a) => a.memberId === id)).map((s) => s.meal);
+    assert.deepEqual(meals('1'), ['lunch']);
+    assert.deepEqual(meals('2'), ['dinner']);
   });
 
   test('exempt members are never assigned', () => {
@@ -337,6 +354,7 @@ describe('make-up debt', () => {
       id: 'junior-debtor',
       name: 'Owes One',
       classYear: 'junior',
+      rotation: 'lunch',
       points: 10,
       exempt: false,
       standingConflicts: [],

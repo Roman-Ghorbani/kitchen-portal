@@ -1,200 +1,92 @@
 'use server';
 
-import { eq, sql } from 'drizzle-orm';
+/**
+ * The manager's roster controls. Each one checks the manager session, hands
+ * the work to lib/roster-service.ts, and refreshes the pages that show it.
+ */
+
 import { revalidatePath } from 'next/cache';
 
-import { db } from '../../db/index.ts';
-import { members, events } from '../../db/schema.ts';
 import { requireAdmin } from '../../lib/session.ts';
-import type { ClassYear, ExemptReason } from '../../lib/types.ts';
+import * as roster from '../../lib/roster-service.ts';
+import type { PointOp } from '../../lib/points-ops.ts';
+import type { ImportOptions, RosterDefaults } from '../../lib/roster-plan.ts';
+import type { RosterResult, Duty, PointsScope, ProfileInput, NewMemberInput, ImportSelection } from '../../lib/roster-service.ts';
 
-export interface RosterResult {
-  ok: boolean;
-  message: string;
-}
+export type { RosterResult } from '../../lib/roster-service.ts';
 
-function refresh() {
+function refresh(memberId?: string) {
   revalidatePath('/admin/roster');
   revalidatePath('/admin');
+  revalidatePath('/standings');
+  if (memberId) revalidatePath(`/admin/member/${memberId}`);
 }
 
-/**
- * Changes someone's duty year, which changes the meal they serve.
- *
- * Needed because pledge class is only a default: brothers who rushed a year
- * late are a year older than the rest of their class, and the import cannot
- * know that.
- */
-export async function setClassYear(
-  memberId: string,
-  classYear: ClassYear,
-): Promise<RosterResult> {
+async function as<T extends { ok: boolean }>(work: (actor: string) => Promise<T>, memberId?: string): Promise<T> {
   const admin = await requireAdmin();
-
-  const [m] = await db.select().from(members).where(eq(members.id, memberId)).limit(1);
-  if (!m) return { ok: false, message: 'No such member.' };
-  if (m.classYear === classYear) return { ok: true, message: 'No change.' };
-
-  await db.update(members).set({ classYear }).where(eq(members.id, memberId));
-
-  await db.insert(events).values({
-    action: 'roster.class_year_changed',
-    entityType: 'member',
-    entityId: memberId,
-    actorName: admin.name,
-    actorRole: 'manager',
-    summary:
-      `${admin.name} changed ${m.name} from ${m.classYear} to ${classYear} ` +
-      `(${classYear === 'junior' ? 'lunch' : 'dinner'} duty)`,
-    payload: { from: m.classYear, to: classYear },
-  });
-
-  refresh();
-  return {
-    ok: true,
-    message: `${m.name} is now a ${classYear} — ${
-      classYear === 'junior' ? 'lunch' : 'dinner'
-    } duty. Already-posted weeks are unchanged.`,
-  };
+  const res = await work(admin.name);
+  if (res.ok) refresh(memberId);
+  return res;
 }
 
-export async function setExempt(
-  memberId: string,
-  exempt: boolean,
-  reason: ExemptReason | null,
-  notes: string,
-): Promise<RosterResult> {
-  const admin = await requireAdmin();
-
-  const [m] = await db.select().from(members).where(eq(members.id, memberId)).limit(1);
-  if (!m) return { ok: false, message: 'No such member.' };
-
-  await db
-    .update(members)
-    .set({
-      exempt,
-      exemptReason: exempt ? (reason ?? 'other') : null,
-      exemptNotes: exempt ? notes.trim() || null : null,
-    })
-    .where(eq(members.id, memberId));
-
-  await db.insert(events).values({
-    action: exempt ? 'roster.exempted' : 'roster.unexempted',
-    entityType: 'member',
-    entityId: memberId,
-    actorName: admin.name,
-    actorRole: 'manager',
-    summary: exempt
-      ? `${admin.name} exempted ${m.name} (${reason ?? 'other'})` +
-        (notes.trim() ? ` — "${notes.trim()}"` : '')
-      : `${admin.name} removed ${m.name}'s exemption`,
-    payload: { exempt, reason, notes: notes.trim() || null },
-  });
-
-  refresh();
-  return {
-    ok: true,
-    message: exempt
-      ? `${m.name} is exempt and will not be auto-scheduled.`
-      : `${m.name} is back in the rotation.`,
-  };
+export async function updateMemberProfile(id: string, input: ProfileInput): Promise<RosterResult> {
+  return as((a) => roster.updateProfile(a, id, input), id);
 }
 
-/**
- * Manually nudges someone's points. Logged with the delta because a hand
- * adjustment is exactly the kind of thing that gets questioned later.
- */
-export async function adjustPoints(
-  memberId: string,
-  delta: number,
-): Promise<RosterResult> {
-  const admin = await requireAdmin();
-
-  if (!Number.isInteger(delta) || delta === 0 || Math.abs(delta) > 20) {
-    return { ok: false, message: 'Adjustment must be a whole number, at most 20.' };
-  }
-
-  const [m] = await db.select().from(members).where(eq(members.id, memberId)).limit(1);
-  if (!m) return { ok: false, message: 'No such member.' };
-
-  await db
-    .update(members)
-    .set({ points: sql`MAX(0, ${members.points} + ${delta})` })
-    .where(eq(members.id, memberId));
-
-  const [after] = await db.select().from(members).where(eq(members.id, memberId)).limit(1);
-
-  await db.insert(events).values({
-    action: 'roster.points_adjusted',
-    entityType: 'member',
-    entityId: memberId,
-    actorName: admin.name,
-    actorRole: 'manager',
-    summary: `${admin.name} adjusted ${m.name}'s points by ${
-      delta > 0 ? '+' : ''
-    }${delta} (${m.points} → ${after.points})`,
-    payload: { delta, before: m.points, after: after.points },
-  });
-
-  refresh();
-  return { ok: true, message: `${m.name}: ${m.points} → ${after.points}.` };
+export async function setDuty(ids: string[], duty: Duty): Promise<RosterResult> {
+  return as((a) => roster.setDuty(a, ids, duty), ids.length === 1 ? ids[0] : undefined);
 }
 
-export async function setMakeupDebt(
-  memberId: string,
-  debt: number,
-): Promise<RosterResult> {
-  const admin = await requireAdmin();
-
-  if (!Number.isInteger(debt) || debt < 0 || debt > 10) {
-    return { ok: false, message: 'Make-up debt must be between 0 and 10.' };
-  }
-
-  const [m] = await db.select().from(members).where(eq(members.id, memberId)).limit(1);
-  if (!m) return { ok: false, message: 'No such member.' };
-
-  await db.update(members).set({ makeupDebt: debt }).where(eq(members.id, memberId));
-
-  await db.insert(events).values({
-    action: 'roster.debt_set',
-    entityType: 'member',
-    entityId: memberId,
-    actorName: admin.name,
-    actorRole: 'manager',
-    summary: `${admin.name} set ${m.name}'s make-up debt to ${debt} (was ${m.makeupDebt})`,
-    payload: { before: m.makeupDebt, after: debt },
-  });
-
-  refresh();
-  return { ok: true, message: `${m.name} owes ${debt} make-up shift(s).` };
+export async function adjustPoints(id: string, delta: number, reason: string): Promise<RosterResult> {
+  return as((a) => roster.adjustPoints(a, id, delta, reason), id);
 }
 
-/** Takes someone off the roster without deleting their history. */
-export async function setActive(
-  memberId: string,
-  active: boolean,
+export async function previewBulkPoints(scope: PointsScope, ids: string[], op: PointOp, amount: number) {
+  await requireAdmin();
+  return roster.previewPoints(scope, ids, op, amount);
+}
+
+export async function applyBulkPoints(
+  scope: PointsScope,
+  ids: string[],
+  op: PointOp,
+  amount: number,
+  reason: string,
 ): Promise<RosterResult> {
-  const admin = await requireAdmin();
+  return as((a) => roster.applyPoints(a, scope, ids, op, amount, reason));
+}
 
-  const [m] = await db.select().from(members).where(eq(members.id, memberId)).limit(1);
-  if (!m) return { ok: false, message: 'No such member.' };
+export async function setMakeupDebt(id: string, debt: number): Promise<RosterResult> {
+  return as((a) => roster.setMakeupDebt(a, id, debt), id);
+}
 
-  await db.update(members).set({ active }).where(eq(members.id, memberId));
+export async function setActive(ids: string[], active: boolean): Promise<RosterResult> {
+  return as((a) => roster.setActive(a, ids, active), ids.length === 1 ? ids[0] : undefined);
+}
 
-  await db.insert(events).values({
-    action: active ? 'roster.reactivated' : 'roster.deactivated',
-    entityType: 'member',
-    entityId: memberId,
-    actorName: admin.name,
-    actorRole: 'manager',
-    summary: `${admin.name} ${active ? 'restored' : 'removed'} ${m.name} ${
-      active ? 'to' : 'from'
-    } the roster`,
-  });
+export async function addMember(input: NewMemberInput): Promise<RosterResult & { id?: string }> {
+  return as((a) => roster.addMember(a, input));
+}
 
-  refresh();
-  return {
-    ok: true,
-    message: active ? `${m.name} restored.` : `${m.name} removed from the roster.`,
-  };
+export async function deleteMember(id: string): Promise<RosterResult> {
+  return as((a) => roster.deleteMember(a, id));
+}
+
+export async function previewRosterImport(text: string, options: ImportOptions) {
+  await requireAdmin();
+  return roster.previewImport(text, options);
+}
+
+export async function applyRosterImport(
+  text: string,
+  options: ImportOptions,
+  selection: ImportSelection,
+): Promise<RosterResult> {
+  return as((a) => roster.applyImport(a, text, options, selection));
+}
+
+export async function saveCrewDefaults(crewForYear: RosterDefaults['crewForYear']): Promise<RosterResult> {
+  const res = await as((a) => roster.updateCrewDefaults(a, crewForYear));
+  revalidatePath('/admin/settings');
+  return res;
 }

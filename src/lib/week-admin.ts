@@ -23,7 +23,7 @@ import {
   events,
 } from '../db/schema.ts';
 import { unsettleAssignment, settleAssignment } from './shift-service.ts';
-import { YEAR_FOR_MEAL } from './types.ts';
+import { CREW_LABELS } from './types.ts';
 import { dayIndex, todayInEastern } from './dates.ts';
 
 export interface AdminResult {
@@ -140,7 +140,7 @@ export async function reassignShift(
   assignmentId: string,
   newMemberId: string,
   actorName: string,
-  opts: { allowAnyClassYear?: boolean } = {},
+  opts: { allowOtherCrew?: boolean } = {},
 ): Promise<AdminResult> {
   const ctx = await shiftContext(assignmentId);
   if (!ctx) return { ok: false, message: 'That shift no longer exists.' };
@@ -159,11 +159,10 @@ export async function reassignShift(
     return { ok: false, message: 'They are already on this shift.' };
   }
 
-  const expectedYear = YEAR_FOR_MEAL[ctx.slot.meal];
-  if (!opts.allowAnyClassYear && next.classYear !== expectedYear) {
+  if (!opts.allowOtherCrew && next.rotation !== ctx.slot.meal) {
     return {
       ok: false,
-      message: `${next.name} is a ${next.classYear} — ${ctx.slot.meal} is for ${expectedYear}s. Check allow wrong year if you are sure.`,
+      message: `${next.name} is on the ${CREW_LABELS[next.rotation].toLowerCase()}, and this is ${ctx.slot.meal}. Tick "allow the other crew" if you are sure.`,
     };
   }
 
@@ -270,7 +269,7 @@ export async function addToShift(
   slotId: string,
   memberId: string,
   actorName: string,
-  opts: { allowAnyClassYear?: boolean; allowOverfill?: boolean } = {},
+  opts: { allowOtherCrew?: boolean; allowOverfill?: boolean } = {},
 ): Promise<AdminResult> {
   const [slot] = await db
     .select()
@@ -297,11 +296,10 @@ export async function addToShift(
     return { ok: false, message: `${person.name} is already on this shift.` };
   }
 
-  const expectedYear = YEAR_FOR_MEAL[slot.meal];
-  if (!opts.allowAnyClassYear && person.classYear !== expectedYear) {
+  if (!opts.allowOtherCrew && person.rotation !== slot.meal) {
     return {
       ok: false,
-      message: `${person.name} is a ${person.classYear} — ${slot.meal} is for ${expectedYear}s. Check allow wrong year if you are sure.`,
+      message: `${person.name} is on the ${CREW_LABELS[person.rotation].toLowerCase()}, and this is ${slot.meal}. Tick "allow the other crew" if you are sure.`,
     };
   }
 
@@ -354,7 +352,7 @@ export interface ManageSlot {
     id: string;
     memberId: string;
     memberName: string;
-    classYear: string;
+    rotation: string;
     status: string;
     coveredByName: string | null;
     multiplier: number;
@@ -413,7 +411,7 @@ export async function getWeekForManagement(weekId: string) {
           id: a.id,
           memberId: a.memberId,
           memberName: p?.name ?? 'Unknown',
-          classYear: p?.classYear ?? '',
+          rotation: p?.rotation ?? '',
           status: a.status,
           coveredByName: a.coveredByMemberId
             ? (byId.get(a.coveredByMemberId)?.name ?? null)

@@ -12,9 +12,9 @@ manager use it daily.
 
 | For | What they get |
 |---|---|
-| **Brothers** (phone) | Their next shift and history, the week's board, putting a shift up for grabs or taking one, the day's menu, requesting a late plate with their allergies attached, and a points standings list |
+| **Brothers** (phone) | Their next shift and history, the week's board, putting a shift up for grabs or taking one, the day's menu, requesting a late plate with their allergies attached, a points standings list, and a profile they keep up to date themselves |
 | **Chefs** (kitchen tablet) | The live late plate queue with mandatory allergy acknowledgement, cutoff controls, and the menu editor |
-| **Kitchen manager** (desktop) | Drawing and posting weeks, attendance and point corrections, roster and setup codes, the kitchen tablet, and the full audit log |
+| **Kitchen manager** (desktop) | Drawing and posting weeks, attendance, roster management (import, crews, exemptions, bulk points, setup codes), the kitchen tablet, the full audit log, and an in-app [handbook](docs/HANDBOOK.md) |
 | **Out-of-house seniors** | A read-only weekly menu behind a shared password |
 
 ---
@@ -84,6 +84,26 @@ not signed in), a brother involved (as actor, subject, or via his shifts), the
 record type, and an inclusive date range on the house clock. Every view is a
 URL, and any view exports to CSV.
 
+## Roster
+
+The roster is meant to be run by whoever is kitchen manager this year,
+without help from whoever built it:
+
+- **Import** a roster from the chapter's export, a spreadsheet, cells pasted
+  from Sheets, or a typed list with headings. Columns are recognised by name in
+  any order; contact details are ignored and never stored. The import shows
+  every add, update and removal for approval before anything is written, and
+  the server re-plans from the same text rather than trusting the preview
+  (`src/lib/roster-intake.ts`, `src/lib/roster-plan.ts`).
+- **Bulk actions** on any selection: move crews, exempt with a reason, issue
+  setup codes, take off the roster. Points can be added, subtracted, set or
+  rebased for a selection or a whole crew, with a preview and a reason that
+  lands on each brother's record (`src/lib/points-ops.ts`).
+- **Profiles:** class year, room, pledge class, Slack ID and private manager
+  notes. Brothers edit their own room, Slack ID and allergies.
+- **Semesters** roll over from Settings, carrying the roster, points and house
+  settings forward.
+
 ## Backups
 
 `npm run backup` takes an online SQLite snapshot, checks `integrity_check`,
@@ -144,12 +164,14 @@ Full procedure, including moving an existing install over, is in
 
 ## How the house rules are encoded
 
-- **Who is on duty.** Juniors serve lunch, sophomores dinner. Duty year is a
-  per-person field so brothers who rushed late can be placed correctly.
+- **Who is on duty.** Each brother is on a lunch or a dinner crew, or exempt.
+  The crew is a per-person field; class year is only a profile fact, used to
+  pick the default crew when someone is added or imported (juniors lunch,
+  sophomores dinner, seniors exempt, all configurable in Settings).
 - **Selection order** for an open seat: make-up debt owed, then fewest points,
   then longest since last served, then a random draw seeded by the week - so a
   week can always be reproduced exactly.
-- **Hard constraints:** right class year, exempt members excluded, standing
+- **Hard constraints:** the right crew, exempt members excluded, standing
   weekly conflicts respected, one shift per Monday-Sunday week except make-ups.
 - **Cover.** A brother can put a shift up for grabs at any time; it stays his
   until someone takes it, and only whoever serves earns the point.
@@ -157,6 +179,9 @@ Full procedure, including moving an existing install over, is in
   Corrections are expressed as a desired end state, so they are idempotent and
   reversible.
 - **Posted weeks are never regenerated.** What the house was told is the record.
+- **Points carry over between semesters.** They are how the draw stays fair
+  over a brother's whole time in the house; the manager can rebase them (take
+  the lowest score off everyone) without changing anyone's place.
 
 ## Repository map
 
@@ -167,9 +192,9 @@ src/
   app/api/          JSON endpoints: late plates, menus, display, calendar, cron, health
   app/actions/      server actions (all writes from the UI)
   lib/              domain logic: scheduler, settlement, auth, throttle, audit, kiosk
-  db/               Drizzle schema, client, seed, roster import
+  db/               Drizzle schema, client, seed
 drizzle/            SQL migrations
 scripts/            backup, restore, drill, migrate, credentials, test runner, smoke tests
 deploy/             systemd units, Cloudflare Tunnel example, Pi setup
-docs/               API reference, operations, late plates
+docs/               manager handbook, API reference, operations, late plates
 ```

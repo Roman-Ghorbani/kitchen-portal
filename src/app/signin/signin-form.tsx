@@ -7,7 +7,7 @@ import { signInBrother, signInAdmin, enrollBrother } from '../actions/auth-actio
 export interface PickerMember {
   id: string;
   name: string;
-  classYear: 'junior' | 'sophomore';
+  rotation: 'lunch' | 'dinner';
   hasPin: boolean;
 }
 
@@ -247,8 +247,8 @@ export function SignInForm({
           <button key={m.id} className="picker-row" onClick={() => setPicked(m)}>
             <span className="avatar">{initials(m.name)}</span>
             <span className="picker-name">{m.name}</span>
-            <span className={`tag ${m.classYear === 'junior' ? 'jun' : 'soph'}`}>
-              {m.classYear === 'junior' ? 'Lunch' : 'Dinner'}
+            <span className={`tag ${m.rotation === 'lunch' ? 'jun' : 'soph'}`}>
+              {m.rotation === 'lunch' ? 'Lunch' : 'Dinner'}
             </span>
             {!m.hasPin && <span className="tag ok">New</span>}
           </button>
@@ -275,7 +275,7 @@ function PickedHeader({ member }: { member: PickerMember }) {
       <span className="avatar me">{initials(member.name)}</span>
       <div>
         <div className="picked-name">{member.name}</div>
-        <div className="hint">{member.classYear === 'junior' ? 'Lunch duty' : 'Dinner duty'}</div>
+        <div className="hint">{member.rotation === 'lunch' ? 'Lunch crew' : 'Dinner crew'}</div>
       </div>
     </div>
   );

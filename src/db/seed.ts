@@ -69,6 +69,8 @@ const DEMO_SOPHOMORES = [
   'Theo Nussbaum', 'Uri Landau', 'Victor Hess', 'Will Baruch', 'Xavi Doran',
 ];
 
+const DEMO_SENIORS = ['Avi Rothman', 'Mark Selig', 'Jordan Pell'];
+
 async function seedDemoRoster() {
   const existing = await db.select().from(members);
   if (existing.length > 0) {
@@ -78,15 +80,24 @@ async function seedDemoRoster() {
     return;
   }
 
+  // Juniors on lunch and sophomores on dinner, which is the house's usual
+  // split - but it is only a default; each member's crew is his own field.
   const rows = [
-    ...DEMO_JUNIORS.map((name) => ({ name, classYear: 'junior' as const })),
-    ...DEMO_SOPHOMORES.map((name) => ({ name, classYear: 'sophomore' as const })),
+    ...DEMO_JUNIORS.map((name) => ({ name, classYear: 'junior' as const, rotation: 'lunch' as const })),
+    ...DEMO_SOPHOMORES.map((name) => ({ name, classYear: 'sophomore' as const, rotation: 'dinner' as const })),
+    ...DEMO_SENIORS.map((name) => ({
+      name,
+      classYear: 'senior' as const,
+      rotation: 'lunch' as const,
+      exempt: true,
+      exemptReason: 'senior' as const,
+    })),
   ];
 
   await db.insert(members).values(rows);
   console.log(
-    `seeded ${DEMO_JUNIORS.length} juniors and ${DEMO_SOPHOMORES.length} ` +
-      `sophomores (demo data - delete before going live)`,
+    `seeded ${DEMO_JUNIORS.length} lunch crew, ${DEMO_SOPHOMORES.length} dinner crew ` +
+      `and ${DEMO_SENIORS.length} exempt seniors (demo data - delete before going live)`,
   );
 }
 
@@ -99,11 +110,12 @@ async function main() {
     await seedDemoRoster();
   }
 
-  const roster = await db.select().from(members);
-  const juniors = roster.filter((m) => m.classYear === 'junior').length;
+  const roster = (await db.select().from(members)).filter((m) => m.active);
+  const onDuty = roster.filter((m) => !m.exempt);
+  const lunch = onDuty.filter((m) => m.rotation === 'lunch').length;
   console.log(
-    `roster size: ${roster.length} (${juniors} juniors, ` +
-      `${roster.length - juniors} sophomores)`,
+    `roster: ${roster.length} (${lunch} lunch crew, ${onDuty.length - lunch} dinner crew, ` +
+      `${roster.length - onDuty.length} exempt)`,
   );
 }
 

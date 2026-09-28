@@ -44,8 +44,8 @@ export default async function AdminPage() {
       getOpenShifts(),
     ]);
 
-  const juniors = roster.filter((m) => m.classYear === 'junior');
-  const sophomores = roster.filter((m) => m.classYear === 'sophomore');
+  const lunchCrew = roster.filter((m) => !m.exempt && m.rotation === 'lunch');
+  const dinnerCrew = roster.filter((m) => !m.exempt && m.rotation === 'dinner');
   const exempt = roster.filter((m) => m.exempt);
   const withPin = roster.filter((m) => m.pinHash !== null);
   const owing = roster.filter((m) => m.makeupDebt > 0);
@@ -89,7 +89,7 @@ export default async function AdminPage() {
           <div className="label">On duty</div>
           <div className="value mono">{roster.length}</div>
           <div className="foot">
-            {juniors.length} juniors · {sophomores.length} sophomores
+            {lunchCrew.length} lunch crew · {dinnerCrew.length} dinner crew
           </div>
         </Link>
         <Link className="card card-pad stat-card" href="/admin/roster?view=readiness">
@@ -145,7 +145,9 @@ export default async function AdminPage() {
           </div>
           <div className="note">
             {semester.name} starts {fmt(semester.startsOn)}. Draw the first week
-            and it goes straight onto the board.
+            and it goes straight onto the board. New to this, or a new semester?
+            Follow the <Link href="/admin/guide#semester">start-of-semester
+            checklist</Link> first.
           </div>
           <div className="row-actions">
             <CreateWeekButton
@@ -236,6 +238,8 @@ export default async function AdminPage() {
       <div className="note">
         Every consequential action is written here permanently — posted, viewed,
         flagged, covered, marked absent. This log is what answers a dispute.
+        How to run the kitchen week to week is in the{' '}
+        <Link href="/admin/guide">Handbook</Link>.
       </div>
     </AppShell>
   );

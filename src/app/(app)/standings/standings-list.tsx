@@ -5,12 +5,12 @@ import { useMemo, useState } from 'react';
 import { formatPoints } from '../../../lib/types.ts';
 import type { StandingRow } from '../../../lib/standings.ts';
 
-type Pool = 'all' | 'junior' | 'sophomore';
+type Pool = 'all' | 'lunch' | 'dinner';
 
 const POOLS: { key: Pool; label: string }[] = [
   { key: 'all', label: 'Everyone' },
-  { key: 'junior', label: 'Juniors' },
-  { key: 'sophomore', label: 'Sophomores' },
+  { key: 'lunch', label: 'Lunch crew' },
+  { key: 'dinner', label: 'Dinner crew' },
 ];
 
 /** How many rows to show at each end before collapsing the middle. */
@@ -29,11 +29,11 @@ export function StandingsList({
 
   const filtered = useMemo(
     () =>
-      pool === 'all' ? rows : rows.filter((r) => r.classYear === pool),
+      pool === 'all' ? rows : rows.filter((r) => r.rotation === pool),
     [pool, rows],
   );
 
-  // Ranks are always the ones from the full list, so filtering to juniors does
+  // Ranks are always the ones from the full list, so filtering to one crew does
   // not renumber everybody and quietly change what the page is claiming.
   const myIndex = meId ? filtered.findIndex((r) => r.id === meId) : -1;
 
@@ -64,7 +64,7 @@ export function StandingsList({
     <div key={r.id} className={`st-row${r.id === meId ? ' is-me' : ''}`}>
       <span className="st-rank mono">{r.rank}</span>
       <span className="st-name">{r.id === meId ? 'You' : r.name}</span>
-      <span className="st-year mono">{r.classYear === 'junior' ? 'J' : 'S'}</span>
+      <span className="st-year mono" title={r.rotation === 'lunch' ? 'Lunch crew' : 'Dinner crew'}>{r.rotation === 'lunch' ? 'L' : 'D'}</span>
       <span className="st-pts mono">{formatPoints(r.points)}</span>
     </div>
   );

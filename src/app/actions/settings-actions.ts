@@ -191,3 +191,19 @@ export async function updateLatePlateBanner(message: string): Promise<SettingsRe
   revalidatePath('/late-plate');
   return { ok: true, message: msg ? 'Banner saved.' : 'Banner cleared.' };
 }
+
+/**
+ * Starts the next semester. Points, the roster and the house's settings carry
+ * over; see lib/semester-service.ts for exactly what does and does not.
+ */
+export async function startNextSemester(input: {
+  name: string;
+  startsOn: string;
+  endsOn: string;
+}): Promise<SettingsResult> {
+  const admin = await requireAdmin();
+  const { startNextSemester: start } = await import('../../lib/semester-service.ts');
+  const res = await start(admin.name, input);
+  if (res.ok) revalidatePath('/', 'layout');
+  return res;
+}

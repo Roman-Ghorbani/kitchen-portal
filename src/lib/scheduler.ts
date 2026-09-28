@@ -13,7 +13,7 @@
  *      reproduces the identical schedule rather than reshuffling people.
  *
  * Hard constraints, never violated:
- *   - Juniors take lunch, sophomores take dinner
+ *   - Each crew takes its own meal: lunch crew lunch, dinner crew dinner
  *   - Exempt members are excluded entirely
  *   - Standing weekly conflicts are excluded
  *   - One shift per person per week, with make-up shifts the sole exception
@@ -26,7 +26,6 @@ import {
   type MealDayConfig,
   type Slot,
   type WeekSchedule,
-  YEAR_FOR_MEAL,
   DEFAULT_MEAL_DAYS,
   DEFAULT_SLOT_SIZES,
 } from './types.ts';
@@ -126,14 +125,14 @@ function buildSlots(
 }
 
 /**
- * A member may take a seat if they are the right class year, have no standing
+ * A member may take a seat if they are on that meal's crew, have no standing
  * conflict that weekday, are not already on that same day, and have not used
  * up their weekly allowance (1, plus 1 per make-up shift owed).
  */
 function isEligible(w: WorkingMember, slot: Slot): boolean {
   const m = w.member;
   if (m.exempt) return false;
-  if (m.classYear !== YEAR_FOR_MEAL[slot.meal]) return false;
+  if (m.rotation !== slot.meal) return false;
   if (m.standingConflicts.includes(dayIndex(slot.date))) return false;
   if (w.assignedDates.includes(slot.date)) return false;
   const allowance = 1 + w.initialDebt;
@@ -262,9 +261,8 @@ export function generateWeek(input: ScheduleInput): ScheduleResult {
 }
 
 function describeShortfall(working: WorkingMember[], slot: Slot): string {
-  const year = YEAR_FOR_MEAL[slot.meal];
-  const sameYear = working.filter((w) => w.member.classYear === year);
-  const active = sameYear.filter((w) => !w.member.exempt);
+  const crew = working.filter((w) => w.member.rotation === slot.meal);
+  const active = crew.filter((w) => !w.member.exempt);
   const blocked = active.filter((w) =>
     w.member.standingConflicts.includes(dayIndex(slot.date)),
   );
@@ -272,9 +270,9 @@ function describeShortfall(working: WorkingMember[], slot: Slot): string {
 
   return (
     active.length +
-    ' active ' +
-    year +
-    's: ' +
+    ' active on the ' +
+    slot.meal +
+    ' crew: ' +
     blocked.length +
     ' blocked by a standing conflict this weekday, ' +
     usedUp.length +
