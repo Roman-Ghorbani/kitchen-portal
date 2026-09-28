@@ -67,7 +67,8 @@ export function hashSecret(secret: string): string {
 export function verifySecret(secret: string, stored: string | null | undefined): boolean {
   if (!stored) return false;
   const cleanStored = stored.trim().replace(/^["']|["']$/g, '');
-  const [scheme, saltB64, hashB64] = cleanStored.split('$');
+  const delim = cleanStored.includes(':') ? ':' : '$';
+  const [scheme, saltB64, hashB64] = cleanStored.split(delim);
   if (scheme !== 'scrypt' || !saltB64 || !hashB64) {
     console.log('[verifySecret parse failed]', { cleanStored: cleanStored.slice(0, 15), scheme });
     return false;
@@ -196,7 +197,7 @@ export function verifyAdminPassword(candidate: string): boolean {
   if (!candidate) return false;
   const clean = candidate.trim();
   const hashed = process.env.ADMIN_PASSWORD_HASH?.trim().replace(/^["']|["']$/g, '');
-  if (hashed) {
+  if (hashed && hashed !== 'scrypt') {
     return verifySecret(clean, hashed);
   }
 
