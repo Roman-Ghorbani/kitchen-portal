@@ -19,7 +19,11 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   const { ip } = contextFrom(request.headers);
-  const target = new URL('/kitchen/late-plates', request.url);
+  const fHost = request.headers.get('x-forwarded-host');
+  const baseOrigin = fHost
+    ? `${request.headers.get('x-forwarded-proto') || 'https'}://${fHost}`
+    : (process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') || request.nextUrl.origin);
+  const target = new URL('/kitchen/late-plates', baseOrigin);
   const token = request.nextUrl.searchParams.get('token') ?? '';
 
   const gate = await checkThrottle([`pairing:${ip}`, `ip:${ip}`]);
