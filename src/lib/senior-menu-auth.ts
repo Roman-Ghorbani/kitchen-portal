@@ -1,166 +1,72 @@
-import { createHmac, timingSafeEqual } from 'node:crypto';
-import { getTvSettings } from './tv-service.ts';
+/**
+ * The Senior Week menu (/menu): one shared password for out-of-house seniors
+ * and alumni who have no roster account.
+ *
+ * The password is stored as a scrypt hash in `app_settings`. There is no
+ * default: until the manager sets one, the page stays locked. A correct
+ * password earns a signed cookie that carries the password's version number,
+ * so changing the password signs every device out.
+ *
+ * Attempt limiting goes through the same throttle as the other credentials.
+ */
 
-export const MENU_AUTH_COOKIE = 'zbt_senior_menu_auth';
-export const MENU_AUTH_TTL_SECONDS = 60 * 60 * 24 * 365 * 10; // 10 years
+import { createHmac } from 'node:crypto';
 
-const MAX_ATTEMPTS = 5;
-const LOCKOUT_MS = 10 * 60 * 1000; // 10 minutes
-const WINDOW_MS = 10 * 60 * 1000; // 10 minutes
+import { hashSecret, verifySecret, safeEqual, sessionSecret } from './auth.ts';
+import { getSetting, setSetting, SETTING } from './app-settings.ts';
 
-interface RateLimitRecord {
-  attempts: number;
-  firstAttemptAt: number;
-  lockedUntil: number | null;
+export const MENU_AUTH_COOKIE = 'zbt_senior_menu';
+/** Browsers cap cookie lifetimes at 400 days. */
+export const MENU_AUTH_TTL_SECONDS = 60 * 60 * 24 * 400;
+export const MIN_MENU_PASSWORD_LENGTH = 8;
+
+export async function seniorMenuPasswordSet(): Promise<boolean> {
+  return Boolean(await getSetting<string | null>(SETTING.seniorMenuPasswordHash, null));
 }
 
-// In-memory rate limiting map keyed by client IP
-const ipAttempts = new Map<string, RateLimitRecord>();
-
-export function getClientIp(headersMap: Headers | Record<string, string | string[] | undefined>): string {
-  let headerValue: string | null = null;
-
-  if (typeof (headersMap as Headers).get === 'function') {
-    headerValue = (headersMap as Headers).get('x-forwarded-for') ??
-      (headersMap as Headers).get('x-real-ip') ??
-      (headersMap as Headers).get('cf-connecting-ip');
-  } else {
-    const raw = headersMap as Record<string, string | string[] | undefined>;
-    const fwd = raw['x-forwarded-for'] || raw['x-real-ip'] || raw['cf-connecting-ip'];
-    if (Array.isArray(fwd)) headerValue = fwd[0];
-    else if (typeof fwd === 'string') headerValue = fwd;
-  }
-
-  if (headerValue) {
-    // If comma-separated (e.g. from proxies), take the first client IP
-    const first = headerValue.split(',')[0].trim();
-    if (first) return first;
-  }
-
-  return '127.0.0.1';
-}
-
-export function checkRateLimit(ip: string): { allowed: boolean; remainingAttempts: number; retryAfterMs: number } {
-  const now = Date.now();
-  const record = ipAttempts.get(ip);
-
-  if (!record) {
-    return { allowed: true, remainingAttempts: MAX_ATTEMPTS, retryAfterMs: 0 };
-  }
-
-  // Check if currently locked out
-  if (record.lockedUntil && record.lockedUntil > now) {
-    return {
-      allowed: false,
-      remainingAttempts: 0,
-      retryAfterMs: record.lockedUntil - now,
-    };
-  }
-
-  // If lockout expired or window expired, reset record
-  if (record.lockedUntil && record.lockedUntil <= now) {
-    ipAttempts.delete(ip);
-    return { allowed: true, remainingAttempts: MAX_ATTEMPTS, retryAfterMs: 0 };
-  }
-
-  if (now - record.firstAttemptAt > WINDOW_MS) {
-    ipAttempts.delete(ip);
-    return { allowed: true, remainingAttempts: MAX_ATTEMPTS, retryAfterMs: 0 };
-  }
-
-  const remaining = Math.max(0, MAX_ATTEMPTS - record.attempts);
-  return {
-    allowed: remaining > 0,
-    remainingAttempts: remaining,
-    retryAfterMs: 0,
-  };
-}
-
-export function recordFailedAttempt(ip: string): { locked: boolean; retryAfterMs: number; remainingAttempts: number } {
-  const now = Date.now();
-  let record = ipAttempts.get(ip);
-
-  if (!record || now - record.firstAttemptAt > WINDOW_MS) {
-    record = { attempts: 1, firstAttemptAt: now, lockedUntil: null };
-  } else {
-    record.attempts += 1;
-  }
-
-  if (record.attempts >= MAX_ATTEMPTS) {
-    record.lockedUntil = now + LOCKOUT_MS;
-    ipAttempts.set(ip, record);
-    return { locked: true, retryAfterMs: LOCKOUT_MS, remainingAttempts: 0 };
-  }
-
-  ipAttempts.set(ip, record);
-  return {
-    locked: false,
-    retryAfterMs: 0,
-    remainingAttempts: Math.max(0, MAX_ATTEMPTS - record.attempts),
-  };
-}
-
-export function clearRateLimit(ip: string): void {
-  ipAttempts.delete(ip);
-}
-
-export async function getSeniorMenuPassword(): Promise<string> {
-  const envPass = process.env.SENIOR_MENU_PASSWORD || process.env.MENU_PASSWORD;
-  if (envPass && envPass.trim()) return envPass.trim();
-
-  try {
-    const tv = await getTvSettings();
-    if (tv.seniorMenuPassword && typeof tv.seniorMenuPassword === 'string' && tv.seniorMenuPassword.trim()) {
-      return tv.seniorMenuPassword.trim();
-    }
-  } catch {
-    // Ignore DB fetch errors and use default
-  }
-
-  return 'zbt2026';
+export async function setSeniorMenuPassword(password: string): Promise<void> {
+  await setSetting(SETTING.seniorMenuPasswordHash, hashSecret(password));
+  await setSetting(SETTING.seniorMenuVersion, (await menuVersion()) + 1);
 }
 
 export async function verifySeniorMenuPassword(candidate: string): Promise<boolean> {
   if (!candidate) return false;
-  const expected = await getSeniorMenuPassword();
+  const stored = await getSetting<string | null>(SETTING.seniorMenuPasswordHash, null);
+  if (!stored) return false;
 
-  const a = Buffer.from(candidate.trim());
-  const b = Buffer.from(expected.trim());
-  if (a.length !== b.length) return false;
-  return timingSafeEqual(a, b);
+  // Carried over in plaintext by migration 0011; upgraded on first use.
+  if (stored.startsWith('plain$')) {
+    const ok = safeEqual(candidate.trim(), stored.slice('plain$'.length).trim());
+    if (ok) await setSetting(SETTING.seniorMenuPasswordHash, hashSecret(candidate.trim()));
+    return ok;
+  }
+  return verifySecret(candidate.trim(), stored);
 }
 
-function secret(): Buffer {
-  const s = process.env.SESSION_SECRET || 'zbt-kitchen-secret-key-fallback-2026';
-  return Buffer.from(s);
+async function menuVersion(): Promise<number> {
+  return getSetting<number>(SETTING.seniorMenuVersion, 1);
 }
 
-export function signMenuToken(ttlSeconds = MENU_AUTH_TTL_SECONDS): string {
-  const payload = {
-    role: 'senior_menu_viewer',
-    exp: Math.floor(Date.now() / 1000) + ttlSeconds,
-  };
+const sign = (body: string) =>
+  createHmac('sha256', sessionSecret()).update(`senior-menu:${body}`).digest('base64url');
+
+export async function signMenuToken(): Promise<string> {
+  const payload = { v: await menuVersion(), exp: Math.floor(Date.now() / 1000) + MENU_AUTH_TTL_SECONDS };
   const body = Buffer.from(JSON.stringify(payload)).toString('base64url');
-  const sig = createHmac('sha256', secret()).update(body).digest('base64url');
-  return `${body}.${sig}`;
+  return `${body}.${sign(body)}`;
 }
 
-export function verifyMenuToken(token: string | undefined): boolean {
+export async function verifyMenuToken(token: string | undefined): Promise<boolean> {
   if (!token) return false;
   const [body, sig] = token.split('.');
-  if (!body || !sig) return false;
-
+  if (!body || !sig || !safeEqual(sig, sign(body))) return false;
   try {
-    const expected = createHmac('sha256', secret()).update(body).digest('base64url');
-    const a = Buffer.from(sig);
-    const b = Buffer.from(expected);
-    if (a.length !== b.length || !timingSafeEqual(a, b)) return false;
-
     const payload = JSON.parse(Buffer.from(body, 'base64url').toString('utf8'));
-    if (typeof payload.exp !== 'number') return false;
-    if (payload.exp < Math.floor(Date.now() / 1000)) return false;
-    if (payload.role !== 'senior_menu_viewer') return false;
-    return true;
+    return (
+      typeof payload.exp === 'number' &&
+      payload.exp > Math.floor(Date.now() / 1000) &&
+      payload.v === (await menuVersion())
+    );
   } catch {
     return false;
   }

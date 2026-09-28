@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 
-export function CalendarSyncButton({ memberId }: { memberId: string }) {
+export function CalendarSyncButton({ feedToken }: { feedToken: string }) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -13,13 +13,10 @@ export function CalendarSyncButton({ memberId }: { memberId: string }) {
     }
   }, []);
 
-  const origin =
-    typeof window !== 'undefined'
-      ? window.location.origin
-      : 'https://kitchen.zbtaa.online';
+  const origin = typeof window !== 'undefined' ? window.location.origin : '';
 
-  const icsHttpsUrl = `${origin}/api/calendar/${memberId}.ics`;
-  const webcalUrl = `${origin.replace(/^https?:/, 'webcal:')}/api/calendar/${memberId}.ics`;
+  const icsHttpsUrl = `${origin}/api/calendar/${feedToken}.ics`;
+  const webcalUrl = `${origin.replace(/^https?:/, 'webcal:')}/api/calendar/${feedToken}.ics`;
   const googleDesktopUrl = `https://calendar.google.com/calendar/render?cid=${encodeURIComponent(icsHttpsUrl)}`;
   const outlookCalUrl = `https://outlook.office.com/calendar/0/addcalendar?url=${encodeURIComponent(icsHttpsUrl)}&name=ZBT%20Kitchen%20Duty`;
 
@@ -99,7 +96,7 @@ export function CalendarSyncButton({ memberId }: { memberId: string }) {
           <a
             className="cal-menu-item"
             href={icsHttpsUrl}
-            download={`kitchen-duty-${memberId}.ics`}
+            download="kitchen-duty.ics"
             onClick={() => setOpen(false)}
           >
             <span className="cal-icon">📥</span>

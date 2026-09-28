@@ -1,35 +1,29 @@
 /**
- * The kitchen's own screen. No sign-in.
+ * The kitchen's own screen: the late plate queue and the menu editor.
  *
- * Lives outside the (app) group deliberately: no sidebar, no nav, no session.
- * The chefs open one bookmarked URL carrying a device token and see the day's
- * queue. That URL is the whole interaction — anything they have to log into,
- * they will stop using.
+ * Lives outside the (app) group deliberately - no sidebar, no nav, no PIN.
+ * Two kinds of visitor get in:
  *
- * Works on any browser, so it is useful on a laptop or the TV today and needs
- * no hardware bought before it earns its place.
+ *   - a paired chef tablet, recognised by its httpOnly pairing cookie
+ *   - the kitchen manager, by his session, so he can see exactly what the
+ *     chefs see ("Open kiosk view" on the Late plates page)
+ *
+ * Anything else gets a screen explaining how to pair. A tablet still using the
+ * old `?device=` bookmark is sent to /kitchen/legacy to be converted.
  */
 
-import { headers } from 'next/headers';
-import { timingSafeEqual } from 'node:crypto';
+import { cookies } from 'next/headers';
+import Link from 'next/link';
+import { redirect } from 'next/navigation';
 
-import { todayInEastern, parseISO } from '../../../lib/dates.ts';
+import { todayInEastern } from '../../../lib/dates.ts';
 import { currentKitchenMeal } from '../../../lib/late-plate-service.ts';
-import { getActiveSemester } from '../../../lib/week-service.ts';
+import { deviceFromCookie } from '../../../lib/kiosk.ts';
+import { getSession } from '../../../lib/session.ts';
+import { KIOSK_COOKIE } from '../../../lib/session-constants.ts';
 import { KitchenQueue } from './kitchen-queue.tsx';
-import { TokenRecovery } from './token-recovery.tsx';
 
 export const dynamic = 'force-dynamic';
-
-async function tokenMatches(provided: string | undefined): Promise<boolean> {
-  const semester = await getActiveSemester().catch(() => null);
-  const expected = semester?.kioskToken || process.env.LATE_PLATE_DEVICE_TOKEN;
-  if (!expected || !provided) return false;
-  const a = Buffer.from(provided);
-  const b = Buffer.from(expected);
-  if (a.length !== b.length) return false;
-  return timingSafeEqual(a, b);
-}
 
 export default async function KitchenLatePlatesPage({
   searchParams,
@@ -37,34 +31,41 @@ export default async function KitchenLatePlatesPage({
   searchParams: Promise<{ device?: string; date?: string }>;
 }) {
   const params = await searchParams;
-  // Touch headers so this can never be statically rendered with a token baked in.
-  await headers();
+  if (params.device) redirect(`/kitchen/legacy?token=${encodeURIComponent(params.device)}`);
 
-  if (!(await tokenMatches(params.device))) {
+  const [device, session] = await Promise.all([
+    deviceFromCookie((await cookies()).get(KIOSK_COOKIE)?.value),
+    getSession(),
+  ]);
+  const managerView = !device && session?.role === 'admin';
+
+  if (!device && !managerView) {
     return (
       <div className="kq-shell kq-locked" data-theme="light">
         <div className="kq-locked-card">
           <h1>Kitchen late plates</h1>
-          <p>
-            This screen needs the kitchen link. If this tablet has been here
-            before, it will let itself back in a moment.
+          <p>This tablet is not paired with the kitchen portal yet.</p>
+          <p className="kq-locked-sub">
+            Ask the kitchen manager for a pairing code, then{' '}
+            <Link href="/kitchen/pair">enter it here</Link>.
           </p>
-          <p className="kq-locked-sub">Otherwise ask Roman for the link.</p>
-          <TokenRecovery />
         </div>
       </div>
     );
   }
 
-  const isExplicitDate = !!params.date;
-  const initialDate = params.date ?? todayInEastern();
-
   return (
     <div className="kq-shell" data-theme="light">
+      {managerView && (
+        <div className="kq-manager-bar">
+          Manager view: this is the chefs&apos; screen. Anything you change here
+          is logged under your name.{' '}
+          <Link href="/admin/late-plates">Back to Late plates</Link>
+        </div>
+      )}
       <KitchenQueue
-        device={params.device!}
-        initialDate={initialDate}
-        isExplicitDate={isExplicitDate}
+        initialDate={params.date ?? todayInEastern()}
+        isExplicitDate={Boolean(params.date)}
         // Opens on whatever the kitchen is working on now, so nobody has to
         // pick a meal before they can see their work.
         initialMeal={currentKitchenMeal()}

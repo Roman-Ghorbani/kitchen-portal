@@ -76,18 +76,6 @@ export async function getActiveSemester() {
     .where(eq(semesters.active, true))
     .limit(1);
   if (!row) throw new Error('No active semester. Run the seed script first.');
-
-  const mealDays = row.mealDays as MealDayConfig;
-  if (!mealDays.dinner[5] || mealDays.lunch[5]) {
-    mealDays.lunch[5] = false;
-    mealDays.dinner[5] = true;
-    await db
-      .update(semesters)
-      .set({ mealDays })
-      .where(eq(semesters.id, row.id));
-    row.mealDays = mealDays;
-  }
-
   return row;
 }
 
@@ -262,6 +250,7 @@ export async function generateAndSaveWeek(
     entityType: 'week',
     entityId: week.id,
     actorName: 'scheduler',
+    actorRole: 'system',
     summary: `Posted week of ${weekStart} (${assignmentValues.length} assignments)`,
     payload: {
       weekStart,
@@ -413,7 +402,7 @@ export { addDays };
  * How far into the future the schedule actually goes.
  *
  * Shown to brothers so "nothing scheduled" is never ambiguous between "you
- * have no shifts" and "Roman has not posted that far yet" - which is exactly
+ * have no shifts" and "the manager has not posted that far yet" - which is exactly
  * the confusion that leads to someone insisting they were never told.
  */
 export interface ScheduleHorizon {

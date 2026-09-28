@@ -1,4 +1,15 @@
-import { getTvSettings, updateTvSettings } from './tv-service.ts';
+/**
+ * The house menu.
+ *
+ * Chefs enter it on the kitchen tablet; brothers see it on the Menu tab while
+ * deciding on a late plate, out-of-house seniors see it on /menu, and the
+ * house display shows it on the dining room TV. One row per date in `menus`.
+ */
+
+import { and, gte, lte, eq } from 'drizzle-orm';
+
+import { db } from '../db/index.ts';
+import { menus } from '../db/schema.ts';
 
 export interface MenuMeal {
   label: string;
@@ -12,159 +23,101 @@ export interface DayMenu {
   dinner: MenuMeal;
   /** False when nobody has entered anything for this day. */
   hasMenu: boolean;
-  /** True when this came from cache because the source could not be reached. */
+  /** True when this came from the in-memory cache after a read failed. */
   stale: boolean;
 }
 
+/** Serving windows as the house states them. Cleanup times live on the slot. */
+export const SERVICE_HOURS = {
+  lunch: { label: 'Lunch', serve: '11:00 AM – 2:30 PM' },
+  dinner: { label: 'Dinner', serve: '4:30 PM – 7:30 PM' },
+} as const;
+
+const MAX_ITEMS = 20;
+const MAX_ITEM_LENGTH = 120;
+
 /**
- * Short in-memory cache (5 seconds) so repeated lookups within a single page
- * render are instantaneous, while changes made on the kiosk appear almost
- * immediately.
+ * A few seconds of caching so one page render asking for the same day three
+ * times costs one query, while an edit on the tablet shows up almost at once.
  */
 const FRESH_MS = 5_000;
+const cache = new Map<string, { menu: DayMenu; at: number }>();
 
-interface CacheEntry {
-  menu: DayMenu;
-  fetchedAt: number;
-}
-
-const cache = new Map<string, CacheEntry>();
-
-export function menuSourceConfigured(): boolean {
-  return true;
-}
-
-function sanitizeItems(items: unknown): string[] {
+export function sanitizeItems(items: unknown): string[] {
   if (!Array.isArray(items)) return [];
   return items
     .filter((i) => i !== null && i !== undefined)
-    .map((i) => String(i).trim())
+    .map((i) => String(i).trim().slice(0, MAX_ITEM_LENGTH))
     .filter((i) => i.length > 0)
-    .slice(0, 20);
+    .slice(0, MAX_ITEMS);
 }
 
-/**
- * Reads a single day's menu directly from the KitchenTracker database.
- */
+function shape(date: string, lunch: string[], dinner: string[], stale = false): DayMenu {
+  return {
+    date,
+    lunch: { ...SERVICE_HOURS.lunch, items: lunch },
+    dinner: { ...SERVICE_HOURS.dinner, items: dinner },
+    hasMenu: lunch.length > 0 || dinner.length > 0,
+    stale,
+  };
+}
+
 export async function getDayMenu(date: string): Promise<DayMenu | null> {
   const cached = cache.get(date);
-  if (cached && Date.now() - cached.fetchedAt < FRESH_MS) {
-    return cached.menu;
-  }
+  if (cached && Date.now() - cached.at < FRESH_MS) return cached.menu;
 
   try {
-    const config = await getTvSettings();
-    const day = (config.menus && config.menus[date]) || {};
-
-    const lunchItems = sanitizeItems(day.lunch);
-    const dinnerItems = sanitizeItems(day.dinner);
-
-    const result: DayMenu = {
-      date,
-      lunch: {
-        label: config.meals?.lunch?.label || 'Lunch',
-        serve: config.meals?.lunch?.serve || '11:00 AM – 2:30 PM',
-        items: lunchItems,
-      },
-      dinner: {
-        label: config.meals?.dinner?.label || 'Dinner',
-        serve: config.meals?.dinner?.serve || '4:30 PM – 7:30 PM',
-        items: dinnerItems,
-      },
-      hasMenu: lunchItems.length > 0 || dinnerItems.length > 0,
-      stale: false,
-    };
-
-    cache.set(date, { menu: result, fetchedAt: Date.now() });
-    return result;
+    const [row] = await db.select().from(menus).where(eq(menus.date, date)).limit(1);
+    const menu = shape(date, sanitizeItems(row?.lunch), sanitizeItems(row?.dinner));
+    cache.set(date, { menu, at: Date.now() });
+    return menu;
   } catch (err) {
-    console.error(`[menu] could not read menu for ${date}:`, err);
-    if (cached) return { ...cached.menu, stale: true };
-    return null;
+    console.error(`[menu] could not read the menu for ${date}:`, err);
+    return cached ? { ...cached.menu, stale: true } : null;
   }
 }
 
-/**
- * Saves or updates menu items for a specific date.
- */
-export async function saveDayMenu(
-  date: string,
-  mealData: { lunch?: string[]; dinner?: string[] },
-): Promise<DayMenu> {
-  const config = await getTvSettings();
-  const currentMenus = Object.assign({}, config.menus || {});
-  const existingDay = currentMenus[date] || {};
-
-  const nextLunch =
-    mealData.lunch !== undefined ? sanitizeItems(mealData.lunch) : sanitizeItems(existingDay.lunch);
-  const nextDinner =
-    mealData.dinner !== undefined ? sanitizeItems(mealData.dinner) : sanitizeItems(existingDay.dinner);
-
-  if (nextLunch.length === 0 && nextDinner.length === 0) {
-    delete currentMenus[date];
-  } else {
-    currentMenus[date] = {
-      lunch: nextLunch,
-      dinner: nextDinner,
-    };
-  }
-
-  await updateTvSettings({ menus: currentMenus });
-  clearMenuCache();
-
-  return (
-    (await getDayMenu(date)) || {
-      date,
-      lunch: { label: 'Lunch', serve: '', items: nextLunch },
-      dinner: { label: 'Dinner', serve: '', items: nextDinner },
-      hasMenu: nextLunch.length > 0 || nextDinner.length > 0,
-      stale: false,
-    }
+/** Every day in [from, to] that has a menu, keyed by date. */
+export async function getMenusInRange(from: string, to: string): Promise<Map<string, DayMenu>> {
+  const rows = await db
+    .select()
+    .from(menus)
+    .where(and(gte(menus.date, from), lte(menus.date, to)));
+  return new Map(
+    rows.map((r) => [r.date, shape(r.date, sanitizeItems(r.lunch), sanitizeItems(r.dinner))]),
   );
 }
 
 /**
- * Saves a full week / batch of menus keyed by ISO date.
+ * Saves one day. A meal left undefined keeps what it had; a day with nothing
+ * on either meal is deleted rather than stored empty.
  */
+export async function saveDayMenu(
+  date: string,
+  meal: { lunch?: string[]; dinner?: string[] },
+): Promise<DayMenu> {
+  await saveWeekMenus({ [date]: meal });
+  return (await getDayMenu(date))!;
+}
+
 export async function saveWeekMenus(
-  menus: Record<string, { lunch?: string[]; dinner?: string[] }>,
+  days: Record<string, { lunch?: string[]; dinner?: string[] }>,
 ): Promise<void> {
-  const config = await getTvSettings();
-  const currentMenus = Object.assign({}, config.menus || {});
+  db.transaction((tx) => {
+    for (const [date, meal] of Object.entries(days)) {
+      const [existing] = tx.select().from(menus).where(eq(menus.date, date)).limit(1).all();
+      const lunch = sanitizeItems(meal.lunch !== undefined ? meal.lunch : existing?.lunch);
+      const dinner = sanitizeItems(meal.dinner !== undefined ? meal.dinner : existing?.dinner);
 
-  for (const [date, data] of Object.entries(menus)) {
-    const existingDay = currentMenus[date] || {};
-    const lunch =
-      data.lunch !== undefined ? sanitizeItems(data.lunch) : sanitizeItems(existingDay.lunch);
-    const dinner =
-      data.dinner !== undefined ? sanitizeItems(data.dinner) : sanitizeItems(existingDay.dinner);
-
-    if (lunch.length === 0 && dinner.length === 0) {
-      delete currentMenus[date];
-    } else {
-      currentMenus[date] = { lunch, dinner };
+      if (lunch.length === 0 && dinner.length === 0) {
+        tx.delete(menus).where(eq(menus.date, date)).run();
+      } else {
+        tx.insert(menus)
+          .values({ date, lunch, dinner, updatedAt: new Date() })
+          .onConflictDoUpdate({ target: menus.date, set: { lunch, dinner, updatedAt: new Date() } })
+          .run();
+      }
     }
-  }
-
-  await updateTvSettings({ menus: currentMenus });
-  clearMenuCache();
-}
-
-/**
- * Retrieves menus for all days in a week given the Monday ISO date.
- */
-export async function getWeekMenus(
-  weekStart: string,
-): Promise<Record<string, { lunch: string[]; dinner: string[] }>> {
-  const config = await getTvSettings();
-  const allMenus = config.menus || {};
-  return allMenus;
-}
-
-/**
- * Clears cached menu records in memory.
- */
-export function clearMenuCache(): void {
+  });
   cache.clear();
 }
-

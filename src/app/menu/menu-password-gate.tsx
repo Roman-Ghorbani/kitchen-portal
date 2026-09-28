@@ -5,10 +5,11 @@ import { useRouter } from 'next/navigation';
 import { submitMenuPassword } from '../actions/menu-auth-actions.ts';
 
 export function MenuPasswordGate({
-  initialLocked = false,
+  configured,
   initialRetryAfterMs = 0,
 }: {
-  initialLocked?: boolean;
+  /** False until the kitchen manager has set a password; nothing opens it. */
+  configured: boolean;
   initialRetryAfterMs?: number;
 }) {
   const [password, setPassword] = useState('');
@@ -50,9 +51,7 @@ export function MenuPasswordGate({
         router.refresh();
       } else {
         setError(res.error ?? 'Incorrect password');
-        if (res.locked && res.retryAfterMs) {
-          setLockoutMs(res.retryAfterMs);
-        }
+        if (res.retryAfterMs) setLockoutMs(res.retryAfterMs);
       }
     });
   }
@@ -69,7 +68,7 @@ export function MenuPasswordGate({
 
         {error && (
           <div className={`alert ${isLocked ? 'bad' : 'warn'}`} style={{ marginBottom: 16 }}>
-            <span className="alert-title">{isLocked ? '🔒 Access Temporarily Blocked' : 'Access Denied'}</span>
+            <span className="alert-title">{isLocked ? 'Temporarily locked' : 'Not quite'}</span>
             <span className="alert-body">
               {error}
               {isLocked && (
@@ -79,6 +78,12 @@ export function MenuPasswordGate({
               )}
             </span>
           </div>
+        )}
+
+        {!configured && (
+          <p className="hint" style={{ marginBottom: 12 }}>
+            The menu is not open yet. Ask the kitchen manager for access.
+          </p>
         )}
 
         <form onSubmit={handleSubmit} className="menu-gate-form">
@@ -93,7 +98,7 @@ export function MenuPasswordGate({
               placeholder="Enter menu password..."
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              disabled={pending || isLocked}
+              disabled={pending || isLocked || !configured}
               autoFocus
             />
           </div>
@@ -102,7 +107,7 @@ export function MenuPasswordGate({
             type="submit"
             className="btn primary"
             style={{ width: '100%', justifyContent: 'center', marginTop: 12 }}
-            disabled={pending || isLocked || !password.trim()}
+            disabled={pending || isLocked || !configured || !password.trim()}
           >
             {pending ? 'Verifying...' : isLocked ? `Locked (${formatRemainingTime(lockoutMs)})` : 'Unlock Menu'}
           </button>

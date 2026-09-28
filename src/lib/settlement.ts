@@ -7,7 +7,7 @@
  * the day has passed.
  *
  * Kept pure and separate from the database because this is the arithmetic
- * people argue about, and it has to be re-runnable. Roman corrects attendance
+ * people argue about, and it has to be re-runnable. The manager corrects attendance
  * whenever he notices - sometimes days later, sometimes after points have
  * already been credited - so settlement is expressed as a *desired end state*
  * rather than an increment. Applying it computes the delta from whatever was

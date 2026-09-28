@@ -36,6 +36,8 @@ import {
   myLatePlatesInRange,
 } from '../src/lib/late-plate-service.ts';
 
+const CHEF = { actorName: 'Chris', actorRole: 'kiosk' } as const;
+
 if (!process.env.DATABASE_FILE?.includes('smoke')) {
   throw new Error(
     'Refusing to run: set DATABASE_FILE to a scratch path containing "smoke".',
@@ -118,7 +120,7 @@ ok('a second same-day cancel succeeds', r.ok && r.message === 'Cancelled.');
 r = await requestLatePlate(ben.id, tue, 'dinner', 'actually yes', at('11:45'));
 ok('a second same-day re-request succeeds', r.ok);
 
-r = await setLatePlateStatus(after[0].id, 'ready', null, 'Kitchen tablet');
+r = await setLatePlateStatus(after[0].id, 'ready', null, CHEF);
 ok('the kitchen can mark a plate ready after the cutoff', r.ok);
 
 const live = await listLatePlates(tue);
@@ -129,7 +131,7 @@ ok(
 );
 
 const samRow = live.find((p) => p.name === 'Sam Kelly')!;
-r = await setLatePlateStatus(samRow.id, 'declined', 'ran out of chicken', 'Chris');
+r = await setLatePlateStatus(samRow.id, 'declined', 'ran out of chicken', CHEF);
 ok('declining with a reason succeeds', r.ok);
 ok('a declined plate drops off the live queue', (await listLatePlates(tue)).length === 1);
 
@@ -137,14 +139,14 @@ const all = await listLatePlates(tue, { includeClosed: true });
 ok('a declined plate is still on the record', all.length === 2);
 ok('the decline reason is stored', all.some((p) => p.reason === 'ran out of chicken'));
 
-r = await setLatePlateSettings(tue, { dinner: { cutoff: '19:00' } }, 'Roman');
+r = await setLatePlateSettings(tue, { dinner: { cutoff: '19:00' } }, CHEF);
 ok('an override saves', r.ok);
 ok(
   'a later override reopens dinner at 5 PM',
   (await mealWindow(tue, 'dinner', at('17:00'))).open,
 );
 
-await setLatePlateSettings(tue, { dinner: { closed: true } }, 'Roman');
+await setLatePlateSettings(tue, { dinner: { closed: true } }, CHEF);
 const closed = await mealWindow(tue, 'dinner', at('12:00'));
 ok('closing shuts the meal regardless of the cutoff', !closed.open);
 r = await requestLatePlate(sam.id, tue, 'lunch', null, at('12:00'));
@@ -182,14 +184,14 @@ const [benRow] = await db
 ok('his flags were remembered on his member record', (benRow.flags ?? []).includes('peanuts'));
 
 /* The rule that matters most in this whole feature. */
-r = await setLatePlateStatus(flagged.id, 'ready', null, 'Chris');
+r = await setLatePlateStatus(flagged.id, 'ready', null, CHEF);
 ok('a flagged plate CANNOT be marked ready without acknowledging', !r.ok);
 ok('the refusal names the restrictions', /Peanuts/.test(r.message) && /Kosher/.test(r.message));
 
 const stillWaiting = (await myLatePlatesInRange(ben.id, wed, wed))[0];
 ok('the refused plate really did not change status', stillWaiting.status === 'waiting');
 
-r = await setLatePlateStatus(flagged.id, 'ready', null, 'Chris', { acknowledged: true });
+r = await setLatePlateStatus(flagged.id, 'ready', null, CHEF, { acknowledged: true });
 ok('acknowledging lets it through', r.ok);
 
 const acked = (await myLatePlatesInRange(ben.id, wed, wed))[0];
@@ -199,13 +201,13 @@ ok('and by whom', acked.acknowledgedBy === 'Chris');
 /* Declining needs no acknowledgement - nothing is being made. */
 r = await requestLatePlate(sam.id, wed, 'dinner', { flags: ['shellfish'] }, atWed('10:00'));
 const samFlagged = (await myLatePlatesInRange(sam.id, wed, wed))[0];
-r = await setLatePlateStatus(samFlagged.id, 'declined', 'no substitute tonight', 'Chris');
+r = await setLatePlateStatus(samFlagged.id, 'declined', 'no substitute tonight', CHEF);
 ok('declining a flagged plate needs no acknowledgement', r.ok);
 
 /* An unflagged plate is not gated at all. */
 r = await requestLatePlate(sam.id, wed, 'lunch', { flags: [] }, atWed('10:00'));
 const plain = (await myLatePlatesInRange(sam.id, wed, wed)).find((p) => p.meal === 'lunch')!;
-r = await setLatePlateStatus(plain.id, 'ready', null, 'Chris');
+r = await setLatePlateStatus(plain.id, 'ready', null, CHEF);
 ok('an unflagged plate needs no acknowledgement', r.ok);
 
 /* Omitting flags entirely means "use my usual", not "I have none". */
@@ -260,12 +262,12 @@ ok(
   chefView.some((p) => p.id === cancelled.id && p.status === 'cancelled'),
 );
 
-r = await setLatePlateStatus(cancelled.id, 'ready', null, 'Chris');
+r = await setLatePlateStatus(cancelled.id, 'ready', null, CHEF);
 ok('a chef cannot mark a cancelled plate ready', !r.ok);
 ok('and is told why', /cancelled/i.test(r.message));
-r = await setLatePlateStatus(cancelled.id, 'ready', null, 'Chris', { acknowledged: true });
+r = await setLatePlateStatus(cancelled.id, 'ready', null, CHEF, { acknowledged: true });
 ok('acknowledging does not get round it either', !r.ok);
-r = await setLatePlateStatus(cancelled.id, 'declined', 'too late', 'Chris');
+r = await setLatePlateStatus(cancelled.id, 'declined', 'too late', CHEF);
 ok('a chef cannot decline a cancelled plate', !r.ok);
 
 const untouched = (await myLatePlatesInRange(ben.id, thu, thu))[0];
@@ -274,7 +276,7 @@ ok('and the row really did not move', untouched.status === 'cancelled');
 /* Cancelling a plate that was already made is disallowed */
 await requestLatePlate(sam.id, thu, 'dinner', { flags: [] }, atThu('09:00'));
 const samThu = (await myLatePlatesInRange(sam.id, thu, thu))[0];
-r = await setLatePlateStatus(samThu.id, 'ready', null, 'Chris');
+r = await setLatePlateStatus(samThu.id, 'ready', null, CHEF);
 ok('his plate is made', r.ok);
 r = await cancelLatePlate(samThu.id, sam.id, atThu('19:30'));
 ok('he cannot cancel an already-plated meal', !r.ok);
@@ -305,7 +307,7 @@ ok('the seeded dinner cutoff is 4:00 PM', DEFAULT_CUTOFFS.dinner === '16:00');
 
 let standing = await getStandingCutoffs();
 /* The whole point: a chef moves dinner on Monday, Tuesday inherits it. */
-r = await setLatePlateSettings(monday, { dinner: { cutoff: '16:45' } }, 'Chris');
+r = await setLatePlateSettings(monday, { dinner: { cutoff: '16:45' } }, CHEF);
 ok('a chef can move a cutoff', r.ok);
 
 let monSettings = await getLatePlateSettings(monday);
@@ -328,7 +330,7 @@ w = await mealWindow(tuesday, 'dinner', new Date(`${tuesday}T16:50:00-04:00`));
 ok('and 4:50 PM is outside it', !w.open);
 
 /* Closing is a decision about one service and must never carry forward. */
-r = await setLatePlateSettings(monday, { dinner: { closed: true } }, 'Chris');
+r = await setLatePlateSettings(monday, { dinner: { closed: true } }, CHEF);
 ok('a chef can stop taking requests', r.ok);
 monSettings = await getLatePlateSettings(monday);
 ok('Monday dinner is closed', monSettings.dinner.closed === true);
@@ -340,12 +342,12 @@ ok('but Tuesday still has the moved cutoff', tueSettings.dinner.cutoff === '16:4
 ok('closing left Monday\'s cutoff intact', monSettings.dinner.cutoff === '16:45');
 
 /* Turning requests back on. */
-r = await setLatePlateSettings(monday, { dinner: { closed: false } }, 'Chris');
+r = await setLatePlateSettings(monday, { dinner: { closed: false } }, CHEF);
 monSettings = await getLatePlateSettings(monday);
 ok('the toggle goes back on', monSettings.dinner.closed === false);
 
 /* A one-day-only change, for when that is what is wanted. */
-r = await setLatePlateSettings(monday, { dinner: { cutoff: '15:00' } }, 'Chris', {
+r = await setLatePlateSettings(monday, { dinner: { cutoff: '15:00' } }, CHEF, {
   carryForward: false,
 });
 monSettings = await getLatePlateSettings(monday);
@@ -354,7 +356,7 @@ ok('carryForward:false still changes that day', monSettings.dinner.cutoff === '1
 ok('but leaves tomorrow alone', tueSettings.dinner.cutoff === '16:45');
 
 /* Rubbish is refused before anything is written. */
-r = await setLatePlateSettings(monday, { lunch: { cutoff: '25:00' } }, 'Chris');
+r = await setLatePlateSettings(monday, { lunch: { cutoff: '25:00' } }, CHEF);
 ok('an impossible time is refused', !r.ok);
 standing = await getStandingCutoffs();
 ok('and did not reach the standing value', standing.lunch.cutoff === '13:30');

@@ -1,13 +1,14 @@
 import { redirect } from 'next/navigation';
-import { cookies, headers } from 'next/headers';
+import { cookies } from 'next/headers';
 import { getSession, getViewAs } from '../../lib/session.ts';
 import { getMemberById } from '../../lib/member-queries.ts';
 import {
   MENU_AUTH_COOKIE,
   verifyMenuToken,
-  getClientIp,
-  checkRateLimit,
+  seniorMenuPasswordSet,
 } from '../../lib/senior-menu-auth.ts';
+import { checkThrottle } from '../../lib/throttle.ts';
+import { requestContext } from '../../lib/request-context.ts';
 import { getDayMenu } from '../../lib/menu-service.ts';
 import { defaultScheduleMonday, weekDates, todayInEastern } from '../../lib/dates.ts';
 import { MenuPasswordGate } from './menu-password-gate.tsx';
@@ -21,9 +22,8 @@ export default async function MenuPage({
 }: {
   searchParams: Promise<{ week?: string }>;
 }) {
-  const [cookieStore, reqHeaders, session, params] = await Promise.all([
+  const [cookieStore, session, params] = await Promise.all([
     cookies(),
-    headers(),
     getSession(),
     searchParams,
   ]);
@@ -69,18 +69,14 @@ export default async function MenuPage({
     );
   }
 
-  // If user is not logged into the portal (e.g. senior, parent, or guest)
-  const menuToken = cookieStore.get(MENU_AUTH_COOKIE)?.value;
-  const isMenuAuthenticated = verifyMenuToken(menuToken);
-
-  if (!isMenuAuthenticated) {
-    const clientIp = getClientIp(reqHeaders);
-    const limit = checkRateLimit(clientIp);
-
+  // Not signed in to the portal: a senior, a parent, an alum.
+  if (!(await verifyMenuToken(cookieStore.get(MENU_AUTH_COOKIE)?.value))) {
+    const { ip } = await requestContext();
+    const gate = await checkThrottle([`menu:${ip}`, `ip:${ip}`]);
     return (
       <MenuPasswordGate
-        initialLocked={!limit.allowed}
-        initialRetryAfterMs={limit.retryAfterMs}
+        configured={await seniorMenuPasswordSet()}
+        initialRetryAfterMs={gate.retryAfter * 1000}
       />
     );
   }

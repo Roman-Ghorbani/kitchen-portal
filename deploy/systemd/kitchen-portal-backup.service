@@ -1,0 +1,17 @@
+# /etc/systemd/system/kitchen-portal-backup.service - run by the timer below.
+# Writes an encrypted, verified archive to the USB drive (see scripts/backup.mjs).
+
+[Unit]
+Description=Kitchen Portal nightly backup
+RequiresMountsFor=/mnt/usb-backup
+
+[Service]
+Type=oneshot
+User=zbt
+Group=zbt
+WorkingDirectory=/home/zbt/kitchen-portal
+EnvironmentFile=/home/zbt/kitchen-portal/.env.production
+Environment=BACKUP_DIR=/mnt/usb-backup/kitchen-portal
+ExecStart=/usr/bin/node scripts/backup.mjs
+# Then prove the archive it just wrote decrypts, unpacks and checks out.
+ExecStartPost=/usr/bin/node scripts/restore.mjs --verify

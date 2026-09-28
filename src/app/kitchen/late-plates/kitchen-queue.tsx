@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { todayInEastern, parseISO, houseClockMinutes } from '../../../lib/dates.ts';
-import { RememberToken } from './token-recovery.tsx';
 import { MenuEditor, hasUnsavedMenu } from './menu-editor.tsx';
 
 type KioskView = 'plates' | 'menus';
@@ -28,9 +27,10 @@ type KioskView = 'plates' | 'menus';
  *     cancelled and no buttons at all. The server refuses these too — this is the
  *     screen agreeing with the rule, not enforcing it.
  *
- * Polls the same public API the TV will use rather than going through a server
- * action: the chefs have no session, the device token in the URL is their
- * identity, and the endpoints already enforce it.
+ * Polls the JSON API rather than going through server actions. The tablet is
+ * authenticated by its pairing cookie (or the manager by his session), which
+ * the browser sends with every same-origin request, and the endpoints enforce
+ * who may do what.
  */
 
 type Status = 'waiting' | 'ready' | 'declined' | 'cancelled';
@@ -85,7 +85,7 @@ interface Payload {
 const MEALS: MealName[] = ['lunch', 'dinner'];
 
 /**
- * One tap each. Still placeholders until Chris gives his own words - these are
+ * One tap each. Still placeholders until the chefs give their own words - these are
  * the mockup's, which are at least plausible rather than invented on the spot.
  */
 const DECLINE_REASONS = [
@@ -165,12 +165,10 @@ function byRequestedAt(a: Plate, b: Plate): number {
 }
 
 export function KitchenQueue({
-  device,
   initialDate,
   isExplicitDate = false,
   initialMeal,
 }: {
-  device: string;
   initialDate: string;
   isExplicitDate?: boolean;
   initialMeal: MealName;
@@ -212,8 +210,8 @@ export function KitchenQueue({
       // In live kiosk mode (isExplicitDate is false), always query without date
       // so the server resolves the canonical current day in Eastern Time.
       const url = isExplicitDate
-        ? `/api/late-plates?date=${activeDate}&all=1&device=${encodeURIComponent(device)}`
-        : `/api/late-plates?all=1&device=${encodeURIComponent(device)}`;
+        ? `/api/late-plates?date=${activeDate}&all=1`
+        : '/api/late-plates?all=1';
       const res = await fetch(url, { cache: 'no-store' });
       if (!res.ok) throw new Error(`Server said ${res.status}`);
       const payload = (await res.json()) as Payload;
@@ -233,7 +231,7 @@ export function KitchenQueue({
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not reach the server');
     }
-  }, [activeDate, device, isExplicitDate]);
+  }, [activeDate, isExplicitDate]);
 
   // 1. Regular polling loop
   useEffect(() => {
@@ -335,7 +333,7 @@ export function KitchenQueue({
     setBusy(plate.id);
     try {
       const res = await fetch(
-        `/api/late-plates/${plate.id}?device=${encodeURIComponent(device)}`,
+        `/api/late-plates/${plate.id}`,
         {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
@@ -369,7 +367,7 @@ export function KitchenQueue({
     setSavingSettings(true);
     try {
       const res = await fetch(
-        `/api/late-plates/settings?device=${encodeURIComponent(device)}`,
+        '/api/late-plates/settings',
         {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -425,7 +423,6 @@ export function KitchenQueue({
 
   return (
     <>
-      <RememberToken device={device} />
 
       <header className="kq-head">
         <div className="kq-head-left">
@@ -526,7 +523,7 @@ export function KitchenQueue({
       </header>
 
       {view === 'menus' ? (
-        <MenuEditor device={device} todayIso={activeDate} />
+        <MenuEditor todayIso={activeDate} />
       ) : (
         <div className="kq-queue-view">
           {error && <div className="kq-error">{error}</div>}

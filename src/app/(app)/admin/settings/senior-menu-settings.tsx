@@ -1,112 +1,84 @@
 'use client';
 
-import { useState, useTransition, useEffect } from 'react';
+import { useEffect, useState, useTransition } from 'react';
+
 import { updateSeniorMenuPassword } from '../../../actions/menu-auth-actions.ts';
 
-export function SeniorMenuSettings({ initialPassword }: { initialPassword?: string }) {
-  const [password, setPassword] = useState(initialPassword || '');
-  const [savedPassword, setSavedPassword] = useState(initialPassword || '');
+const MIN_LENGTH = 8;
+
+/**
+ * The shareable weekly menu for out-of-house seniors and alumni.
+ *
+ * The current password is never shown - only whether one is set - because it
+ * is stored as a hash. Changing it signs every device out of the menu.
+ */
+export function SeniorMenuSettings({ passwordSet }: { passwordSet: boolean }) {
+  const [password, setPassword] = useState('');
+  const [menuUrl, setMenuUrl] = useState('/menu');
   const [copied, setCopied] = useState(false);
-  const [statusMsg, setStatusMsg] = useState<string | null>(null);
-  const [isError, setIsError] = useState(false);
-  const [menuUrl, setMenuUrl] = useState('https://kitchen.zbtaa.online/menu');
+  const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null);
+  const [isSet, setIsSet] = useState(passwordSet);
   const [pending, startTransition] = useTransition();
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setMenuUrl(`${window.location.origin}/menu`);
-    }
-  }, []);
+  useEffect(() => setMenuUrl(`${window.location.origin}/menu`), []);
 
-  function handleCopy() {
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(menuUrl);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
-    }
+  function copy() {
+    void navigator.clipboard?.writeText(menuUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2500);
   }
 
-  function handleSave(e: React.FormEvent) {
+  function save(e: React.FormEvent) {
     e.preventDefault();
-    if (!password.trim() || password === savedPassword) return;
-
-    setStatusMsg(null);
-    setIsError(false);
-
     startTransition(async () => {
       const res = await updateSeniorMenuPassword(password);
+      setStatus({ ok: res.ok, text: res.message });
       if (res.ok) {
-        setSavedPassword(password);
-        setStatusMsg('Password updated.');
-        setIsError(false);
-      } else {
-        setStatusMsg(res.message);
-        setIsError(true);
+        setPassword('');
+        setIsSet(true);
       }
-      setTimeout(() => setStatusMsg(null), 3000);
     });
   }
 
   return (
-    <div className="card card-pad" style={{ marginTop: 16 }}>
-      <h2 className="section-title" style={{ marginTop: 0 }}>
-        Out-of-House Senior Menu
-      </h2>
-      <p style={{ fontSize: 13, color: 'var(--ink-400)', marginTop: 0 }}>
-        Shareable weekly menu for out-of-house seniors and alumni. Protected by a simple global password that automatically remembers each device forever.
+    <section className="card card-pad settings-card">
+      <h2 className="section-title">Senior Week menu</h2>
+      <p className="settings-lede">
+        A read-only weekly menu for out-of-house seniors and alumni, behind one
+        shared password.{' '}
+        {isSet ? 'A password is set.' : 'No password is set yet, so the page is closed.'}
       </p>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 12 }}>
-        <div className="senior-link-row">
-          <input
-            className="field"
-            readOnly
-            value={menuUrl}
-            style={{ flex: 1, fontFamily: 'var(--font-mono)', fontSize: 13 }}
-            onClick={(e) => (e.target as HTMLInputElement).select()}
-          />
-          <button
-            type="button"
-            className={`btn ${copied ? 'gold' : ''}`}
-            onClick={handleCopy}
-            style={{ flexShrink: 0 }}
-          >
-            {copied ? '✓ Copied!' : 'Copy Link'}
-          </button>
-        </div>
-
-        <form onSubmit={handleSave} style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 240 }}>
-            <label htmlFor="senior-pw-field" style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink-600)', whiteSpace: 'nowrap' }}>
-              Access Password:
-            </label>
-            <input
-              id="senior-pw-field"
-              type="text"
-              className="field"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="e.g. zbt2026"
-              style={{ flex: 1 }}
-              disabled={pending}
-            />
-          </div>
-
-          <button
-            type="submit"
-            className="btn sm"
-            disabled={pending || password === savedPassword || !password.trim()}
-          >
-            {pending ? 'Saving...' : 'Update Password'}
-          </button>
-        </form>
-
-        {statusMsg && (
-          <div style={{ fontSize: 12, fontWeight: 600, color: isError ? 'var(--red-600)' : 'var(--green-600)' }}>
-            {statusMsg}
-          </div>
-        )}
+      <div className="settings-inline">
+        <input className="field mono" readOnly value={menuUrl} onFocus={(e) => e.target.select()} />
+        <button type="button" className="btn sm" onClick={copy}>
+          {copied ? 'Copied' : 'Copy link'}
+        </button>
       </div>
-    </div>
+
+      <form className="settings-inline" onSubmit={save}>
+        <input
+          className="field"
+          type="password"
+          autoComplete="new-password"
+          placeholder={isSet ? 'New password' : 'Set a password'}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          disabled={pending}
+        />
+        <button type="submit" className="btn sm" disabled={pending || password.trim().length < MIN_LENGTH}>
+          {pending ? 'Saving…' : isSet ? 'Change password' : 'Set password'}
+        </button>
+      </form>
+      <p className="settings-hint">
+        At least {MIN_LENGTH} characters. Changing it signs everyone out of the menu.
+      </p>
+
+      {status && (
+        <div className={status.ok ? 'form-msg ok' : 'form-msg bad'} role="status">
+          {status.text}
+        </div>
+      )}
+    </section>
   );
 }

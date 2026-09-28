@@ -141,6 +141,7 @@ async function main() {
     action: 'roster.imported',
     entityType: 'roster',
     actorName: 'import script',
+    actorRole: 'system',
     summary: `Imported ${inserted.length} members from CSV`,
     payload: {
       onDuty: inserted.length,

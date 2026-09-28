@@ -42,6 +42,7 @@ export async function setClassYear(
     entityType: 'member',
     entityId: memberId,
     actorName: admin.name,
+    actorRole: 'manager',
     summary:
       `${admin.name} changed ${m.name} from ${m.classYear} to ${classYear} ` +
       `(${classYear === 'junior' ? 'lunch' : 'dinner'} duty)`,
@@ -82,6 +83,7 @@ export async function setExempt(
     entityType: 'member',
     entityId: memberId,
     actorName: admin.name,
+    actorRole: 'manager',
     summary: exempt
       ? `${admin.name} exempted ${m.name} (${reason ?? 'other'})` +
         (notes.trim() ? ` — "${notes.trim()}"` : '')
@@ -127,6 +129,7 @@ export async function adjustPoints(
     entityType: 'member',
     entityId: memberId,
     actorName: admin.name,
+    actorRole: 'manager',
     summary: `${admin.name} adjusted ${m.name}'s points by ${
       delta > 0 ? '+' : ''
     }${delta} (${m.points} → ${after.points})`,
@@ -157,6 +160,7 @@ export async function setMakeupDebt(
     entityType: 'member',
     entityId: memberId,
     actorName: admin.name,
+    actorRole: 'manager',
     summary: `${admin.name} set ${m.name}'s make-up debt to ${debt} (was ${m.makeupDebt})`,
     payload: { before: m.makeupDebt, after: debt },
   });
@@ -182,6 +186,7 @@ export async function setActive(
     entityType: 'member',
     entityId: memberId,
     actorName: admin.name,
+    actorRole: 'manager',
     summary: `${admin.name} ${active ? 'restored' : 'removed'} ${m.name} ${
       active ? 'to' : 'from'
     } the roster`,

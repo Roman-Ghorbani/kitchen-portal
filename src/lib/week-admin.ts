@@ -102,6 +102,7 @@ export async function deleteWeek(
     action: 'week.deleted',
     entityType: 'week',
     actorName,
+    actorRole: 'manager',
     summary: `${actorName} deleted the week of ${w.weekStart}`,
     payload: { weekStart: w.weekStart },
   });
@@ -201,6 +202,7 @@ export async function reassignShift(
     entityType: 'assignment',
     entityId: assignmentId,
     actorName,
+    actorRole: 'manager',
     summary:
       `${actorName} moved ${ctx.slot.meal} on ${ctx.slot.date} from ` +
       `${previousName} to ${next.name}`,
@@ -244,6 +246,7 @@ export async function removeFromShift(
     action: 'shift.removed',
     entityType: 'assignment',
     actorName,
+    actorRole: 'manager',
     summary:
       `${actorName} took ${who} off ${ctx.slot.meal} on ${ctx.slot.date} without penalty` +
       (closeBounty ? ' and closed the bounty' : ' (seat open for pickup)'),
@@ -328,6 +331,7 @@ export async function addToShift(
     entityType: 'assignment',
     entityId: created.id,
     actorName,
+    actorRole: 'manager',
     summary: `${actorName} put ${person.name} on ${slot.meal} for ${slot.date}`,
     payload: { date: slot.date, meal: slot.meal, memberId, memberName: person.name },
   });
@@ -456,6 +460,7 @@ export async function cancelSlotService(
     entityType: 'slot',
     entityId: slotId,
     actorName,
+    actorRole: 'manager',
     summary: `${actorName} cancelled kitchen service for ${slot.meal} on ${slot.date}`,
     payload: { date: slot.date, meal: slot.meal },
   });
@@ -505,6 +510,7 @@ export async function enableSlotService(
     entityType: 'slot',
     entityId: weekId,
     actorName,
+    actorRole: 'manager',
     summary: `${actorName} enabled kitchen service for ${meal} on ${date}`,
     payload: { date, meal },
   });

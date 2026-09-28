@@ -26,6 +26,14 @@ export function NavIcon({ name }: { name: string }) {
           <path d="M5 9.8V20h14V9.8" />
         </svg>
       );
+    case 'audit':
+      return (
+        <svg {...common} aria-hidden="true">
+          <path d="M9 4h6M9 4a1 1 0 0 0-1 1v1h8V5a1 1 0 0 0-1-1" />
+          <path d="M16 6h2a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h2" />
+          <path d="M9 12h6M9 16h4" />
+        </svg>
+      );
     case 'standings':
       return (
         <svg {...common} aria-hidden="true">

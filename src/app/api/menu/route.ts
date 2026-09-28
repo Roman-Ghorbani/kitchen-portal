@@ -1,200 +1,115 @@
-import { NextRequest, NextResponse } from 'next/server.js';
-import { todayInEastern, addDays, dayIndex } from '../../../lib/dates.ts';
-import {
-  getDayMenu,
-  saveDayMenu,
-  saveWeekMenus,
-  type DayMenu,
-} from '../../../lib/menu-service.ts';
-import { callerOf, canWrite, CORS_HEADERS } from '../../../lib/late-plate-api.ts';
+/**
+ * GET /api/menu    menus for one day or a range of days
+ * PUT /api/menu    the chefs save a day (or several)
+ *
+ * The chefs enter menus on the kitchen tablet, and this is the store they
+ * write to. Brothers read menus through their own pages and the house display
+ * through /api/tv/schedule, so this endpoint only needs to serve the tablet
+ * and the manager: reading needs any signed-in caller, writing needs the
+ * manager or a paired tablet.
+ */
 
-const DAY_NAMES = [
-  'Monday',
-  'Tuesday',
-  'Wednesday',
-  'Thursday',
-  'Friday',
-  'Saturday',
-  'Sunday',
-];
+import { NextRequest } from 'next/server.js';
+
+import { todayInEastern, addDays, dayIndex } from '../../../lib/dates.ts';
+import { getDayMenu, saveDayMenu, saveWeekMenus } from '../../../lib/menu-service.ts';
+import { callerOf, canRead, canWrite, json, UNAUTHORIZED } from '../../../lib/api-auth.ts';
+
+export const dynamic = 'force-dynamic';
+
+const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+const MAX_DAYS = 35;
 
 /**
- * Optional token check for external apps if MENU_API_TOKEN is strictly set.
+ * Query parameters:
+ *   date       YYYY-MM-DD, "today" or "tomorrow" - a single day
+ *   startDate  YYYY-MM-DD - first day of a range (default today)
+ *   days       length of the range, 1-35 (default 7)
  */
-function getExpectedToken(): string | null {
-  return process.env.MENU_API_TOKEN || null;
-}
+export async function GET(request: NextRequest) {
+  const caller = await callerOf(request);
+  if (!canRead(caller)) return json(UNAUTHORIZED, 401);
 
-export async function OPTIONS() {
-  return new NextResponse(null, {
-    status: 204,
-    headers: CORS_HEADERS,
+  const params = request.nextUrl.searchParams;
+  const today = todayInEastern();
+  const dateParam = params.get('date');
+
+  if (dateParam) {
+    const date =
+      dateParam === 'today' ? today : dateParam === 'tomorrow' ? addDays(today, 1) : dateParam;
+    if (!ISO_DATE.test(date)) return json({ error: 'date must be YYYY-MM-DD' }, 400);
+
+    const menu = await getDayMenu(date);
+    return json({
+      success: true,
+      date,
+      dayOfWeek: DAY_NAMES[dayIndex(date)],
+      isToday: date === today,
+      menu: menu
+        ? { hasMenu: menu.hasMenu, stale: menu.stale, lunch: menu.lunch, dinner: menu.dinner }
+        : null,
+    });
+  }
+
+  const start = params.get('startDate') ?? today;
+  if (!ISO_DATE.test(start)) return json({ error: 'startDate must be YYYY-MM-DD' }, 400);
+  const count = Math.min(Math.max(Number(params.get('days')) || 7, 1), MAX_DAYS);
+  const dates = Array.from({ length: count }, (_, i) => addDays(start, i));
+  const menus = await Promise.all(dates.map((d) => getDayMenu(d)));
+
+  const days = dates.map((date, i) => ({
+    date,
+    dayOfWeek: DAY_NAMES[dayIndex(date)],
+    isToday: date === today,
+    hasMenu: menus[i]?.hasMenu ?? false,
+    stale: menus[i]?.stale ?? false,
+    lunch: menus[i]?.lunch ?? { label: 'Lunch', serve: '', items: [] },
+    dinner: menus[i]?.dinner ?? { label: 'Dinner', serve: '', items: [] },
+  }));
+
+  return json({
+    success: true,
+    today,
+    timezone: 'America/New_York',
+    daysCount: days.length,
+    todayMenu: days[0],
+    tomorrowMenu: days[1] ?? null,
+    days,
   });
 }
 
 /**
- * GET /api/menu
- *
- * Query parameters:
- *  - date: "YYYY-MM-DD", "today", or "tomorrow" (returns single day)
- *  - days: number of days to fetch starting from date (default 7)
- *  - token / key: API token (if MENU_API_TOKEN is strictly configured)
- */
-export async function GET(request: NextRequest) {
-  const expectedToken = getExpectedToken();
-
-  if (expectedToken) {
-    const authHeader = request.headers.get('authorization');
-    const bearerToken = authHeader?.startsWith('Bearer ')
-      ? authHeader.substring(7)
-      : null;
-    const headerKey =
-      request.headers.get('x-api-key') || request.headers.get('x-menu-token');
-    const queryToken =
-      request.nextUrl.searchParams.get('token') ||
-      request.nextUrl.searchParams.get('key');
-
-    const providedToken = queryToken || headerKey || bearerToken;
-
-    if (providedToken !== expectedToken) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Unauthorized: Invalid or missing API token for menu access.',
-        },
-        { status: 401, headers: CORS_HEADERS },
-      );
-    }
-  }
-
-  try {
-    const today = todayInEastern();
-    const dateParam = request.nextUrl.searchParams.get('date');
-    const daysParam = request.nextUrl.searchParams.get('days');
-
-    // Single specific day requested
-    if (dateParam && dateParam !== 'week') {
-      let targetDate = dateParam;
-      if (dateParam === 'today') targetDate = today;
-      else if (dateParam === 'tomorrow') targetDate = addDays(today, 1);
-
-      const menu = await getDayMenu(targetDate);
-      const idx = dayIndex(targetDate);
-
-      return NextResponse.json(
-        {
-          success: true,
-          date: targetDate,
-          dayOfWeek: DAY_NAMES[idx],
-          isToday: targetDate === today,
-          menu: menu
-            ? {
-                hasMenu: menu.hasMenu,
-                stale: menu.stale,
-                lunch: menu.lunch,
-                dinner: menu.dinner,
-              }
-            : null,
-        },
-        { headers: CORS_HEADERS },
-      );
-    }
-
-    // Horizon / multiple days (default 7 days)
-    const startDateParam =
-      request.nextUrl.searchParams.get('startDate') ||
-      request.nextUrl.searchParams.get('start');
-    const baseDate = startDateParam || today;
-    const numDays = Math.min(Math.max(Number(daysParam) || 7, 1), 35);
-    const dates = Array.from({ length: numDays }, (_, i) => addDays(baseDate, i));
-
-    const menus = await Promise.all(dates.map((d) => getDayMenu(d)));
-
-    const days = dates.map((d, i) => {
-      const menu = menus[i];
-      const idx = dayIndex(d);
-      return {
-        date: d,
-        dayOfWeek: DAY_NAMES[idx],
-        isToday: d === today,
-        hasMenu: menu?.hasMenu ?? false,
-        stale: menu?.stale ?? false,
-        lunch: menu?.lunch ?? { label: 'Lunch', serve: '', items: [] },
-        dinner: menu?.dinner ?? { label: 'Dinner', serve: '', items: [] },
-      };
-    });
-
-    return NextResponse.json(
-      {
-        success: true,
-        today,
-        timezone: 'America/New_York',
-        daysCount: days.length,
-        todayMenu: days[0],
-        tomorrowMenu: days[1] ?? null,
-        days,
-      },
-      { headers: CORS_HEADERS },
-    );
-  } catch (error) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to fetch menu data',
-      },
-      { status: 500, headers: CORS_HEADERS },
-    );
-  }
-}
-
-/**
- * PUT /api/menu
- *
- * Saves or updates menu items for a single day or batch of days.
- * Requires admin session or kitchen kiosk device token.
+ * Body: `{ date, lunch: string[], dinner: string[] }` for one day, or
+ * `{ menus: { [date]: { lunch, dinner } } }` for several.
  */
 export async function PUT(request: NextRequest) {
   const caller = await callerOf(request);
-  if (!canWrite(caller)) {
-    return NextResponse.json(
-      { success: false, error: 'Unauthorized: Admin or kitchen device token required.' },
-      { status: 401, headers: CORS_HEADERS },
-    );
-  }
+  if (!canWrite(caller)) return json(UNAUTHORIZED, 401);
 
+  let body: {
+    date?: string;
+    lunch?: string[];
+    dinner?: string[];
+    menus?: Record<string, { lunch?: string[]; dinner?: string[] }>;
+  };
   try {
-    const body = await request.json();
-
-    if (body.menus && typeof body.menus === 'object') {
-      await saveWeekMenus(body.menus);
-      return NextResponse.json(
-        { success: true, message: 'Batch menus saved successfully' },
-        { headers: CORS_HEADERS },
-      );
-    }
-
-    const date = body.date || todayInEastern();
-    const updated = await saveDayMenu(date, {
-      lunch: body.lunch,
-      dinner: body.dinner,
-    });
-
-    return NextResponse.json(
-      { success: true, date, menu: updated },
-      { headers: CORS_HEADERS },
-    );
-  } catch (error) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to save menu data',
-      },
-      { status: 500, headers: CORS_HEADERS },
-    );
+    body = await request.json();
+  } catch {
+    return json({ error: 'Body must be JSON.' }, 400);
   }
-}
 
-export async function POST(request: NextRequest) {
-  return PUT(request);
-}
+  if (body.menus && typeof body.menus === 'object') {
+    if (!Object.keys(body.menus).every((d) => ISO_DATE.test(d))) {
+      return json({ error: 'menus must be keyed by YYYY-MM-DD' }, 400);
+    }
+    await saveWeekMenus(body.menus);
+    return json({ success: true, message: 'Menus saved.' });
+  }
 
+  const date = body.date ?? todayInEastern();
+  if (!ISO_DATE.test(date)) return json({ error: 'date must be YYYY-MM-DD' }, 400);
+
+  const menu = await saveDayMenu(date, { lunch: body.lunch, dinner: body.dinner });
+  return json({ success: true, date, menu });
+}

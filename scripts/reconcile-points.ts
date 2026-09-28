@@ -130,6 +130,7 @@ async function main() {
     action: 'points.reconciled',
     entityType: 'roster',
     actorName: 'reconcile script',
+    actorRole: 'system',
     summary: `Recomputed points from assignments for ${touched.size} member(s)`,
     payload: { corrections: drift },
   });

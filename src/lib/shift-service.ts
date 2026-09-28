@@ -129,6 +129,7 @@ export async function flagConflict(
     entityId: assignmentId,
     actorMemberId,
     actorName: name,
+    actorRole: 'brother',
     summary:
       `${name} put his ${ctx.slot.meal} shift on ${ctx.slot.date} up for grabs` +
       (reason ? ` — "${reason}"` : ''),
@@ -240,6 +241,7 @@ export async function volunteerToCover(
     entityId: assignmentId,
     actorMemberId: volunteerId,
     actorName: volunteer.name,
+    actorRole: 'brother',
     summary: `${volunteer.name} picked up ${originalName}'s ${ctx.slot.meal} on ${ctx.slot.date}`,
     payload: {
       date: ctx.slot.date,
@@ -281,6 +283,7 @@ export async function setAttendance(
     entityType: 'assignment',
     entityId: assignmentId,
     actorName: adminName,
+    actorRole: 'manager',
     summary: `${adminName} marked ${who} ${status} for ${ctx.slot.meal} on ${ctx.slot.date}`,
     payload: { date: ctx.slot.date, meal: ctx.slot.meal, status },
   });
@@ -297,7 +300,7 @@ export async function setAttendance(
 
 /**
  * Drops someone into a shift on the spot and settles their points at the
- * chosen multiplier. The bounty exists so Roman can get somebody to step up
+ * chosen multiplier. The bounty exists so the manager can get somebody to step up
  * immediately when a meal would otherwise go uncleaned.
  */
 export async function assignSubstitute(
@@ -339,6 +342,7 @@ export async function assignSubstitute(
     entityType: 'assignment',
     entityId: assignmentId,
     actorName: adminName,
+    actorRole: 'manager',
     summary:
       `${adminName} put ${sub.name} on ${ctx.slot.meal} for ${ctx.slot.date} ` +
       `in place of ${originalName}` +
@@ -598,6 +602,7 @@ export async function setShiftPoints(
     entityType: 'assignment',
     entityId: assignmentId,
     actorName: adminName,
+    actorRole: 'manager',
     summary:
       `${adminName} set ${ctx.slot.meal} on ${ctx.slot.date} to ` +
       `${formatPoints(multiplier)}x for ${who} (was ${formatPoints(previous)}x)`,
@@ -670,6 +675,7 @@ export async function openForCover(
     entityType: 'assignment',
     entityId: assignmentId,
     actorName: adminName,
+    actorRole: 'manager',
     summary:
       `${adminName} opened ${who}'s ${ctx.slot.meal} on ${ctx.slot.date} for ` +
       `cover at ${formatPoints(bounty)}x` +
@@ -721,6 +727,7 @@ export async function setSlotBounty(
     entityType: 'slot',
     entityId: slotId,
     actorName: adminName,
+    actorRole: 'manager',
     summary: isClosed
       ? `${adminName} closed the bounty for open seats on ${slot.meal}, ${slot.date}`
       : `${adminName} offered ${formatPoints(bounty)}x for the open seat on ${slot.meal}, ${slot.date}`,
@@ -817,6 +824,7 @@ export async function claimOpenSeat(
     entityId: rows[0].id,
     actorMemberId: memberId,
     actorName: person.name,
+    actorRole: 'brother',
     summary:
       `${person.name} claimed an open seat on ${slot.meal}, ${slot.date}` +
       (slot.coverBounty > 1 ? ` at ${formatPoints(slot.coverBounty)}x` : ''),

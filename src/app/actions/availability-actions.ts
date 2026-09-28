@@ -83,6 +83,7 @@ export async function setStandingConflict(
     entityId: session.sub,
     actorMemberId: session.sub,
     actorName: session.name,
+    actorRole: 'brother',
     summary: blocked
       ? `${session.name} marked ${DAY_NAMES[dayIndex]} unavailable` +
         (note.trim() ? ` — "${note.trim()}"` : '')
@@ -187,6 +188,7 @@ export async function adminSetMemberAvailability(
     entityType: 'member',
     entityId: targetMemberId,
     actorName: session.name,
+    actorRole: 'manager',
     summary: blocked
       ? `${session.name} marked ${member.name} unavailable on ${DAY_NAMES[dayIndex]}` +
         (note.trim() ? ` — "${note.trim()}"` : '')

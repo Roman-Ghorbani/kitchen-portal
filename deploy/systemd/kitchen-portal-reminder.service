@@ -1,0 +1,12 @@
+# /etc/systemd/system/kitchen-portal-reminder.service - run by the timer below.
+# Posts tomorrow's crews to Slack. The endpoint refuses without CRON_SECRET.
+
+[Unit]
+Description=Kitchen Portal day-before reminder
+After=kitchen-portal.service
+
+[Service]
+Type=oneshot
+User=zbt
+EnvironmentFile=/home/zbt/kitchen-portal/.env.production
+ExecStart=/bin/sh -c 'curl -fsS -H "Authorization: Bearer $CRON_SECRET" http://127.0.0.1:3000/api/cron/reminder'

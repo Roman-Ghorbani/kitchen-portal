@@ -1,7 +1,6 @@
-﻿'use server';
+'use server';
 
 import { eq } from 'drizzle-orm';
-import { randomBytes } from 'crypto';
 import { revalidatePath } from 'next/cache';
 
 import { db } from '../../db/index.ts';
@@ -59,6 +58,7 @@ export async function toggleMealDay(
     entityType: 'semester',
     entityId: semester.id,
     actorName: admin.name,
+    actorRole: 'manager',
     summary: `${admin.name} turned ${meal} on ${DAY_NAMES[dayIndex]} ${
       enabled ? 'on' : 'off'
     }`,
@@ -113,6 +113,7 @@ export async function toggleLatePlateDay(
     entityType: 'semester',
     entityId: semester.id,
     actorName: admin.name,
+    actorRole: 'manager',
     summary: `${admin.name} turned ${meal} late plates on ${DAY_NAMES[dayIndex]} ${
       enabled ? 'on' : 'off'
     }`,
@@ -150,6 +151,7 @@ export async function toggleLatePlates(enabled: boolean): Promise<SettingsResult
     entityType: 'semester',
     entityId: semester.id,
     actorName: admin.name,
+    actorRole: 'manager',
     summary: `${admin.name} ${enabled ? 'enabled' : 'paused'} late plate requests for brothers`,
     payload: { enabled },
   });
@@ -165,43 +167,27 @@ export async function toggleLatePlates(enabled: boolean): Promise<SettingsResult
   };
 }
 
-export async function generateKioskToken(): Promise<SettingsResult> {
-  await requireAdmin();
-  const semester = await getActiveSemester();
-  const token = randomBytes(16).toString('hex');
-  
-  await db
-    .update(semesters)
-    .set({ kioskToken: token })
-    .where(eq(semesters.id, semester.id));
-    
-  revalidatePath('/admin/settings');
-  return { ok: true, message: 'Kiosk token regenerated.' };
-}
-
-export async function updateLatePlateSettings(message: string, logoUrl: string): Promise<SettingsResult> {
+export async function updateLatePlateBanner(message: string): Promise<SettingsResult> {
   const admin = await requireAdmin();
   const semester = await getActiveSemester();
-
-  const msg = message.trim() || null;
-  const logo = logoUrl.trim() || null;
+  const msg = message.trim().slice(0, 500) || null;
 
   await db
     .update(semesters)
-    .set({ latePlateMessage: msg, logoUrl: logo })
+    .set({ latePlateMessage: msg })
     .where(eq(semesters.id, semester.id));
 
   await db.insert(events).values({
-    action: 'settings.late_plates_updated',
+    action: 'settings.late_plate_banner_changed',
     entityType: 'semester',
     entityId: semester.id,
     actorName: admin.name,
-    summary: `${admin.name} updated late plate banner/logo settings`,
-    payload: { message: msg, logoUrl: logo },
+    actorRole: 'manager',
+    summary: msg ? `${admin.name} set the late plate banner: "${msg}"` : `${admin.name} cleared the late plate banner`,
+    payload: { message: msg },
   });
 
-  revalidatePath('/admin/settings');
+  revalidatePath('/admin/late-plates');
   revalidatePath('/late-plate');
-
-  return { ok: true, message: 'Settings saved successfully.' };
+  return { ok: true, message: msg ? 'Banner saved.' : 'Banner cleared.' };
 }

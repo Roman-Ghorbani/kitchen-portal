@@ -1,0 +1,10 @@
+# /etc/systemd/system/kitchen-portal-reminder.timer
+[Unit]
+Description=Day-before kitchen duty reminder, 7 PM house time
+
+[Timer]
+OnCalendar=*-*-* 19:00:00 America/New_York
+Persistent=false
+
+[Install]
+WantedBy=timers.target

@@ -1,49 +1,63 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
-import { SESSION_COOKIE, SESSION_TTL_SECONDS } from './lib/session-constants.ts';
+import {
+  SESSION_COOKIE,
+  KIOSK_COOKIE,
+  BROTHER_SESSION_TTL_SECONDS,
+  KIOSK_COOKIE_TTL_SECONDS,
+} from './lib/session-constants.ts';
 
 /**
- * Keeps a signed-in brother signed in.
+ * Keeps long-lived cookies alive by renewing their expiry on each page load.
  *
- * Renews the session cookie's expiry on every request, so somebody who opens
- * the app even once a month never reaches the end of the window and is never
- * asked for their PIN again. Only the expiry is touched - the signed payload
- * is passed through untouched, so this cannot mint or alter a session, and
- * verification still happens server-side on every page.
+ * Only the cookie's lifetime changes; the value passes through untouched, so
+ * this cannot mint or alter a credential, and every page still verifies the
+ * session (signature, expiry and revocation) on the server. A manager session
+ * is left alone - it is meant to end after a working day.
  *
- * Deliberately does no crypto: middleware runs on the edge runtime where
- * node:crypto is unavailable, and re-verifying here would buy nothing that
- * the page itself does not already do.
+ * No crypto here: middleware runs on the edge runtime, where node:crypto is
+ * unavailable. Reading the role is a base64 decode of the unverified payload,
+ * used only to decide whether to extend a cookie, never to grant anything.
  */
 export function middleware(request: NextRequest) {
-  if (process.env.MAINTENANCE_MODE === 'true') {
-    // Let static assets and icons through so the page doesn't look completely broken
-    const path = request.nextUrl.pathname;
-    if (!path.startsWith('/_next/') && !path.endsWith('.png') && !path.endsWith('.svg')) {
-      return new NextResponse(
-        `<!DOCTYPE html><html><head><title>Maintenance</title><meta name="viewport" content="width=device-width, initial-scale=1"></head><body style="font-family: system-ui; text-align: center; padding: 2rem; background: #000; color: #fff;"><h1>Kitchen Portal is Down for Maintenance</h1><p>We are currently migrating servers to the new Pi. The site will be back shortly.</p></body></html>`,
-        { status: 503, headers: { 'Content-Type': 'text/html' } }
-      );
-    }
-  }
-
-  const token = request.cookies.get(SESSION_COOKIE)?.value;
   const response = NextResponse.next();
+  const secure = process.env.NODE_ENV === 'production';
 
-  if (token) {
-    response.cookies.set(SESSION_COOKIE, token, {
+  const session = request.cookies.get(SESSION_COOKIE)?.value;
+  if (session && roleOf(session) === 'brother') {
+    response.cookies.set(SESSION_COOKIE, session, {
       httpOnly: true,
       sameSite: 'lax',
-      secure: process.env.NODE_ENV === 'production',
+      secure,
       path: '/',
-      maxAge: SESSION_TTL_SECONDS,
+      maxAge: BROTHER_SESSION_TTL_SECONDS,
+    });
+  }
+
+  const kiosk = request.cookies.get(KIOSK_COOKIE)?.value;
+  if (kiosk && request.nextUrl.pathname.startsWith('/kitchen')) {
+    response.cookies.set(KIOSK_COOKIE, kiosk, {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure,
+      path: '/',
+      maxAge: KIOSK_COOKIE_TTL_SECONDS,
     });
   }
 
   return response;
 }
 
+function roleOf(token: string): string | null {
+  try {
+    const body = token.split('.')[0].replace(/-/g, '+').replace(/_/g, '/');
+    return (JSON.parse(atob(body)) as { role?: string }).role ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export const config = {
-  // Pages only. No point touching static assets or the cron endpoints.
+  // Pages only; API routes and static assets have no use for renewal.
   matcher: ['/((?!_next/static|_next/image|favicon.ico|robots.txt|api/).*)'],
 };

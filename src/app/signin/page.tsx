@@ -4,6 +4,8 @@ import { redirect } from 'next/navigation';
 import { db } from '../../db/index.ts';
 import { members } from '../../db/schema.ts';
 import { getSession } from '../../lib/session.ts';
+import { adminTotpEnabled } from '../../lib/auth.ts';
+import { getActiveSemester } from '../../lib/week-service.ts';
 import { SignInForm, type PickerMember } from './signin-form.tsx';
 import './signin.css';
 
@@ -14,6 +16,7 @@ export default async function SignInPage() {
   const session = await getSession();
   if (session) redirect(session.role === 'admin' ? '/admin' : '/');
 
+  const semester = await getActiveSemester().catch(() => null);
   const rows = await db
     .select({
       id: members.id,
@@ -39,11 +42,11 @@ export default async function SignInPage() {
         <div className="brand-mark">ZBT</div>
         <div>
           <div className="signin-title">Kitchen Portal</div>
-          <div className="signin-sub">Fall 2026</div>
+          {semester && <div className="signin-sub">{semester.name}</div>}
         </div>
       </div>
 
-      <SignInForm roster={roster} />
+      <SignInForm roster={roster} totpEnabled={adminTotpEnabled()} />
     </main>
   );
 }

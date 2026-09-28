@@ -1,0 +1,41 @@
+# /etc/systemd/system/kitchen-portal.service
+#
+# The web app. Listens on 127.0.0.1:3000 only; the public reaches it through
+# the Cloudflare Tunnel, and the house display on the same Pi reaches it
+# directly. Nothing on the LAN can connect to the port.
+
+[Unit]
+Description=Kitchen Portal (Next.js)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=zbt
+Group=zbt
+WorkingDirectory=/home/zbt/kitchen-portal
+EnvironmentFile=/home/zbt/kitchen-portal/.env.production
+Environment=NODE_ENV=production
+Environment=PORT=3000
+ExecStart=/usr/bin/node node_modules/next/dist/bin/next start -H 127.0.0.1 -p 3000
+Restart=always
+RestartSec=3
+
+# Least privilege: the process may write only its database directory and
+# Next's build cache, and can never gain new privileges.
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/zbt/kitchen-portal/data /home/zbt/kitchen-portal/.next
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

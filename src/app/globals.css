@@ -8651,3 +8651,633 @@ body:has(.mb-scrim) .mobile-bottom-nav {
 @media (prefers-reduced-motion: reduce) {
   .mb-scrim, .mb-sheet, .mb-toast { animation: none; }
 }
+
+/* ==================================================================== */
+/* Settings, security, audit log and the kitchen tablet                 */
+/* Built on the graphite + blue tokens; no new colours.                  */
+/* ==================================================================== */
+
+.btn.alt {
+  background: transparent;
+  box-shadow: none;
+  color: var(--ink-2);
+}
+
+.linkish {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--blue);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.settings-card {
+  margin-bottom: 16px;
+}
+
+.settings-card .section-title {
+  margin-top: 0;
+}
+
+.settings-lede {
+  margin: 0 0 14px;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+
+.settings-lede a,
+.settings-hint a {
+  color: var(--blue);
+}
+
+.settings-hint {
+  margin: 8px 0 0;
+  font-size: 12.5px;
+  color: var(--ink-3);
+}
+
+.settings-inline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.settings-inline .field {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+
+.settings-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: baseline;
+  font-size: 14px;
+}
+
+.settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.subsection-title {
+  margin: 22px 0 10px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+.card-head-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.form-msg {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.form-msg.ok {
+  background: var(--green-100);
+  color: var(--sage);
+}
+
+.form-msg.bad {
+  background: var(--red-100);
+  color: var(--clay);
+}
+
+/* ---- security checklist ------------------------------------------- */
+
+.check-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.check-list li {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--sunken);
+  font-size: 13.5px;
+}
+
+.check-mark {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.check-list .ok .check-mark {
+  background: var(--green-100);
+  color: var(--sage);
+}
+
+.check-list .todo .check-mark {
+  background: var(--amber-100);
+  color: var(--sand);
+}
+
+.check-fix {
+  display: block;
+  margin-top: 3px;
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+
+/* ---- stat tiles ---------------------------------------------------- */
+
+.stat-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.stat-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+
+.stat-label {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.stat-value {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-value-sm {
+  font-size: 18px;
+}
+
+.stat-sub {
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+
+/* ---- tables and lists ---------------------------------------------- */
+
+.compact-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+  font-size: 13.5px;
+}
+
+.compact-table th {
+  text-align: left;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--line-strong);
+}
+
+.compact-table td {
+  padding: 9px 8px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+
+.row-actions {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.activity-list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+  font-size: 13.5px;
+}
+
+.activity-list li {
+  display: grid;
+  grid-template-columns: 150px 1fr;
+  gap: 12px;
+}
+
+.activity-list time {
+  color: var(--ink-3);
+  font-size: 12px;
+}
+
+@media (max-width: 560px) {
+  .activity-list li {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+}
+
+/* ---- kitchen tablet pairing ---------------------------------------- */
+
+.pairing-box {
+  margin-top: 14px;
+  padding: 16px;
+  border-radius: var(--radius);
+  background: var(--blue-wash);
+  border: 1px solid var(--line-strong);
+  font-size: 13.5px;
+}
+
+.pairing-code {
+  font-size: 30px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  color: var(--blue-hi);
+  margin-bottom: 6px;
+}
+
+/* ---- setup codes ---------------------------------------------------- */
+
+.setup-codes {
+  margin: 12px 0;
+  padding: 14px;
+  border-radius: var(--radius);
+  border: 1px solid var(--line-strong);
+  background: var(--sunken);
+}
+
+.setup-codes-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.setup-codes-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.setup-code {
+  font-size: 15px;
+  letter-spacing: 0.08em;
+  color: var(--blue-hi);
+}
+
+@media print {
+  .sidebar,
+  .topbar,
+  .mobile-bottom-nav,
+  .setup-codes-actions,
+  .row-actions {
+    display: none !important;
+  }
+  .setup-codes {
+    background: #fff;
+    color: #000;
+    border-color: #999;
+  }
+  .setup-code {
+    color: #000;
+  }
+}
+
+/* ---- account ------------------------------------------------------- */
+
+.account-card {
+  margin-top: 32px;
+}
+
+.account-form {
+  display: grid;
+  gap: 10px;
+  max-width: 320px;
+}
+
+/* ---- audit log ----------------------------------------------------- */
+
+.audit-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.audit-presets .chip {
+  display: inline-flex;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--ink-2);
+  font-size: 12.5px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.audit-presets .chip:hover {
+  color: var(--ink);
+  border-color: var(--blue);
+}
+
+.audit-filters {
+  margin-bottom: 14px;
+}
+
+.audit-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+.audit-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-2);
+  min-width: 0;
+}
+
+.audit-field .field {
+  width: 100%;
+  font-size: 13.5px;
+  padding: 8px 10px;
+}
+
+.audit-field-wide {
+  grid-column: 1 / -1;
+}
+
+.audit-checks {
+  border: 0;
+  margin: 14px 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.audit-checks legend {
+  width: 100%;
+  margin-bottom: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-2);
+}
+
+.check-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--sunken);
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.check-chip:has(input:checked) {
+  border-color: var(--blue);
+  background: var(--blue-wash);
+  color: var(--ink);
+}
+
+.check-chip input {
+  accent-color: var(--blue);
+}
+
+.audit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.audit-summary {
+  margin: 4px 2px 10px;
+  font-size: 12.5px;
+  color: var(--ink-3);
+}
+
+.audit-table-wrap {
+  overflow-x: auto;
+}
+
+.audit-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.audit-table th {
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+  text-align: left;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line-strong);
+}
+
+.audit-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+
+.audit-table tr:hover td {
+  background: var(--raised);
+}
+
+.audit-when {
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+.audit-action {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--blue);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.audit-table td a {
+  color: var(--ink);
+}
+
+.role-chip {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--sunken);
+  color: var(--ink-2);
+}
+
+.role-chip.role-manager {
+  background: var(--blue-wash);
+  color: var(--blue-hi);
+}
+
+.role-chip.role-kiosk {
+  background: var(--amber-100);
+  color: var(--sand);
+}
+
+.role-chip.role-anonymous {
+  background: var(--red-100);
+  color: var(--clay);
+}
+
+.audit-details {
+  margin-top: 4px;
+}
+
+.audit-details summary {
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+.audit-details dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 12px;
+  margin: 8px 0;
+  font-size: 12px;
+}
+
+.audit-details dt {
+  color: var(--ink-3);
+}
+
+.audit-details dd {
+  margin: 0;
+  word-break: break-all;
+}
+
+.audit-payload {
+  margin: 0;
+  padding: 10px;
+  border-radius: var(--radius-sm);
+  background: var(--sunken);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.audit-pager {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 14px;
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+
+/* ---- kiosk: manager view bar and pairing ---------------------------- */
+
+.kq-manager-bar {
+  padding: 10px 16px;
+  background: #1e2a38;
+  color: #eceef1;
+  font-size: 14px;
+}
+
+.kq-manager-bar a {
+  color: #8fbaea;
+  font-weight: 700;
+}
+
+.kq-pair-form {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.kq-pair-input {
+  font-family: var(--font-mono);
+  font-size: 28px;
+  letter-spacing: 0.14em;
+  text-align: center;
+  padding: 14px;
+  border-radius: 12px;
+  border: 2px solid #c6ccd6;
+}
+
+.kq-pair-button {
+  padding: 14px;
+  border-radius: 12px;
+  border: 0;
+  background: #2f5f8f;
+  color: #fff;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.kq-pair-button:disabled {
+  opacity: 0.5;
+}
+
+.kq-pair-error {
+  color: #a33a2e;
+  font-weight: 600;
+}
+
+/* PIN fields letter-space their digits; the hint text should read normally. */
+.field.pin::placeholder {
+  letter-spacing: normal;
+  font-size: 15px;
+  font-family: var(--font-body);
+}

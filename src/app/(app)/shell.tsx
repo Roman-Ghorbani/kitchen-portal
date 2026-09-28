@@ -4,6 +4,7 @@ import { signOut } from '../actions/auth-actions.ts';
 import { stopViewingAs } from '../actions/preview-actions.ts';
 import type { SessionPayload } from '../../lib/auth.ts';
 import { NavIcon } from './nav-icons.tsx';
+import { getActiveSemester } from '../../lib/week-service.ts';
 
 /*
  * Four destinations, and every one of them answers a different question.
@@ -18,23 +19,20 @@ const BROTHER_NAV = [
 ];
 
 /*
- * Five, down from eight. The three that went were duplicates: Stats and the
- * roster's own tiles both folded into the dashboard, week creation folded into
- * Weeks, and the TV console moved under Settings where the rest of the
- * hardware lives.
+ * The manager's six: run the week (Dashboard, Weeks), look after people
+ * (Roster), the kitchen (Late plates), the record (Audit log), and the rare
+ * stuff (Settings).
  */
 const ADMIN_NAV = [
   { href: '/admin', label: 'Dashboard', icon: 'dashboard' },
   { href: '/admin/week', label: 'Weeks', icon: 'schedule' },
   { href: '/admin/roster', label: 'Roster', icon: 'roster' },
   { href: '/admin/late-plates', label: 'Late plates', icon: 'late-plate' },
+  { href: '/admin/audit', label: 'Audit log', icon: 'audit' },
   { href: '/admin/settings', label: 'Settings', icon: 'settings' },
 ];
 
-/** Signed out, the only thing worth showing is the schedule itself. */
-const PUBLIC_NAV = [{ href: '/schedule', label: 'Schedule', icon: 'schedule' }];
-
-export function AppShell({
+export async function AppShell({
   session,
   active,
   title,
@@ -52,13 +50,8 @@ export function AppShell({
 }) {
   // While previewing, the manager gets the brother's four tabs - the point is
   // to see what the house sees, and his own sidebar would defeat that.
-  const nav = !session
-    ? PUBLIC_NAV
-    : session.role === 'admin' && !viewingAs
-      ? ADMIN_NAV
-      : session.role === 'admin'
-        ? BROTHER_NAV
-        : BROTHER_NAV;
+  const nav = session?.role === 'admin' && !viewingAs ? ADMIN_NAV : BROTHER_NAV;
+  const semester = await getActiveSemester().catch(() => null);
 
   return (
     <div className="shell">
@@ -67,7 +60,7 @@ export function AppShell({
           <div className="brand-mark">ZBT</div>
           <div className="brand-text">
             <div className="t1">Kitchen Portal</div>
-            <div className="t2">Fall 2026</div>
+            {semester && <div className="t2">{semester.name}</div>}
           </div>
         </div>
 

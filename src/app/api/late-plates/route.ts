@@ -2,9 +2,9 @@
  * GET  /api/late-plates?date=YYYY-MM-DD   the day's queue
  * POST /api/late-plates                   a brother requests a plate
  *
- * The GET shape follows /api/tv: a flat JSON envelope with an explicit
- * timezone and poll interval, so the kitchen display can consume it the same
- * way it already consumes the schedule.
+ * The GET shape is a flat JSON envelope with an explicit timezone and poll
+ * interval, the same convention as /api/tv/schedule. Readable by a signed-in
+ * brother, the manager, or a paired kitchen tablet.
  */
 
 import { NextRequest } from 'next/server.js';
@@ -19,13 +19,7 @@ import {
   MEALS,
   SERVE_TIMES,
 } from '../../../lib/late-plate-service.ts';
-import {
-  callerOf,
-  canRead,
-  json,
-  preflight,
-  UNAUTHORIZED,
-} from '../../../lib/late-plate-api.ts';
+import { callerOf, canRead, json, UNAUTHORIZED } from '../../../lib/api-auth.ts';
 import type { Meal } from '../../../lib/types.ts';
 
 export const dynamic = 'force-dynamic';
@@ -41,10 +35,6 @@ const DAY_NAMES = [
 ];
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
-
-export async function OPTIONS() {
-  return preflight();
-}
 
 export async function GET(request: NextRequest) {
   const caller = await callerOf(request);
@@ -152,8 +142,7 @@ export async function GET(request: NextRequest) {
  * A brother requesting his own plate.
  *
  * `memberId` is read from the session and any value in the body is ignored -
- * otherwise the endpoint would let anybody sign up anybody, which is exactly
- * the prank the device token elsewhere is guarding against.
+ * otherwise the endpoint would let anybody sign up anybody.
  */
 export async function POST(request: NextRequest) {
   const caller = await callerOf(request);

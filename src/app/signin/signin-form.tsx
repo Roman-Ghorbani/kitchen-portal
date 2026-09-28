@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useTransition } from 'react';
 
-import { signInBrother, signInAdmin } from '../actions/auth-actions.ts';
+import { signInBrother, signInAdmin, enrollBrother } from '../actions/auth-actions.ts';
 
 export interface PickerMember {
   id: string;
@@ -10,6 +10,8 @@ export interface PickerMember {
   classYear: 'junior' | 'sophomore';
   hasPin: boolean;
 }
+
+const PIN_LENGTH = 6;
 
 function initials(name: string): string {
   return name
@@ -20,13 +22,24 @@ function initials(name: string): string {
     .toUpperCase();
 }
 
-export function SignInForm({ roster }: { roster: PickerMember[] }) {
+const digits = (v: string, max: number) => v.replace(/\D/g, '').slice(0, max);
+
+export function SignInForm({
+  roster,
+  totpEnabled,
+}: {
+  roster: PickerMember[];
+  totpEnabled: boolean;
+}) {
   const [query, setQuery] = useState('');
   const [picked, setPicked] = useState<PickerMember | null>(null);
   const [pin, setPin] = useState('');
+  const [code, setCode] = useState('');
+  const [confirmPin, setConfirmPin] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [adminMode, setAdminMode] = useState(false);
   const [password, setPassword] = useState('');
+  const [totp, setTotp] = useState('');
   const [pending, startTransition] = useTransition();
 
   const matches = useMemo(() => {
@@ -35,121 +48,179 @@ export function SignInForm({ roster }: { roster: PickerMember[] }) {
     return roster.filter((m) => m.name.toLowerCase().includes(q));
   }, [query, roster]);
 
-  function submitPin() {
-    if (!picked) return;
+  function run(action: () => Promise<{ ok: boolean; error?: string } | undefined>) {
     setError(null);
     startTransition(async () => {
-      const res = await signInBrother(picked.id, pin);
+      const res = await action();
       if (res && !res.ok) setError(res.error ?? 'Sign-in failed.');
     });
   }
 
-  function submitAdmin() {
+  function back() {
+    setPicked(null);
+    setAdminMode(false);
+    setPin('');
+    setCode('');
+    setConfirmPin('');
+    setPassword('');
+    setTotp('');
     setError(null);
-    startTransition(async () => {
-      const res = await signInAdmin(password);
-      if (res && !res.ok) setError(res.error ?? 'Sign-in failed.');
-    });
   }
 
-  /* ---------------- admin ---------------- */
+  /* ---------------- kitchen manager ---------------- */
 
   if (adminMode) {
+    const ready = password.length > 0 && (!totpEnabled || totp.length === 6);
     return (
-      <div className="signin-card">
-        <h2>Kitchen Manager</h2>
-        <p className="hint">Admin access to the roster, points, and approvals.</p>
+      <form
+        className="signin-card"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (ready) run(() => signInAdmin(password, totp));
+        }}
+      >
+        <h2>Kitchen manager</h2>
+        <p className="hint">
+          Roster, weeks, points and the audit log.
+          {totpEnabled && ' Enter the six-digit code from your authenticator app.'}
+        </p>
 
         <input
           className="field"
           type="password"
           placeholder="Password"
+          autoComplete="current-password"
           value={password}
           autoFocus
           onChange={(e) => setPassword(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && submitAdmin()}
         />
 
-        {error && <div className="error">{error}</div>}
+        {totpEnabled && (
+          <input
+            className="field pin"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            placeholder="Authenticator code"
+            value={totp}
+            onChange={(e) => setTotp(digits(e.target.value, 6))}
+          />
+        )}
 
-        <button
-          className="btn primary wide"
-          onClick={submitAdmin}
-          disabled={pending || !password}
-        >
+        {error && <div className="error" role="alert">{error}</div>}
+
+        <button className="btn primary wide" type="submit" disabled={pending || !ready}>
           {pending ? 'Signing in…' : 'Sign in'}
         </button>
-
-        <button
-          className="linkish"
-          onClick={() => {
-            setAdminMode(false);
-            setError(null);
-          }}
-        >
+        <button className="linkish" type="button" onClick={back}>
           ← Back to the roster
         </button>
-      </div>
+      </form>
     );
   }
 
-  /* ---------------- PIN step ---------------- */
+  /* ---------------- first sign-in: setup code + new PIN ---------------- */
+
+  if (picked && !picked.hasPin) {
+    const mismatch = confirmPin.length === PIN_LENGTH && confirmPin !== pin;
+    const ready = code.replace(/[^0-9A-Za-z]/g, '').length === 8 && pin.length === PIN_LENGTH && pin === confirmPin;
+    return (
+      <form
+        className="signin-card"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (ready) run(() => enrollBrother(picked.id, code, pin));
+        }}
+      >
+        <PickedHeader member={picked} />
+
+        <h2>Set up your account</h2>
+        <p className="hint">
+          Enter the setup code the kitchen manager gave you, then choose a{' '}
+          {PIN_LENGTH}-digit PIN. The code works once. No code? Ask the kitchen
+          manager for one.
+        </p>
+
+        <input
+          className="field mono"
+          placeholder="Setup code, e.g. K7QM-3XWD"
+          autoCapitalize="characters"
+          autoComplete="off"
+          spellCheck={false}
+          value={code}
+          autoFocus
+          onChange={(e) => setCode(e.target.value.toUpperCase().slice(0, 9))}
+        />
+        <input
+          className="field pin"
+          type="password"
+          inputMode="numeric"
+          autoComplete="new-password"
+          placeholder={`New ${PIN_LENGTH}-digit PIN`}
+          value={pin}
+          onChange={(e) => setPin(digits(e.target.value, PIN_LENGTH))}
+        />
+        <input
+          className="field pin"
+          type="password"
+          inputMode="numeric"
+          autoComplete="new-password"
+          placeholder="Type it again"
+          value={confirmPin}
+          onChange={(e) => setConfirmPin(digits(e.target.value, PIN_LENGTH))}
+        />
+
+        {mismatch && <div className="error">The two PINs do not match.</div>}
+        {error && <div className="error" role="alert">{error}</div>}
+
+        <button className="btn primary wide" type="submit" disabled={pending || !ready}>
+          {pending ? 'Setting up…' : 'Set PIN and continue'}
+        </button>
+        <button className="linkish" type="button" onClick={back}>
+          ← Not you?
+        </button>
+      </form>
+    );
+  }
+
+  /* ---------------- returning brother ---------------- */
 
   if (picked) {
-    const firstTime = !picked.hasPin;
+    const ready = pin.length === 4 || pin.length === PIN_LENGTH;
     return (
-      <div className="signin-card">
-        <div className="picked">
-          <span className="avatar me">{initials(picked.name)}</span>
-          <div>
-            <div className="picked-name">{picked.name}</div>
-            <div className="hint">
-              {picked.classYear === 'junior' ? 'Lunch duty' : 'Dinner duty'}
-            </div>
-          </div>
-        </div>
+      <form
+        className="signin-card"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (ready) run(() => signInBrother(picked.id, pin));
+        }}
+      >
+        <PickedHeader member={picked} />
 
-        <h2>{firstTime ? 'Choose a 4-digit PIN' : 'Enter your PIN'}</h2>
+        <h2>Enter your PIN</h2>
         <p className="hint">
-          {firstTime
-            ? "You'll use this every time you sign in. It keeps anyone else from flagging or covering shifts as you."
-            : 'Forgot it? Ask Roman to reset it for you.'}
+          Forgot it? The kitchen manager can reset it and give you a new setup code.
         </p>
 
         <input
           className="field pin"
           type="password"
           inputMode="numeric"
-          autoComplete="off"
-          maxLength={4}
-          placeholder="••••"
+          autoComplete="current-password"
+          placeholder="••••••"
           value={pin}
           autoFocus
-          onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
-          onKeyDown={(e) => e.key === 'Enter' && pin.length === 4 && submitPin()}
+          onChange={(e) => setPin(digits(e.target.value, PIN_LENGTH))}
         />
 
-        {error && <div className="error">{error}</div>}
+        {error && <div className="error" role="alert">{error}</div>}
 
-        <button
-          className="btn primary wide"
-          onClick={submitPin}
-          disabled={pending || pin.length !== 4}
-        >
-          {pending ? 'Signing in…' : firstTime ? 'Set PIN and continue' : 'Sign in'}
+        <button className="btn primary wide" type="submit" disabled={pending || !ready}>
+          {pending ? 'Signing in…' : 'Sign in'}
         </button>
-
-        <button
-          className="linkish"
-          onClick={() => {
-            setPicked(null);
-            setPin('');
-            setError(null);
-          }}
-        >
+        <button className="linkish" type="button" onClick={back}>
           ← Not you?
         </button>
-      </div>
+      </form>
     );
   }
 
@@ -157,35 +228,11 @@ export function SignInForm({ roster }: { roster: PickerMember[] }) {
 
   return (
     <div className="signin-card">
-      <div className="onboarding-banner">
-        <div className="banner-title">ZBT Kitchen Portal</div>
-        <div className="banner-steps">
-          <div className="step-item">
-            <span className="step-num">1</span>
-            <span>Select your name & set a 4-digit PIN</span>
-          </div>
-          <div className="step-item">
-            <span className="step-num">2</span>
-            <span>Check duty shifts, weekly menus & bus tracking</span>
-          </div>
-          <div className="step-item">
-            <span className="step-num">3</span>
-            <span>Request late plates & manage pickup</span>
-          </div>
-        </div>
-      </div>
-
-      <div className="signin-header-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-        <h2>Find your name</h2>
-        <button
-          className="btn gold sm"
-          style={{ fontSize: 11.5, padding: '4px 10px', whiteSpace: 'nowrap' }}
-          onClick={() => setAdminMode(true)}
-        >
-          🔑 Manager Sign In
-        </button>
-      </div>
-      <p className="hint">{roster.length} brothers on the duty roster.</p>
+      <h2>Find your name</h2>
+      <p className="hint">
+        {roster.length} brothers on the duty roster. First time here? You will
+        need the setup code the kitchen manager gave you.
+      </p>
 
       <input
         className="field"
@@ -209,8 +256,8 @@ export function SignInForm({ roster }: { roster: PickerMember[] }) {
 
         {matches.length === 0 && (
           <div className="hint empty">
-            No match. Check the spelling, or ask Roman if you should be on the
-            roster.
+            No match. Check the spelling, or ask the kitchen manager if you
+            should be on the roster.
           </div>
         )}
       </div>
@@ -218,6 +265,18 @@ export function SignInForm({ roster }: { roster: PickerMember[] }) {
       <button className="linkish" onClick={() => setAdminMode(true)}>
         I&apos;m the kitchen manager
       </button>
+    </div>
+  );
+}
+
+function PickedHeader({ member }: { member: PickerMember }) {
+  return (
+    <div className="picked">
+      <span className="avatar me">{initials(member.name)}</span>
+      <div>
+        <div className="picked-name">{member.name}</div>
+        <div className="hint">{member.classYear === 'junior' ? 'Lunch duty' : 'Dinner duty'}</div>
+      </div>
     </div>
   );
 }

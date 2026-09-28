@@ -1,7 +1,11 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useTransition } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+
+import { issueSetupCodesForAll, type IssuedCode } from '../../../actions/auth-actions.ts';
+import { SetupCodes } from './setup-codes.tsx';
 
 export interface MemberPreparedness {
   id: string;
@@ -24,6 +28,10 @@ export function UnpreparedMembersSection({
   const [tab, setTab] = useState<Tab>('scheduled-no-pin');
   const [query, setQuery] = useState('');
   const [copied, setCopied] = useState(false);
+  const [issued, setIssued] = useState<IssuedCode[]>([]);
+  const [issueMessage, setIssueMessage] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+  const router = useRouter();
 
   const scheduledNoPin = useMemo(
     () => members.filter((m) => m.isScheduled && !m.hasPin),
@@ -69,7 +77,7 @@ export function UnpreparedMembersSection({
   function copySlackNudge() {
     const targets = scheduledNoPin.length > 0 ? scheduledNoPin : allNoPin;
     const namesList = targets.map((m) => m.name).join(', ');
-    const text = `📢 *Kitchen Portal Reminder* 📢\nThe following brothers are on the active duty schedule but have not signed into the web app yet:\n👉 *${namesList}*\n\nPlease sign in at https://kitchen.zbtaa.online to set your PIN, check your assigned shifts, and confirm your weekly availability!`;
+    const text = `Kitchen Portal reminder: these brothers are on the duty schedule but have not signed in yet: ${namesList}.\n\nYour setup code is in your DMs. Sign in at ${window.location.origin}/signin to set your PIN, check your shifts and confirm your availability.`;
 
     navigator.clipboard.writeText(text);
     setCopied(true);
@@ -123,15 +131,30 @@ export function UnpreparedMembersSection({
             </div>
           </div>
 
-          <button
-            type="button"
-            className="btn gold sm"
-            onClick={copySlackNudge}
-            style={{ fontWeight: 600 }}
-          >
-            {copied ? '✓ Slack Message Copied!' : '📋 Copy Slack Reminder List'}
-          </button>
+          <div className="setup-codes-actions">
+            <button
+              type="button"
+              className="btn primary sm"
+              disabled={pending || allNoPin.length === 0}
+              onClick={() =>
+                startTransition(async () => {
+                  const res = await issueSetupCodesForAll(allNoPin.map((m) => m.id));
+                  setIssued(res.issued);
+                  setIssueMessage(res.message);
+                  router.refresh();
+                })
+              }
+            >
+              Issue setup codes ({allNoPin.length})
+            </button>
+            <button type="button" className="btn sm" onClick={copySlackNudge}>
+              {copied ? 'Copied' : 'Copy group reminder'}
+            </button>
+          </div>
         </div>
+
+        {issueMessage && <div className="form-msg ok">{issueMessage}</div>}
+        <SetupCodes codes={issued} onDone={() => setIssued([])} />
 
         <div className="roster-toolbar" style={{ marginBottom: 16 }}>
           <input

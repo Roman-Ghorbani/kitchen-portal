@@ -1,0 +1,17 @@
+# /etc/cloudflared/config.yml
+#
+# The only public entry point. cloudflared makes an outbound connection to
+# Cloudflare, so the Pi opens no inbound ports on the house network and its
+# address never appears in DNS. Cloudflare terminates TLS (and sets HSTS) and
+# passes the real client address in CF-Connecting-IP, which the app trusts
+# only because nothing else can reach 127.0.0.1:3000.
+
+tunnel: <TUNNEL-UUID>
+credentials-file: /etc/cloudflared/<TUNNEL-UUID>.json
+
+ingress:
+  - hostname: kitchen.example.org
+    service: http://127.0.0.1:3000
+  # Everything else - including any other hostname pointed at this tunnel -
+  # gets a 404 from cloudflared rather than reaching a service.
+  - service: http_status:404

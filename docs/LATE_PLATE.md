@@ -1,15 +1,10 @@
 # Late plates
 
-Step 1 of the late-plate queue: brothers ask for a plate on the site instead of
-writing their name on a box on Chris's cart.
-
-Built: the data model, the API, the brother-facing page at `/late-plate`,
-allergen and dietary flagging with a chef acknowledgement, and a token-gated
-chef screen at `/kitchen/late-plates`. Not built: the kitchen TV panel (step 2).
-
-The chef screen is a plain web page, so it works on a laptop, a phone, or the
-TV today. **No hardware needs buying to use this.** When a tablet is eventually
-mounted, it is the same URL in kiosk mode.
+Brothers ask for a plate on the site instead of writing their name on a box on
+the chefs' cart. The pieces: the brother-facing Menu tab (`/late-plate`),
+allergen and dietary flagging with a mandatory chef acknowledgement, the chef
+screen on a paired kitchen tablet (`/kitchen/late-plates`), the manager's view
+under Late plates, and a names-only panel on the dining room display.
 
 ## How it behaves
 
@@ -78,9 +73,12 @@ Who acknowledged and when is stored on the row and written to the audit log.
 
 ## The chef screen
 
-`/kitchen/late-plates?device=<token>` — no sign-in, no sidebar. One bookmarked
-URL is the whole interaction; anything the chefs have to log into, they will
-stop using.
+`/kitchen/late-plates` — no PIN, no sidebar. The tablet is **paired** once:
+the manager presses *Pair a tablet* on the Late plates page, and a short code
+typed at `/kitchen/pair` gives the tablet an httpOnly cookie it keeps for good.
+Anything the chefs have to log into, they will stop using; this asks nothing
+of them after day one. The manager can open the same screen from his session
+(*Open kiosk view*) to see exactly what they see.
 
 **One meal at a time.** Only lunch or dinner is ever out and being served, so
 the screen shows one meal and opens on whichever is current. The other is one
@@ -115,20 +113,19 @@ from the server rather than showing what was tapped.
 **Declining** is one tap. Three reasons — *Kitchen closed for the night*, *Ran
 out of food*, *Missed the cutoff time* — decline immediately, with a free-text
 box for anything else and *Never mind* to back out. A reason then a confirm is
-two taps for a decision already made. **Those three are still placeholders
-until Chris gives his own words.**
+two taps for a decision already made.
 
 Other details:
 
-- Polls the same public `GET /api/late-plates` the TV will use (with `all=1`),
-  so this screen is proof the API works rather than a private path around it.
+- Polls `GET /api/late-plates?all=1`, the same endpoint every other client
+  uses, so this screen is proof the API works rather than a private path.
 - Sized for a greasy finger: nothing tappable under 44px, type larger than
   anywhere else in the app because it is read across a counter.
 - Allergen plates carry a red rail and an ALLERGY badge.
 - Every card shows the time it was asked.
-- The token is remembered in `localStorage`, so a kiosk browser that restarts on
-  a bare URL lets itself back in instead of stranding the chefs on a locked
-  screen.
+- The pairing cookie is renewed on every load, so a tablet that is used daily
+  never has to be paired again. A tablet still on the old `?device=` bookmark
+  converts itself into a paired device on its next load.
 
 ### Cancellations
 
@@ -148,20 +145,13 @@ A brother can cancel at any time, and the chefs see it.
   acknowledgement. The greyed-out card is the screen agreeing with the rule, not
   enforcing it.
 
-Decline reasons are currently *Ran out*, *Asked too late*, *Cannot do this
-restriction tonight*, plus free text. **Replace these with Chris's own words**
-once you have asked him — that was already on the list.
 
 ## The day's menu
 
-The late-plate page shows what is actually being served. Menus are stored directly
-in the `KitchenTracker` database and configured directly by the chefs from their
-kitchen kiosk tablet at `/kitchen/late-plates?device=<token>`.
-
-The Wall TV (`kitchen-tv`) polls `KitchenTracker`'s API to display the day's and
-tomorrow's menus in real-time alongside duty shifts. All edits made by chefs on
-the kiosk propagate instantly to both the brother late-plate dashboard and the
-wall TV.
+The Menu tab shows what is actually being served. The chefs enter menus on the
+tablet's *Menu* view; they are stored one row per date in the `menus` table.
+The same menus appear on the Senior Week page (`/menu`) and, through
+`/api/tv/schedule`, on the dining room display.
 
 ## Cutoffs
 
@@ -189,46 +179,32 @@ to look for. The per-day row holds it; nothing else does.
 `PUT /api/late-plates/settings` carries a cutoff forward by default. Pass
 `carryForward: false` to move one for a single day.
 
-## Deploying it
+## Setting it up
 
-1. `npm run db:migrate` — applies `drizzle/0001_exotic_sprite.sql`, which only
-   adds two tables. Nothing existing is touched.
-2. `npm run db:migrate` also applies `0002_nasty_scarlet_spider.sql` — six
-   `ALTER TABLE ADD COLUMN`s, all nullable, so it applies to a live roster
-   without touching a row.
-3. `npm run db:migrate` also applies `0003_white_mad_thinker.sql`, one new
-   table for the standing cutoffs. Nothing existing is touched.
-4. Set `LATE_PLATE_DEVICE_TOKEN`. Without it the chef screen cannot be opened at
-   all (token access is *off* when unset, never open). The brother-facing page
-   works without it.
-5. Optionally set `MENU_SOURCE_URL` — see `docs/TAILNET.md`.
+1. `npm run db:migrate`.
+2. On the Late plates page, pair the kitchen tablet.
+3. Set which days take requests, and a banner if there is anything to say.
 
 ## API
 
-`kitchen.zbtaa.online` is public, so every endpoint is gated:
+The app is on a public hostname, so every endpoint is gated:
 
 | Who | Read the queue | Change a plate / the settings |
 | --- | --- | --- |
 | Signed out | no | no |
 | Brother (PIN session) | yes | no |
-| Kitchen manager (admin session) | yes | yes |
-| Kitchen tablet (device token) | yes | yes |
+| Kitchen manager | yes | yes |
+| Paired kitchen tablet | yes | yes |
 
-The device token is a long random string baked into the tablet's bookmarked
-URL, so the chefs never log in. It is **not** real security — anyone who reads
-the tablet's address bar has it — but the threat model here is a brother
-marking his own plate ready as a joke, and any stronger scheme ends with the
-chefs not using the thing. Rotate it if it leaks; keep it out of git. If it is
-unset, token access is simply off rather than open.
-
-Accepted as `?device=<token>`, `X-API-Key: <token>`, or
-`Authorization: Bearer <token>`.
+The dining room display does not use these endpoints. It reads
+`/api/tv/late-plates` with its own read-only key, and gets names and statuses
+only — never notes or dietary flags. See [API.md](API.md).
 
 ### `GET /api/late-plates?date=YYYY-MM-DD`
 
-Defaults to today. `&all=1` includes cancelled and declined rows. Follows the
-`/api/tv` envelope — `success`, `timestamp`, `timezone`, `pollIntervalSeconds`
-— so the TV can consume it the same way it consumes the schedule.
+Defaults to today. `&all=1` includes cancelled and declined rows. Same
+envelope as `/api/tv/schedule` — `success`, `timestamp`, `timezone`,
+`pollIntervalSeconds`.
 
 ```json
 {
@@ -282,7 +258,7 @@ set. 201 on success, 409 when the cutoff has passed or he already has one down.
 
 ### `PATCH /api/late-plates/:id`
 
-Admin or device token.
+Manager or paired tablet.
 
 ```json
 { "status": "ready", "acknowledged": true }
@@ -295,7 +271,7 @@ mark a flagged plate ready; without it you get a 409 naming the flags.
 
 ### `GET` / `PUT /api/late-plates/settings`
 
-Admin or device token for the `PUT`.
+Manager or paired tablet for the `PUT`.
 
 ```json
 { "date": "2026-09-01", "dinner": { "cutoff": "16:45", "closed": false },
@@ -310,8 +286,8 @@ A cutoff saved here becomes the standing value unless `carryForward` is false;
 ## Testing
 
 ```
-npm test        # cutoffs, the flag catalogue, the menu client, who-may-do-what
-DATABASE_FILE=./data/smoke-late-plate.db \
+npm test        # cutoffs, the flag catalogue, menus, who-may-do-what
+DATABASE_FILE=/tmp/smoke-late-plate.db \
   node --experimental-strip-types scripts/smoke-late-plate.ts
 ```
 
@@ -320,19 +296,10 @@ run unless `DATABASE_FILE` names a path containing "smoke".
 
 ## Still open
 
-- **Halal is not in the flag list.** Ramadan is. Worth a sentence to the chefs;
-  one line to add.
-- **Replace the decline reasons with Chris's own words.** The three currently
-  shipping came from the mockup, not from him.
-- **Confirm 1:30 PM for lunch and 4:00 PM for dinner** are the right starting
-  points. After the first time a chef moves one, these stop mattering — the
-  standing value takes over.
+- **Halal is not in the flag list.** Ramadan is. One line to add.
+- **The decline reasons** came from the mockup; replace them with the chefs'
+  own words.
 - **The box still needs a name on it.** Sign-up moved online; labelling the
-  physical box did not. By default that lands on the chef at plating time —
-  new work the pitch never mentioned. The plan's suggestion is plate numbers
-  ("7" instead of a name, a second of Sharpie instead of ten); that was
-  deliberately left out of v1 pending a conversation with Chris. Adding it is a
-  column and a display change.
-- Confirm the lunch cutoff above with the chefs.
-- Nothing notifies a brother when his plate is marked ready. He finds out by
-  opening the page. Deliberate — notifications are not v1.
+  physical box did not. Plate numbers ("7" instead of a name) would be a column
+  and a display change.
+- Nothing notifies a brother when his plate is marked ready. Deliberate for v1.

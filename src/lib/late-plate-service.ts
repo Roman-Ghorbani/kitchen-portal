@@ -2,7 +2,7 @@
  * Late plates.
  *
  * A brother who cannot make a meal asks the kitchen to set one aside. Until
- * now that was a Sharpie and a stack of boxes on Chris's cart; this module is
+ * now that was a Sharpie and a stack of boxes on the chefs' cart; this module is
  * the queue that replaces it.
  *
  * Two rules carry the whole design:
@@ -43,6 +43,13 @@ import {
   type FlagSummary,
 } from './dietary.ts';
 import { DEFAULT_LATE_PLATE_DAYS, type Meal, type MealDayConfig } from './types.ts';
+import type { ActorRole } from './audit.ts';
+
+/** Who is acting, for the audit log. */
+export interface Actor {
+  actorName: string;
+  actorRole: ActorRole;
+}
 
 export const MEALS: readonly Meal[] = ['lunch', 'dinner'];
 
@@ -290,7 +297,7 @@ export function decideWindow(input: {
     return {
       ...base,
       open: false,
-      closedReason: 'The cutoff for that meal is misconfigured. Tell Roman.',
+      closedReason: 'The cutoff for that meal is misconfigured. Tell the kitchen manager.',
     };
   }
 
@@ -496,6 +503,7 @@ export async function adminManualRequest(
     entityType: 'late-plate',
     entityId: existing?.id ?? null,
     actorName: adminName,
+    actorRole: 'manager',
     summary: `${adminName} manually placed a ${meal} late plate for ${member.name} (${date})`,
     payload: { date, meal, note: trimmed, flags, flagsOther },
   });
@@ -545,6 +553,7 @@ export async function adminOverrideStatus(
     entityType: 'late-plate',
     entityId: id,
     actorName: adminName,
+    actorRole: 'manager',
     summary: `${adminName} changed ${row.name}'s ${row.meal} plate on ${row.date} to ${status}`,
     payload: { status, reason },
   });
@@ -654,7 +663,7 @@ export async function requestLatePlate(
 
   if (!member) return { ok: false, message: 'That member is not on the roster.' };
   if (!member.active) {
-    return { ok: false, message: 'Your roster entry is inactive. Talk to Roman.' };
+    return { ok: false, message: 'Your roster entry is inactive. Talk to the kitchen manager.' };
   }
 
   const window = await mealWindow(date, meal, now);
@@ -735,6 +744,7 @@ export async function requestLatePlate(
     entityId: existing?.id ?? null,
     actorMemberId: memberId,
     actorName: member.name,
+    actorRole: 'brother',
     summary:
       `${member.name} requested a ${meal} late plate for ${date}` +
       (summary.hasAny ? ` [${summary.lines.join(', ')}]` : '') +
@@ -801,6 +811,7 @@ export async function cancelLatePlate(
     entityId: id,
     actorMemberId: memberId,
     actorName: member?.name ?? null,
+    actorRole: 'brother',
     summary: `${member?.name ?? 'A brother'} cancelled his ${row.meal} late plate for ${row.date}`,
     payload: { date: row.date, meal: row.meal },
   });
@@ -824,9 +835,10 @@ export async function setLatePlateStatus(
   id: string,
   status: Extract<LatePlateStatus, 'waiting' | 'ready' | 'declined'>,
   reason: string | null,
-  actorName: string,
+  actor: Actor,
   opts: { acknowledged?: boolean } = {},
 ): Promise<LatePlateResult> {
+  const { actorName } = actor;
   const [row] = await db.select().from(latePlates).where(eq(latePlates.id, id)).limit(1);
   if (!row) return { ok: false, message: 'That request no longer exists.' };
   // A brother who has pulled out cannot have his plate marked ready or
@@ -867,6 +879,7 @@ export async function setLatePlateStatus(
     entityId: id,
     actorMemberId: null,
     actorName,
+    actorRole: actor.actorRole,
     summary:
       `${actorName} marked a ${row.meal} late plate for ${row.date} as ${status}` +
       (acknowledging ? `, acknowledging ${flags.lines.join(', ')}` : '') +
@@ -977,9 +990,10 @@ export async function getLatePlateSettings(
 export async function setLatePlateSettings(
   date: string,
   changes: Partial<Record<Meal, { cutoff?: string; closed?: boolean }>>,
-  actorName: string,
+  actor: Actor,
   opts: { carryForward?: boolean } = {},
 ): Promise<LatePlateResult> {
+  const { actorName } = actor;
   // Validate everything before writing anything, so a bad dinner time cannot
   // leave lunch half-saved.
   for (const [meal, change] of Object.entries(changes)) {
@@ -1034,6 +1048,7 @@ export async function setLatePlateSettings(
       entityId: null,
       actorMemberId: null,
       actorName,
+      actorRole: actor.actorRole,
       summary:
         `${actorName} set ${meal} late plates for ${date} to ` +
         (next.closed ? 'closed' : `cutoff ${next.cutoff}`) +
@@ -1192,6 +1207,7 @@ export async function setRecurringLatePlate(
     entityType: 'recurring-late-plate',
     actorMemberId: memberId,
     actorName: member.name,
+    actorRole: 'brother',
     summary: `${member.name} scheduled a recurring weekly ${meal} late plate for every ${dayName}`,
     payload: { dayOfWeek, meal, note: trimmed },
   });
@@ -1232,6 +1248,7 @@ export async function deleteRecurringLatePlate(
     entityId: id,
     actorMemberId: memberId,
     actorName: member?.name ?? null,
+    actorRole: 'brother',
     summary: `${member?.name ?? 'A brother'} removed recurring ${row.meal} late plate for every ${dayName}`,
     payload: { dayOfWeek: row.dayOfWeek, meal: row.meal },
   });

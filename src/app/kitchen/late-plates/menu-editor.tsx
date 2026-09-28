@@ -11,7 +11,6 @@ interface MealDraft {
 }
 
 interface MenuEditorProps {
-  device: string;
   todayIso: string;
 }
 
@@ -56,7 +55,7 @@ function formatWeekRange(startIso: string): string {
   return `${startStr} – ${endStr}`;
 }
 
-export function MenuEditor({ device, todayIso }: MenuEditorProps) {
+export function MenuEditor({ todayIso }: MenuEditorProps) {
   const actualToday = todayIso || todayInEastern();
   const currentWeekMonday = mondayOf(actualToday);
 
@@ -90,7 +89,7 @@ export function MenuEditor({ device, todayIso }: MenuEditorProps) {
       setLoading(true);
       const startFetch = addDays(baseWeekStart, -7);
       const res = await fetch(
-        `/api/menu?startDate=${startFetch}&days=28&device=${encodeURIComponent(device)}`,
+        `/api/menu?startDate=${startFetch}&days=28`,
         { cache: 'no-store' },
       );
       if (!res.ok) throw new Error(`Server returned ${res.status}`);
@@ -124,7 +123,7 @@ export function MenuEditor({ device, todayIso }: MenuEditorProps) {
     } finally {
       setLoading(false);
     }
-  }, [device]);
+  }, []);
 
   /*
    * Follow the real today.
@@ -193,7 +192,7 @@ export function MenuEditor({ device, todayIso }: MenuEditorProps) {
       setError(null);
 
       try {
-        const res = await fetch(`/api/menu?device=${encodeURIComponent(device)}`, {
+        const res = await fetch('/api/menu', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -229,7 +228,7 @@ export function MenuEditor({ device, todayIso }: MenuEditorProps) {
         setSaving(false);
       }
     },
-    [device],
+    [],
   );
 
   // Trigger debounced auto-save when user types

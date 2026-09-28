@@ -76,7 +76,21 @@
       "idx": 10,
       "version": "6",
       "when": 1788123456789,
-      "tag": "0010_reconcile_member_debt",
+      "tag": "0010_data_correction",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1790623955849,
+      "tag": "0011_security_foundations",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1790623956739,
+      "tag": "0012_retire_dead_state",
       "breakpoints": true
     }
   ]

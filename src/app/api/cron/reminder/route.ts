@@ -7,7 +7,8 @@
  * reaches most people is worth far more than one that waits for a complete
  * mapping.
  *
- * Protected by CRON_SECRET, same as the chapter transition.
+ * Triggered daily by a systemd timer on the Pi (deploy/kitchen-portal-reminder.*)
+ * with CRON_SECRET as a bearer token. Refuses to run at all without one.
  */
 
 import { eq, inArray, asc } from 'drizzle-orm';
@@ -22,17 +23,10 @@ import {
 import { getActiveSemester } from '../../../../lib/week-service.ts';
 import { announceTomorrow, slackConfigured } from '../../../../lib/slack.ts';
 import { addDays, todayInEastern } from '../../../../lib/dates.ts';
+import { safeEqual } from '../../../../lib/auth.ts';
+import { appUrl } from '../../../../lib/site.ts';
 
 export const dynamic = 'force-dynamic';
-export const maxDuration = 60;
-
-function appUrl(): string {
-  const explicit = process.env.NEXT_PUBLIC_APP_URL;
-  if (explicit) return explicit.replace(/\/$/, '');
-  const vercel = process.env.VERCEL_PROJECT_PRODUCTION_URL;
-  if (vercel) return `https://${vercel}`;
-  return 'http://localhost:3000';
-}
 
 export async function GET(request: Request): Promise<Response> {
   const secret = process.env.CRON_SECRET;
@@ -42,7 +36,7 @@ export async function GET(request: Request): Promise<Response> {
       { status: 500 },
     );
   }
-  if (request.headers.get('authorization') !== `Bearer ${secret}`) {
+  if (!safeEqual(request.headers.get('authorization') ?? '', `Bearer ${secret}`)) {
     return Response.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
   }
 

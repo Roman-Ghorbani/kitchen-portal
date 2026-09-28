@@ -19,24 +19,12 @@ import {
   DEFAULT_CUTOFFS,
   SERVE_TIMES,
 } from '../../../../lib/late-plate-service.ts';
-import {
-  actorNameOf,
-  callerOf,
-  canRead,
-  canWrite,
-  json,
-  preflight,
-  UNAUTHORIZED,
-} from '../../../../lib/late-plate-api.ts';
+import { actorOf, callerOf, canRead, canWrite, json, UNAUTHORIZED } from '../../../../lib/api-auth.ts';
 import type { Meal } from '../../../../lib/types.ts';
 
 export const dynamic = 'force-dynamic';
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
-
-export async function OPTIONS() {
-  return preflight();
-}
 
 export async function GET(request: NextRequest) {
   const caller = await callerOf(request);
@@ -94,7 +82,7 @@ export async function PUT(request: NextRequest) {
     return json({ error: 'Nothing to change. Send lunch and/or dinner.' }, 400);
   }
 
-  const result = await setLatePlateSettings(date, changes, actorNameOf(caller), {
+  const result = await setLatePlateSettings(date, changes, actorOf(caller), {
     carryForward: body.carryForward !== false,
   });
   if (!result.ok) return json({ ok: false, message: result.message }, 400);

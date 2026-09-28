@@ -1,129 +1,93 @@
 #!/usr/bin/env bash
 #
-# Push whatever is on your laptop to the droplet.
+# Ship the current commit to the Raspberry Pi.
 #
-#   ./deploy.sh                 test, push to GitHub, deploy, verify
-#   ./deploy.sh --skip-tests    same but faster, when you are sure
-#   ./deploy.sh --rollback      put the previous version back
+#   ./deploy.sh              check, push, back up, build, restart, verify
+#   ./deploy.sh --rollback   put the previously deployed commit back
 #
-# Run it from Git Bash on Windows (right-click in the project folder ->
-# "Open Git Bash here"), or any terminal on Mac/Linux.
+# Order of operations, each one a gate for the next:
+#   1. Refuse if the working tree is dirty. What ships is a commit, never
+#      whatever happens to be on disk.
+#   2. Typecheck and run the test suite locally.
+#   3. Push the branch.
+#   4. On the Pi: take a verified backup, record the running commit, fetch
+#      and check out the new one, install if the lockfile changed, migrate,
+#      build, restart the service.
+#   5. Hit /api/health on the Pi until it answers; if it never does, roll back.
 #
-# What it does, in order:
-#   1. Runs the tests here, and stops if they fail. Nothing broken leaves
-#      your laptop.
-#   2. Commits and pushes anything uncommitted, after showing you what.
-#   3. Backs up the live database before touching anything.
-#   4. On the droplet: pulls, installs, migrates, builds, restarts.
-#   5. Checks the site actually responds, and rolls back if it does not.
-#
-# The build happens on the droplet rather than here, because better-sqlite3
-# compiles against the machine it runs on - a Windows build will not run on
-# Linux.
+# The Pi is reached over Tailscale by SSH; nothing about deploying goes
+# through the public tunnel. Override the defaults with environment variables.
 
 set -euo pipefail
 
-# ---- your settings -------------------------------------------------------
-DROPLET="${KITCHEN_HOST:-zbt@zbt-kitchen-tv}"
-APP_DIR="${KITCHEN_APP_DIR:-~/KitchenTracker}"
-SITE="${KITCHEN_URL:-https://kitchen.zbtaa.online}"
-SERVICE_NAME="${KITCHEN_SERVICE:-kitchen-tv}"
-SSH_CMD="ssh -o ConnectTimeout=10"
-# --------------------------------------------------------------------------
+HOST="${KP_HOST:-zbt@zbt-kitchen-tv}"
+APP_DIR="${KP_APP_DIR:-/home/zbt/kitchen-portal}"
+SERVICE="${KP_SERVICE:-kitchen-portal}"
+SSH="ssh -o ConnectTimeout=10 $HOST"
 
-BOLD=$'\e[1m'; DIM=$'\e[2m'; RED=$'\e[31m'; GREEN=$'\e[32m'; YELLOW=$'\e[33m'; OFF=$'\e[0m'
-step() { echo "${BOLD}==>${OFF} $*"; }
-ok()   { echo "    ${GREEN}ok${OFF} $*"; }
-warn() { echo "    ${YELLOW}!${OFF} $*"; }
-die()  { echo "${RED}✗ $*${OFF}" >&2; exit 1; }
+say()  { printf '\033[1m==>\033[0m %s\n' "$*"; }
+ok()   { printf '    \033[32mok\033[0m %s\n' "$*"; }
+die()  { printf '\033[31merror:\033[0m %s\n' "$*" >&2; exit 1; }
 
-SKIP_TESTS=false
-ROLLBACK=false
-for arg in "$@"; do
-  case "$arg" in
-    --skip-tests) SKIP_TESTS=true ;;
-    --rollback)   ROLLBACK=true ;;
-    *) die "unknown option: $arg" ;;
-  esac
-done
+health() {
+  for _ in $(seq 1 30); do
+    $SSH "curl -fsS -o /dev/null http://127.0.0.1:3000/api/health" 2>/dev/null && return 0
+    sleep 2
+  done
+  return 1
+}
 
-if [[ "$DROPLET" == *YOUR.DROPLET.IP* ]]; then
-  die "Edit deploy.sh and set DROPLET to your droplet, or export KITCHEN_HOST."
-fi
-
-# ---- rollback ------------------------------------------------------------
-if [ "$ROLLBACK" = true ]; then
-  step "Rolling back to the previous version"
-  $SSH_CMD "$DROPLET" "cd $APP_DIR && git reset --hard HEAD@{1} && npm ci --silent && npm run build && pm2 restart all"
-  sleep 4
-  code=$(curl -s -o /dev/null -w '%{http_code}' "$SITE/schedule" || echo 000)
-  [ "$code" = "200" ] && ok "rolled back, site is up" || die "rolled back but site returns $code"
+if [ "${1:-}" = "--rollback" ]; then
+  say "Rolling back to the previously deployed commit"
+  $SSH bash -s <<REMOTE
+set -euo pipefail
+cd "$APP_DIR"
+prev=\$(cat .deploy-previous)
+git checkout --quiet "\$prev"
+npm ci --silent
+npm run db:migrate
+npm run build
+sudo systemctl restart "$SERVICE"
+echo "now at \$(git rev-parse --short HEAD)"
+REMOTE
+  health && ok "healthy after rollback" || die "still unhealthy - check: ssh $HOST journalctl -u $SERVICE -n 80"
   exit 0
 fi
 
-# ---- 1. tests ------------------------------------------------------------
-if [ "$SKIP_TESTS" = true ]; then
-  warn "skipping tests"
-else
-  step "Running tests"
-  npm test >/dev/null 2>&1 || die "tests failed - run 'npm test' to see why. Nothing was deployed."
-  npx tsc --noEmit >/dev/null 2>&1 || die "typecheck failed - run 'npx tsc --noEmit' to see why."
-  ok "tests and typecheck pass"
-fi
-
-# ---- 2. push -------------------------------------------------------------
-step "Pushing your changes"
-if [ -n "$(git status --porcelain)" ]; then
-  echo "${DIM}"
-  git status --short
-  echo "${OFF}"
-  read -r -p "    Commit these and deploy? Message (blank to cancel): " msg
-  [ -z "$msg" ] && die "cancelled"
-  git add -A
-  git commit -q -m "$msg"
-  ok "committed"
-fi
-
+say "Checking the working tree"
+[ -z "$(git status --porcelain)" ] || die "uncommitted changes. Commit or stash them first."
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
-git push -q origin "$BRANCH"
-ok "pushed $BRANCH ($(git rev-parse --short HEAD))"
+COMMIT=$(git rev-parse HEAD)
+ok "$BRANCH @ ${COMMIT:0:7}"
 
-# ---- 3. back up the live database first ----------------------------------
-step "Backing up the live database"
-$SSH_CMD "$DROPLET" "cd $APP_DIR && node scripts/backup.cjs" >/dev/null 2>&1 \
-  && ok "snapshot taken" \
-  || warn "backup step failed - continuing, but check the droplet"
+say "Typecheck and tests"
+npm run --silent typecheck || die "typecheck failed"
+npm test >/dev/null 2>&1 || die "tests failed - run 'npm test' to see why"
+ok "clean"
 
-# ---- 4. deploy -----------------------------------------------------------
-step "Deploying to $DROPLET"
-$SSH_CMD "$DROPLET" bash -s <<REMOTE
+say "Pushing"
+git push --quiet origin "$BRANCH"
+ok "pushed"
+
+say "Deploying to $HOST"
+$SSH bash -s <<REMOTE
 set -euo pipefail
-cd $APP_DIR
-git fetch --all --quiet
-git reset --hard "origin/$BRANCH" --quiet
-if git diff --name-only HEAD@{1} HEAD 2>/dev/null | grep -qE "package(-lock)?\.json"; then
-  npm ci --silent
-fi
+cd "$APP_DIR"
+node scripts/backup.mjs
+git rev-parse HEAD > .deploy-previous
+git fetch --quiet origin
+git checkout --quiet "$COMMIT"
+if ! git diff --quiet "\$(cat .deploy-previous)" HEAD -- package-lock.json; then npm ci --silent; fi
 npm run db:migrate
 npm run build
-pm2 restart all
+sudo systemctl restart "$SERVICE"
 REMOTE
-ok "built and restarted on the droplet"
+ok "built and restarted"
 
-# ---- 5. verify -----------------------------------------------------------
-step "Checking the site"
-for i in 1 2 3 4 5 6 7 8 9 10; do
-  code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "$SITE/schedule" || echo 000)
-  [ "$code" = "200" ] && break
-  sleep 2
-done
-
-if [ "$code" = "200" ]; then
-  ok "$SITE is up"
-  echo ""
-  echo "${GREEN}${BOLD}Deployed.${OFF} $(git log -1 --pretty='%s')"
+say "Verifying"
+if health; then
+  ok "healthy at ${COMMIT:0:7}"
 else
-  echo ""
-  die "site returned $code. Run './deploy.sh --rollback' to put the last version back,
-   then 'ssh $DROPLET \"sudo journalctl -u $SERVICE_NAME -n 50\"' to see what broke."
+  printf '    health check failed - rolling back\n'
+  exec "$0" --rollback
 fi

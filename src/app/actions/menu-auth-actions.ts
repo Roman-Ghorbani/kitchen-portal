@@ -1,96 +1,103 @@
 'use server';
 
-import { cookies, headers } from 'next/headers';
+import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+
 import {
   MENU_AUTH_COOKIE,
   MENU_AUTH_TTL_SECONDS,
-  getClientIp,
-  checkRateLimit,
-  recordFailedAttempt,
-  clearRateLimit,
+  MIN_MENU_PASSWORD_LENGTH,
   verifySeniorMenuPassword,
+  setSeniorMenuPassword,
   signMenuToken,
 } from '../../lib/senior-menu-auth.ts';
 import { requireAdmin } from '../../lib/session.ts';
-import { updateTvSettings } from '../../lib/tv-service.ts';
+import { checkThrottle, recordFailure, describeWait, POLICIES } from '../../lib/throttle.ts';
+import { requestContext } from '../../lib/request-context.ts';
+import { logEvent } from '../../lib/audit.ts';
 
 export interface MenuAuthResult {
   ok: boolean;
   error?: string;
-  locked?: boolean;
   retryAfterMs?: number;
-  remainingAttempts?: number;
 }
 
 export async function submitMenuPassword(password: string): Promise<MenuAuthResult> {
-  const reqHeaders = await headers();
-  const clientIp = getClientIp(reqHeaders);
+  const { ip, userAgent } = await requestContext();
+  const keys = [`menu:${ip}`, `ip:${ip}`];
 
-  // Check rate limit on server by IP (protects across incognito and cookie clears)
-  const limit = checkRateLimit(clientIp);
-  if (!limit.allowed) {
-    const minutes = Math.ceil(limit.retryAfterMs / (60 * 1000));
+  const gate = await checkThrottle(keys);
+  if (!gate.allowed) {
     return {
       ok: false,
-      error: `Too many incorrect attempts. Access from this device is temporarily blocked for ${minutes} minute${minutes === 1 ? '' : 's'}.`,
-      locked: true,
-      retryAfterMs: limit.retryAfterMs,
+      error: `Too many incorrect attempts. Try again in ${describeWait(gate.retryAfter)}.`,
+      retryAfterMs: gate.retryAfter * 1000,
     };
   }
 
-  const valid = await verifySeniorMenuPassword(password);
-  if (!valid) {
-    const attempt = recordFailedAttempt(clientIp);
-    if (attempt.locked) {
-      const minutes = Math.ceil(attempt.retryAfterMs / (60 * 1000));
+  if (!(await verifySeniorMenuPassword(password))) {
+    const after = await recordFailure([
+      [keys[0], POLICIES.menu],
+      [keys[1], POLICIES.ip],
+    ]);
+    await logEvent({
+      action: 'auth.menu_password_failed',
+      entityType: 'senior-menu',
+      actorRole: 'anonymous',
+      summary: `Failed Senior Week menu password from ${ip}`,
+      payload: { ip, userAgent },
+    });
+    if (!after.allowed) {
       return {
         ok: false,
-        error: `Too many incorrect attempts. Access from this device is blocked for ${minutes} minute${minutes === 1 ? '' : 's'}.`,
-        locked: true,
-        retryAfterMs: attempt.retryAfterMs,
+        error: `Too many incorrect attempts. Try again in ${describeWait(after.retryAfter)}.`,
+        retryAfterMs: after.retryAfter * 1000,
       };
     }
-
     return {
       ok: false,
-      error: `Incorrect password. ${attempt.remainingAttempts} attempt${attempt.remainingAttempts === 1 ? '' : 's'} remaining before a 10-minute lockout.`,
-      remainingAttempts: attempt.remainingAttempts,
+      error: `Incorrect password. ${after.remaining} attempt${after.remaining === 1 ? '' : 's'} left before a lockout.`,
     };
   }
 
-  // Password is correct: clear failed attempts and set persistent 10-year cookie
-  clearRateLimit(clientIp);
-
-  const cookieStore = await cookies();
-  cookieStore.set(MENU_AUTH_COOKIE, signMenuToken(), {
+  const store = await cookies();
+  store.set(MENU_AUTH_COOKIE, await signMenuToken(), {
     httpOnly: true,
     sameSite: 'lax',
     secure: process.env.NODE_ENV === 'production',
-    path: '/',
+    path: '/menu',
     maxAge: MENU_AUTH_TTL_SECONDS,
   });
-
   revalidatePath('/menu');
   return { ok: true };
 }
 
 export async function lockMenuDevice(): Promise<void> {
-  const cookieStore = await cookies();
-  cookieStore.delete(MENU_AUTH_COOKIE);
+  const store = await cookies();
+  store.delete({ name: MENU_AUTH_COOKIE, path: '/menu' });
   revalidatePath('/menu');
   redirect('/menu');
 }
 
-export async function updateSeniorMenuPassword(newPassword: string): Promise<{ ok: boolean; message: string }> {
-  await requireAdmin();
+/** Setting a new password signs every device out of the menu. */
+export async function updateSeniorMenuPassword(
+  newPassword: string,
+): Promise<{ ok: boolean; message: string }> {
+  const admin = await requireAdmin();
   const trimmed = newPassword.trim();
-  if (!trimmed || trimmed.length < 3) {
-    return { ok: false, message: 'Password must be at least 3 characters long.' };
+  if (trimmed.length < MIN_MENU_PASSWORD_LENGTH) {
+    return { ok: false, message: `Use at least ${MIN_MENU_PASSWORD_LENGTH} characters.` };
   }
 
-  await updateTvSettings({ seniorMenuPassword: trimmed });
+  await setSeniorMenuPassword(trimmed);
+  await logEvent({
+    action: 'settings.senior_menu_password_changed',
+    entityType: 'senior-menu',
+    actorRole: 'manager',
+    actorName: admin.name,
+    summary: `${admin.name} changed the Senior Week menu password (every device signed out)`,
+  });
   revalidatePath('/admin/settings');
-  return { ok: true, message: 'Senior menu password updated successfully.' };
+  return { ok: true, message: 'Password changed. Anyone already viewing the menu will need the new one.' };
 }

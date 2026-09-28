@@ -1,17 +1,24 @@
+# Dependencies and build output
 node_modules/
 .next/
-.env*.local
-.env
 *.tsbuildinfo
 next-env.d.ts
-.vercel
 
-# Roster exports contain phone numbers and emails - never commit them
-*.csv
+# Secrets - never commit
+.env
+.env.*
+!.env.example
 
-# SQLite database file
+# Live state: the database, uploads and backups stay on the Pi
 data/
+backups/
 *.db
 *.db-wal
 *.db-shm
-backups/
+
+# Roster exports contain phone numbers and emails
+*.csv
+
+# Local editor settings
+.vscode/
+.deploy-previous

@@ -28,6 +28,8 @@ import { AppShell } from './shell.tsx';
 import { HorizonNote } from './horizon-note.tsx';
 import { OfferShiftButton } from './offer-button.tsx';
 import { CalendarSyncButton } from './calendar-sync-button.tsx';
+import { AccountCard } from './account-card.tsx';
+import { calendarFeedToken } from '../../lib/calendar-feed.ts';
 import { HistoryList, type HistoryEntry } from './history-list.tsx';
 
 export const dynamic = 'force-dynamic';
@@ -180,7 +182,7 @@ export default async function HomePage() {
           {!readOnly && next.status === 'assigned' && next.role === 'assigned' && (
             <div className="next-action">
               <OfferShiftButton assignmentId={next.assignmentId} />
-              <CalendarSyncButton memberId={memberId} />
+              <CalendarSyncButton feedToken={calendarFeedToken(memberId)} />
             </div>
           )}
         </div>
@@ -335,6 +337,8 @@ export default async function HomePage() {
         <span className="section-count mono">{past.length}</span>
       </h2>
       <HistoryList entries={history} />
+
+      {!readOnly && <AccountCard />}
     </AppShell>
   );
 }

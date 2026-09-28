@@ -1,7 +1,7 @@
 /**
  * Forgiving roster parser.
  *
- * Roman's roster could arrive as a spreadsheet paste, a Slack message, or a
+ * The roster could arrive as a spreadsheet paste, a Slack message, or a
  * list someone typed by hand. Rather than demand a format, this accepts the
  * shapes a real chapter roster actually shows up in and reports what it could
  * not make sense of, so nothing is silently dropped.

@@ -330,3 +330,29 @@ describe('shortfall reporting', () => {
     assert.match(lunchGaps[0].reason, /one-shift-per-week limit/);
   });
 });
+
+describe('make-up debt', () => {
+  test('a brother who owes a make-up is picked ahead of lower points', () => {
+    const debtor: Member = {
+      id: 'junior-debtor',
+      name: 'Owes One',
+      classYear: 'junior',
+      points: 10,
+      exempt: false,
+      standingConflicts: [],
+      lastServedDate: '2026-09-01',
+      makeupDebt: 1,
+    };
+    const fresh: Member = { ...debtor, id: 'junior-fresh', name: 'Fresh', points: 0, makeupDebt: 0 };
+
+    const result = generateWeek({
+      weekStart: '2026-09-28',
+      members: [debtor, fresh],
+      slotSizes: { lunch: 1, dinner: 1 },
+    });
+
+    const pick = result.rationale.find((r) => r.memberId === debtor.id);
+    assert.ok(pick, 'the debtor was scheduled');
+    assert.equal(pick.viaMakeupDebt, true, 'and picked because of the debt');
+  });
+});

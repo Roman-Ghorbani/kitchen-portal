@@ -2,7 +2,7 @@
  * PATCH /api/late-plates/:id
  *
  * The chef-side transition - mark a plate ready, or decline it with a reason.
- * Gated to an admin session or the kitchen device token; a brother's own
+ * Gated to the manager or a paired kitchen tablet; a brother's own
  * cancellation goes through the server action, not here.
  *
  * Marking a plate with allergens or restrictions ready requires
@@ -13,22 +13,11 @@
 import { NextRequest } from 'next/server.js';
 
 import { setLatePlateStatus } from '../../../../lib/late-plate-service.ts';
-import {
-  actorNameOf,
-  callerOf,
-  canWrite,
-  json,
-  preflight,
-  UNAUTHORIZED,
-} from '../../../../lib/late-plate-api.ts';
+import { actorOf, callerOf, canWrite, json, UNAUTHORIZED } from '../../../../lib/api-auth.ts';
 
 export const dynamic = 'force-dynamic';
 
 const ALLOWED = ['waiting', 'ready', 'declined'] as const;
-
-export async function OPTIONS() {
-  return preflight();
-}
 
 export async function PATCH(
   request: NextRequest,
@@ -55,7 +44,7 @@ export async function PATCH(
     id,
     status,
     typeof body.reason === 'string' ? body.reason : null,
-    actorNameOf(caller),
+    actorOf(caller),
     { acknowledged: body.acknowledged === true },
   );
 

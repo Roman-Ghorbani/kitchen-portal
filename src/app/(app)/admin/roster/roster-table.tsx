@@ -10,7 +10,8 @@ import {
   adjustPoints,
   setActive,
 } from '../../../actions/roster-actions.ts';
-import { resetMemberPin } from '../../../actions/auth-actions.ts';
+import { resetMemberPin, issueSetupCode, type IssuedCode } from '../../../actions/auth-actions.ts';
+import { SetupCodes } from './setup-codes.tsx';
 import { formatPoints } from '../../../../lib/types.ts';
 
 export interface RosterRow {
@@ -60,6 +61,7 @@ export function RosterTable({ rows }: { rows: RosterRow[] }) {
   const [confirmReset, setConfirmReset] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
+  const [issued, setIssued] = useState<IssuedCode | null>(null);
   const [pending, startTransition] = useTransition();
   const router = useRouter();
 
@@ -354,15 +356,36 @@ export function RosterTable({ rows }: { rows: RosterRow[] }) {
                 </div>
 
                 <div className="detail-group">
-                  <span className="detail-label">App PIN &amp; Security</span>
-                  {!r.hasPin ? (
-                    <div className="detail-hint">
-                      {r.name} has not set a PIN yet. They will choose a 4-digit PIN the first time they sign in.
-                    </div>
+                  <span className="detail-label">Sign-in</span>
+                  {issued?.memberId === r.id ? (
+                    <SetupCodes codes={[issued]} onDone={() => setIssued(null)} />
+                  ) : !r.hasPin ? (
+                    <>
+                      <div className="detail-actions">
+                        <button
+                          className="btn sm"
+                          disabled={pending || !r.active}
+                          onClick={() =>
+                            run(async () => {
+                              const res = await issueSetupCode(r.id);
+                              if (res.issued) setIssued(res.issued);
+                              return res;
+                            })
+                          }
+                        >
+                          Issue setup code
+                        </button>
+                      </div>
+                      <div className="detail-hint">
+                        {r.name} has not set a PIN. He needs a one-time setup code to claim his
+                        account; issuing a new one cancels any earlier code.
+                      </div>
+                    </>
                   ) : confirmReset === r.id ? (
                     <>
                       <div className="detail-warn">
-                        Wipes {r.name}&apos;s 4-digit PIN so they can choose a new one on their next sign-in.
+                        Clears {r.name}&apos;s PIN, signs him out on every device, and gives you a
+                        new setup code to pass on.
                       </div>
                       <div className="detail-actions">
                         <button
@@ -370,22 +393,16 @@ export function RosterTable({ rows }: { rows: RosterRow[] }) {
                           disabled={pending}
                           onClick={() => {
                             setConfirmReset(null);
-                            run(() =>
-                              resetMemberPin(r.id).then((x) => ({
-                                ok: x.ok,
-                                message: x.ok
-                                  ? `${r.name}'s PIN has been cleared.`
-                                  : (x.error ?? 'Failed to reset PIN'),
-                              })),
-                            );
+                            run(async () => {
+                              const res = await resetMemberPin(r.id);
+                              if (res.issued) setIssued(res.issued);
+                              return res;
+                            });
                           }}
                         >
-                          Yes, Reset PIN
+                          Yes, reset PIN
                         </button>
-                        <button
-                          className="btn sm"
-                          onClick={() => setConfirmReset(null)}
-                        >
+                        <button className="btn sm" onClick={() => setConfirmReset(null)}>
                           Cancel
                         </button>
                       </div>
@@ -393,16 +410,13 @@ export function RosterTable({ rows }: { rows: RosterRow[] }) {
                   ) : (
                     <>
                       <div className="detail-actions">
-                        <button
-                          className="btn sm"
-                          disabled={pending}
-                          onClick={() => setConfirmReset(r.id)}
-                        >
-                          🔑 Reset Forgotten PIN
+                        <button className="btn sm" disabled={pending} onClick={() => setConfirmReset(r.id)}>
+                          Reset forgotten PIN
                         </button>
                       </div>
                       <div className="detail-hint">
-                        Clears their PIN if forgotten, allowing them to choose a new one upon signing in.
+                        Also the fix if he thinks someone else knows his PIN: the reset ends every
+                        session signed in as him.
                       </div>
                     </>
                   )}

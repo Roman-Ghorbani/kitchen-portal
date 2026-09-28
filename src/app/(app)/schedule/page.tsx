@@ -14,7 +14,6 @@ import { CopyWeekButton } from './copy-week.tsx';
 import { HorizonNote } from '../horizon-note.tsx';
 import { parseISO, mondayOf, addDays, todayInEastern, defaultScheduleMonday } from '../../../lib/dates.ts';
 import { getMemberDossier } from '../../../lib/member-dossier.ts';
-import { CalendarSyncButton } from '../calendar-sync-button.tsx';
 
 export const dynamic = 'force-dynamic';
 
@@ -73,10 +72,11 @@ export default async function SchedulePage({
 }: {
   searchParams: Promise<{ week?: string }>;
 }) {
-  // Deliberately viewable signed out. Looking at the schedule should be as
-  // frictionless as the screenshot it replaces; a PIN is only needed to
-  // change something.
+  // Signed-in only. The board names who will be in the kitchen when, and the
+  // app sits on a public hostname; sign-in lasts a year, so this costs a
+  // brother one PIN entry, not friction every visit.
   const session = await getSession();
+  if (!session) redirect('/signin');
 
   const params = await searchParams;
   const [allWeeks, horizon] = await Promise.all([
@@ -162,18 +162,6 @@ export default async function SchedulePage({
           : `Week of ${shortDate(week.weekStart)}`
       }
     >
-      {!session && (
-        <div className="alert info">
-          <span className="alert-title">You are viewing as a guest</span>
-          <span className="alert-body">
-            Anyone can see the board. Sign in to see your own shifts
-            highlighted, take a spare seat, or put one of yours up for grabs.
-          </span>
-          <Link className="btn gold sm" href="/signin">
-            Sign in
-          </Link>
-        </div>
-      )}
 
       <HorizonNote horizon={horizon} today={today} />
 
@@ -211,7 +199,7 @@ export default async function SchedulePage({
           <span className={`tag ${week.status === 'complete' ? 'locked' : 'ok'}`}>
             {week.status === 'complete' ? 'Finished' : 'Posted'}
           </span>
-          {/* Admin only: the group-chat post should come from Roman, not
+          {/* Admin only: the group-chat post should come from the manager, not
               from whoever happens to open the page. */}
           {session?.role === 'admin' && (
             <CopyWeekButton text={weekAsText(week)} />
