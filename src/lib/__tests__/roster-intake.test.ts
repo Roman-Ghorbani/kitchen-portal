@@ -72,7 +72,7 @@ describe('the chapter export', () => {
     );
     const serialised = JSON.stringify(r);
     assert.ok(!serialised.includes('secret@x.com'), 'email must never be read');
-    assert.ok(!serialised.includes('579'), 'phone must never be read');
+    assert.ok(!serialised.includes('555'), 'phone must never be read');
     assert.deepEqual(r.columns, { classYear: false, pledgeClass: true, room: true, crew: false });
   });
 
@@ -181,7 +181,7 @@ describe('typed lists', () => {
 
 describe('matching names', () => {
   test('case, spacing, accents and apostrophes do not matter', () => {
-    assert.equal(nameKey('  Liam  O’Dell '), nameKey("Liam O’Dell"));
+    assert.equal(nameKey('  Liam  O’Dell '), nameKey("liam o'dell"));
     assert.equal(nameKey('José Núñez'), nameKey('jose nunez'));
   });
 });
