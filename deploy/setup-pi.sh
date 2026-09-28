@@ -25,7 +25,7 @@ as_app() { sudo -u "$APP_USER" -H bash -c "cd '$APP_DIR' && $*"; }
 
 as_app "npm ci"
 as_app "mkdir -p data && chmod 700 data"
-as_app "node --env-file=.env.production ./node_modules/drizzle-kit/bin.cjs migrate"
+as_app "npm run db:migrate"
 as_app "npm run build"
 
 for unit in kitchen-portal.service kitchen-portal-reminder.service kitchen-portal-reminder.timer; do
