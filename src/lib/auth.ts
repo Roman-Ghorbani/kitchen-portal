@@ -279,7 +279,7 @@ export function matchTotp(
 ): number | null {
   if (!/^\d{6}$/.test(code)) return null;
   const now = totpStep(nowMs);
-  for (const step of [now, now - 1, now + 1]) {
+  for (const step of [now, now - 1, now + 1, now - 2, now + 2]) {
     if (safeEqual(totpAt(secretBase32, step), code)) return step;
   }
   return null;
