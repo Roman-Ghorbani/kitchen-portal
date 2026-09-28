@@ -66,16 +66,26 @@ export function hashSecret(secret: string): string {
 
 export function verifySecret(secret: string, stored: string | null | undefined): boolean {
   if (!stored) return false;
-  const [scheme, saltB64, hashB64] = stored.split('$');
-  if (scheme !== 'scrypt' || !saltB64 || !hashB64) return false;
+  const cleanStored = stored.trim().replace(/^["']|["']$/g, '');
+  const [scheme, saltB64, hashB64] = cleanStored.split('$');
+  if (scheme !== 'scrypt' || !saltB64 || !hashB64) {
+    console.log('[verifySecret parse failed]', { cleanStored: cleanStored.slice(0, 15), scheme });
+    return false;
+  }
 
   try {
     const salt = Buffer.from(saltB64, 'base64url');
     const expected = Buffer.from(hashB64, 'base64url');
-    if (expected.length !== SCRYPT_KEYLEN) return false;
+    if (expected.length !== SCRYPT_KEYLEN) {
+      console.log('[verifySecret keylen mismatch]', { expLen: expected.length, SCRYPT_KEYLEN });
+      return false;
+    }
     const actual = scryptSync(secret, salt, expected.length, { N: SCRYPT_COST });
-    return timingSafeEqual(actual, expected);
-  } catch {
+    const match = timingSafeEqual(actual, expected);
+    console.log('[verifySecret result]', { match, secretLen: secret.length });
+    return match;
+  } catch (err) {
+    console.log('[verifySecret error]', err);
     return false;
   }
 }
@@ -184,12 +194,18 @@ export const verifyPin = verifySecret;
  */
 export function verifyAdminPassword(candidate: string): boolean {
   if (!candidate) return false;
-  const hashed = process.env.ADMIN_PASSWORD_HASH;
-  if (hashed) return verifySecret(candidate, hashed);
+  const clean = candidate.trim();
+  const hashed = process.env.ADMIN_PASSWORD_HASH?.trim().replace(/^["']|["']$/g, '');
+  if (hashed) {
+    return verifySecret(clean, hashed);
+  }
 
-  const plain = process.env.ADMIN_PASSWORD;
-  if (!plain) return false;
-  return safeEqual(candidate, plain);
+  const plain = process.env.ADMIN_PASSWORD?.trim().replace(/^["']|["']$/g, '');
+  if (plain) {
+    return safeEqual(clean, plain);
+  }
+
+  return false;
 }
 
 export function adminPasswordIsHashed(): boolean {
@@ -277,11 +293,15 @@ export function matchTotp(
   code: string,
   nowMs = Date.now(),
 ): number | null {
-  if (!/^\d{6}$/.test(code)) return null;
+  const cleanCode = (code || '').replace(/\s/g, '').trim();
+  if (!/^\d{6}$/.test(cleanCode)) return null;
+  const cleanSecret = (secretBase32 || '').trim().replace(/^["']|["']$/g, '');
   const now = totpStep(nowMs);
   for (const step of [now, now - 1, now + 1, now - 2, now + 2]) {
-    if (safeEqual(totpAt(secretBase32, step), code)) return step;
+    const exp = totpAt(cleanSecret, step);
+    if (safeEqual(exp, cleanCode)) return step;
   }
+  console.log(`[matchTotp mismatch] received=${cleanCode}, expectedNow=${totpAt(cleanSecret, now)}, nowStep=${now}`);
   return null;
 }
 
