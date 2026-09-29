@@ -27,7 +27,7 @@ manager use it daily.
 |---|---|
 | ![Kitchen tablet](docs/screenshots/kitchen-tablet.png) | ![Member record](docs/screenshots/member-record.png) |
 
-![Cover requests in the audit log: asked, raised to 2x by the manager, picked up](docs/screenshots/audit-cover.png)
+![Cover requests in the audit log over a few days: asked, picked up, and one same-day ask the manager raised to 2x](docs/screenshots/audit-cover.png)
 
 ![The manager's dashboard](docs/screenshots/dashboard.png)
 

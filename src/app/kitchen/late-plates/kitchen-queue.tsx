@@ -497,6 +497,11 @@ export function KitchenQueue({
             <div className="kq-switch" role="tablist" aria-label="Meal">
               {MEALS.map((m) => {
                 const outstanding = data?.meals?.[m]?.toMake ?? 0;
+                // "All done" only once there was something to do. A meal
+                // nobody has asked for yet says so, rather than looking finished.
+                const handledCount = data?.meals?.[m]?.handled ?? 0;
+                const status =
+                  outstanding > 0 ? `${outstanding} to make` : handledCount > 0 ? 'all done' : 'none yet';
                 return (
                   <button
                     key={m}
@@ -512,7 +517,7 @@ export function KitchenQueue({
                     <span
                       className={`kq-switch-count${outstanding > 0 ? ' pending' : ''}`}
                     >
-                      {outstanding > 0 ? `${outstanding} to make` : 'all done'}
+                      {status}
                     </span>
                   </button>
                 );

@@ -3,7 +3,7 @@ import { redirect, notFound } from 'next/navigation';
 
 import { getSession } from '../../../../../lib/session.ts';
 import { getMemberDossier } from '../../../../../lib/member-dossier.ts';
-import { parseISO, formatEasternTimestamp } from '../../../../../lib/dates.ts';
+import { parseISO, formatEasternTimestamp, todayInEastern } from '../../../../../lib/dates.ts';
 import { formatPoints, CLASS_YEAR_LABELS, ROTATION_LABELS } from '../../../../../lib/types.ts';
 import { AppShell } from '../../../shell.tsx';
 import { AdminAvailabilityEditor } from './admin-availability.tsx';
@@ -43,7 +43,7 @@ export default async function MemberDossierPage({
   if (!dossier) notFound();
 
   const { member, shifts, timeline, conflicts, totals } = dossier;
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayInEastern();
 
   return (
     <AppShell
@@ -136,6 +136,8 @@ export default async function MemberDossierPage({
         <div className="dossier-shifts">
           {shifts.map((s) => {
             const noShow = s.status === 'no-show';
+            // A shift somebody else took earns him nothing: the point went to them.
+            const earned = s.coveredByName ? 0 : s.pointsAwarded;
             const past = s.date < today;
 
             return (
@@ -171,7 +173,7 @@ export default async function MemberDossierPage({
                         ? 'bad'
                         : s.status === 'flagged'
                           ? 'bad'
-                          : s.pointsAwarded > 0
+                          : earned > 0
                             ? 'ok'
                             : 'locked'
                     }`}
@@ -186,10 +188,12 @@ export default async function MemberDossierPage({
                             ? 'Handed off'
                             : past
                               ? 'Served'
-                              : 'Upcoming'}
+                              : s.date === today
+                                ? 'Today'
+                                : 'Upcoming'}
                   </span>
                   <span className="ds-points mono">
-                    {s.pointsAwarded > 0 ? `+${formatPoints(s.pointsAwarded)}` : '0'}
+                    {earned > 0 ? `+${formatPoints(earned)}` : '0'}
                   </span>
                 </div>
               </div>
