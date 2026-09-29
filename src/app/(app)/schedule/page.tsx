@@ -171,7 +171,7 @@ export default async function SchedulePage({
             {openCount} shift{openCount === 1 ? ' still needs' : 's still need'} cover
           </span>
           <span className="alert-body">
-            Anyone can take these and keep the point, whichever crew they are on.
+            Anyone can take these and keep the point, whichever rotation they are on.
           </span>
         </div>
       )}
@@ -228,7 +228,7 @@ export default async function SchedulePage({
         <span>
           <span className="legend-swatch open" /> Needs cover
         </span>
-        <span>Each brother is on the lunch or the dinner crew</span>
+        <span>Each brother is on the lunch or the dinner rotation</span>
       </div>
     </AppShell>
   );

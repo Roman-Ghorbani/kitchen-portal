@@ -49,8 +49,8 @@ export interface Placement {
 }
 
 /**
- * Where somebody goes on duty. An explicit crew wins; otherwise the default
- * for his class year. An exempt brother still carries a crew - the one he
+ * Where somebody goes on duty. An explicit rotation wins; otherwise the default
+ * for his class year. An exempt brother still carries a rotation - the one he
  * returns to if the exemption is lifted.
  */
 export function placement(
@@ -82,7 +82,7 @@ export interface ImportOptions {
   liveInOnly: boolean;
   /** Take anyone on the roster who is not in the file off it. */
   removeMissing: boolean;
-  /** Put existing members back on their class year's default crew. */
+  /** Put existing members back on their class year's default rotation. */
   resetCrews: boolean;
 }
 
@@ -132,7 +132,7 @@ export interface ImportPlan {
 }
 
 const show = (v: unknown) => (v === null || v === undefined || v === '' ? '—' : String(v));
-const crewLabel = (p: { rotation: Meal; exempt: boolean }) => (p.exempt ? 'exempt' : `${p.rotation} crew`);
+const crewLabel = (p: { rotation: Meal; exempt: boolean }) => (p.exempt ? 'exempt' : `${p.rotation} rotation`);
 
 export function planImport(
   intake: IntakeResult,

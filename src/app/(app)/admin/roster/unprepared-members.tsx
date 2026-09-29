@@ -229,7 +229,7 @@ export function UnpreparedMembersSection({
                   </Link>
 
                   <span className={`tag ${m.exempt ? 'locked' : m.rotation === 'lunch' ? 'jun' : 'soph'}`}>
-                    {m.exempt ? 'Exempt' : m.rotation === 'lunch' ? 'Lunch crew' : 'Dinner crew'}
+                    {m.exempt ? 'Exempt' : m.rotation === 'lunch' ? 'Lunch rotation' : 'Dinner rotation'}
                   </span>
                 </div>
 

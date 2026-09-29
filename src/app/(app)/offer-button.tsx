@@ -35,8 +35,11 @@ export function OfferShiftButton({ assignmentId }: { assignmentId: string }) {
   return (
     <div className="flag-wrap">
       {!open ? (
-        <button className="btn sm danger" onClick={() => setOpen(true)}>
-          Put this up for grabs
+        <button className="shift-btn" onClick={() => setOpen(true)}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M7 7h11l-3-3M17 17H6l3 3" />
+          </svg>
+          Put up for grabs
         </button>
       ) : (
         <div className="flag-form">
@@ -49,11 +52,11 @@ export function OfferShiftButton({ assignmentId }: { assignmentId: string }) {
             onKeyDown={(e) => e.key === 'Enter' && submit()}
           />
           <div className="flag-actions" style={{ marginTop: 8 }}>
-            <button className="btn sm" type="button" onClick={() => setOpen(false)}>
+            <button className="shift-btn" type="button" onClick={() => setOpen(false)}>
               Cancel
             </button>
             <button
-              className="btn danger sm"
+              className="shift-btn is-primary"
               type="button"
               onClick={submit}
               disabled={pending || !reason.trim()}

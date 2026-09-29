@@ -299,7 +299,7 @@ export function PersonPicker({
                   </span>
                 )}
                 <span className={`tag ${m.rotation === 'lunch' ? 'jun' : 'soph'}`}>
-                  {m.rotation === 'lunch' ? 'lunch crew' : 'dinner crew'}
+                  {m.rotation === 'lunch' ? 'lunch rotation' : 'dinner rotation'}
                 </span>
                 <span className="roster-pts mono">{formatPoints(m.points)} pts</span>
                 {m.exempt && <span className="tag locked">exempt</span>}
@@ -611,7 +611,7 @@ export function SlotEditor({
               />
               <label className="check-inline">
                 <input type="checkbox" checked={otherCrew} onChange={(e) => setOtherCrew(e.target.checked)} />
-                Allow the other crew
+                Allow the other rotation
               </label>
               <button className="btn sm" onClick={() => setAdding(false)}>
                 Cancel

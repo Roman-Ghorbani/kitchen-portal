@@ -2,7 +2,7 @@
  * A brother's own profile: what the house knows about him, the few things he
  * keeps up to date himself (room, Slack ID, allergies), and his account.
  *
- * Crew, exemption and points are shown but not editable here - they decide
+ * Rotation, exemption and points are shown but not editable here - they decide
  * who cleans, so they stay with the kitchen manager.
  */
 
@@ -11,7 +11,7 @@ import { redirect } from 'next/navigation';
 import { getSession, getViewAs } from '../../../lib/session.ts';
 import { getMemberById } from '../../../lib/member-queries.ts';
 import { getMemberDietary } from '../../../lib/late-plate-service.ts';
-import { CLASS_YEAR_LABELS, CREW_LABELS, EXEMPT_REASON_LABELS, formatPoints } from '../../../lib/types.ts';
+import { CLASS_YEAR_LABELS, ROTATION_LABELS, EXEMPT_REASON_LABELS, formatPoints } from '../../../lib/types.ts';
 import { AppShell } from '../shell.tsx';
 import { AccountCard } from '../account-card.tsx';
 import { ProfileForm, DietaryForm } from './profile-forms.tsx';
@@ -31,7 +31,7 @@ export default async function ProfilePage() {
 
   const duty = member.exempt
     ? `Exempt · ${EXEMPT_REASON_LABELS[member.exemptReason ?? 'other']}`
-    : CREW_LABELS[member.rotation];
+    : ROTATION_LABELS[member.rotation];
 
   return (
     <AppShell

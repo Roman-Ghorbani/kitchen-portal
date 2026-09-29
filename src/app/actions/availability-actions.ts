@@ -20,9 +20,9 @@ const DAY_NAMES = [
 /**
  * Sets a standing weekly conflict, or clears it.
  *
- * Each brother is on one crew, so his crew fixes the meal and one day index
+ * Each brother is on one rotation, so his rotation fixes the meal and one day index
  * per person is enough: blocking Tuesday blocks Tuesday lunch for someone on
- * the lunch crew, and nothing else needs saying.
+ * the lunch rotation, and nothing else needs saying.
  *
  * This is the primary defence against last-minute drama: someone who sets a
  * recurring class conflict once is simply never scheduled then, so there is

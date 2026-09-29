@@ -9805,3 +9805,173 @@ body:has(.mb-scrim) .mobile-bottom-nav {
 .debt-row .form-field {
   width: 150px;
 }
+
+/* ---- shift actions: the buttons on a brother's next shift ---------- */
+/* Quiet by default. Offering a shift is an ordinary thing to do, not an
+   alarm, and the hero card's own colour already carries the emphasis. */
+
+.next-action {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.next-action .flag-wrap {
+  margin-left: 0;
+}
+
+.shift-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 42px;
+  padding: 0 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(236, 238, 241, 0.16);
+  background: rgba(236, 238, 241, 0.05);
+  color: var(--ink-700);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s var(--ease), border-color 0.15s var(--ease), color 0.15s var(--ease);
+}
+
+.shift-btn:hover {
+  background: rgba(236, 238, 241, 0.1);
+  border-color: rgba(236, 238, 241, 0.28);
+  color: var(--ink-900);
+}
+
+.shift-btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.shift-btn svg {
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
+.shift-btn.is-soft {
+  background: var(--blue-wash);
+  border-color: rgba(111, 163, 220, 0.3);
+  color: var(--blue-hi);
+}
+
+.shift-btn.is-soft:hover {
+  background: rgba(111, 163, 220, 0.2);
+  border-color: rgba(111, 163, 220, 0.45);
+  color: var(--blue-hi);
+}
+
+.shift-btn.is-primary {
+  background: var(--blue-dim);
+  border-color: var(--blue-dim);
+  color: #fff;
+}
+
+.shift-btn.is-primary:hover {
+  background: var(--blue);
+  border-color: var(--blue);
+  color: #0f1113;
+}
+
+.shift-btn-caret {
+  margin-left: -2px;
+  transition: transform 0.15s var(--ease);
+}
+
+.shift-btn-caret.is-open {
+  transform: rotate(180deg);
+}
+
+/* On a light card (the upcoming list), the same button on light ink. */
+.upcoming-shift .shift-btn {
+  border-color: var(--line-strong);
+  background: transparent;
+  color: var(--ink-700);
+  height: 38px;
+  font-size: 13.5px;
+}
+
+.cal-popover-menu {
+  left: 0;
+  right: auto;
+  width: 280px;
+  background: var(--raised);
+  border: 1px solid var(--line-strong);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+}
+
+.cal-menu-item {
+  color: var(--ink-900);
+  padding: 10px 12px;
+}
+
+.cal-menu-item:hover {
+  background: var(--blue-wash);
+}
+
+.cal-menu-item .cal-title {
+  color: var(--ink-900);
+  font-size: 13.5px;
+}
+
+.cal-menu-item .cal-sub {
+  color: var(--ink-2);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+@media (max-width: 620px) {
+  .next-action {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .next-action .shift-btn,
+  .next-action .cal-popover-wrap,
+  .next-action .flag-wrap {
+    width: 100%;
+  }
+
+  .next-action .shift-btn {
+    justify-content: center;
+  }
+
+  .cal-popover-menu {
+    width: 100%;
+  }
+}
+
+/* The hero card clips overflow, so the calendar choices open in the flow of
+   the card rather than floating over its edge. */
+.next-action .cal-popover-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.next-action .cal-popover-menu {
+  position: static;
+  width: 100%;
+  min-width: 260px;
+  box-shadow: none;
+}
+
+/* Destructive, but not shouting: an outline in the muted clay. */
+.bulk-bar .btn.danger,
+.profile-grid .btn.danger {
+  background: transparent;
+  color: var(--clay);
+  border-color: rgba(196, 117, 107, 0.45);
+}
+
+.bulk-bar .btn.danger:hover,
+.profile-grid .btn.danger:hover {
+  background: rgba(196, 117, 107, 0.12);
+  border-color: var(--clay);
+  color: var(--clay);
+}

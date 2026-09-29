@@ -16,7 +16,7 @@ import { db } from '../db/index.ts';
 import { members, events, assignments, CLASS_YEARS, EXEMPT_REASONS } from '../db/schema.ts';
 import {
   CLASS_YEAR_LABELS,
-  CREW_LABELS,
+  ROTATION_LABELS,
   EXEMPT_REASON_LABELS,
   formatPoints,
   type ClassYear,
@@ -149,21 +149,21 @@ export async function updateProfile(actor: string, id: string, input: ProfileInp
 }
 
 /* ------------------------------------------------------------------ */
-/* Duty: crew and exemption                                            */
+/* Duty: rotation and exemption                                        */
 /* ------------------------------------------------------------------ */
 
-/** Lunch crew, dinner crew, or exempt with a reason. */
+/** Lunch rotation, dinner rotation, or exempt with a reason. */
 export type Duty = { kind: 'crew'; crew: Meal } | { kind: 'exempt'; reason: ExemptReason; notes?: string };
 
 export function dutyLabel(d: { rotation: Meal; exempt: boolean; exemptReason: ExemptReason | null }): string {
   return d.exempt
     ? `exempt (${EXEMPT_REASON_LABELS[d.exemptReason ?? 'other'].toLowerCase()})`
-    : CREW_LABELS[d.rotation].toLowerCase();
+    : ROTATION_LABELS[d.rotation].toLowerCase();
 }
 
 /**
- * Puts people on a crew or exempts them. Putting an exempt brother on a crew
- * lifts the exemption; exempting keeps his crew for when he comes back.
+ * Puts people on a rotation or exempts them. Putting an exempt brother on a rotation
+ * lifts the exemption; exempting keeps his rotation for when he comes back.
  * Weeks already posted are not touched.
  */
 export async function setDuty(actor: string, ids: string[], duty: Duty): Promise<RosterResult> {
@@ -200,7 +200,7 @@ export async function setDuty(actor: string, ids: string[], duty: Duty): Promise
   });
 
   const what =
-    duty.kind === 'crew' ? `on the ${CREW_LABELS[duty.crew].toLowerCase()}` : 'exempt';
+    duty.kind === 'crew' ? `on the ${ROTATION_LABELS[duty.crew].toLowerCase()}` : 'exempt';
   if (!moved) return { ok: true, message: `Already ${what}.` };
   return {
     ok: true,
@@ -220,8 +220,8 @@ export type PointsScope = 'selected' | 'on-duty' | 'lunch' | 'dinner' | 'everyon
 export const POINTS_SCOPE_LABELS: Record<PointsScope, string> = {
   selected: 'Selected brothers',
   'on-duty': 'Everyone on duty',
-  lunch: 'Lunch crew',
-  dinner: 'Dinner crew',
+  lunch: 'Lunch rotation',
+  dinner: 'Dinner rotation',
   everyone: 'Everyone on the roster (exempt too)',
 };
 
@@ -391,13 +391,13 @@ export interface NewMemberInput {
   duty?: CrewDefault;
   room?: string;
   pledgeClass?: string;
-  /** Starting points. Omitted: the lowest on his crew, so he is not first in line for everything. */
+  /** Starting points. Omitted: the lowest on his rotation, so he is not first in line for everything. */
   points?: number;
 }
 
 /**
  * Where a newcomer's points start. Zero would put him at the front of the
- * draw for weeks; the lowest current score on his crew puts him level with
+ * draw for weeks; the lowest current score on his rotation puts him level with
  * whoever has done the least.
  */
 async function startingPoints(rotation: Meal): Promise<number> {

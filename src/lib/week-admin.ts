@@ -23,7 +23,7 @@ import {
   events,
 } from '../db/schema.ts';
 import { unsettleAssignment, settleAssignment } from './shift-service.ts';
-import { CREW_LABELS } from './types.ts';
+import { ROTATION_LABELS } from './types.ts';
 import { dayIndex, todayInEastern } from './dates.ts';
 
 export interface AdminResult {
@@ -162,7 +162,7 @@ export async function reassignShift(
   if (!opts.allowOtherCrew && next.rotation !== ctx.slot.meal) {
     return {
       ok: false,
-      message: `${next.name} is on the ${CREW_LABELS[next.rotation].toLowerCase()}, and this is ${ctx.slot.meal}. Tick "allow the other crew" if you are sure.`,
+      message: `${next.name} is on the ${ROTATION_LABELS[next.rotation].toLowerCase()}, and this is ${ctx.slot.meal}. Tick "allow the other rotation" if you are sure.`,
     };
   }
 
@@ -299,7 +299,7 @@ export async function addToShift(
   if (!opts.allowOtherCrew && person.rotation !== slot.meal) {
     return {
       ok: false,
-      message: `${person.name} is on the ${CREW_LABELS[person.rotation].toLowerCase()}, and this is ${slot.meal}. Tick "allow the other crew" if you are sure.`,
+      message: `${person.name} is on the ${ROTATION_LABELS[person.rotation].toLowerCase()}, and this is ${slot.meal}. Tick "allow the other rotation" if you are sure.`,
     };
   }
 

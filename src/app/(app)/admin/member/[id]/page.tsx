@@ -4,7 +4,7 @@ import { redirect, notFound } from 'next/navigation';
 import { getSession } from '../../../../../lib/session.ts';
 import { getMemberDossier } from '../../../../../lib/member-dossier.ts';
 import { parseISO, formatEasternTimestamp } from '../../../../../lib/dates.ts';
-import { formatPoints, CLASS_YEAR_LABELS, CREW_LABELS } from '../../../../../lib/types.ts';
+import { formatPoints, CLASS_YEAR_LABELS, ROTATION_LABELS } from '../../../../../lib/types.ts';
 import { AppShell } from '../../../shell.tsx';
 import { AdminAvailabilityEditor } from './admin-availability.tsx';
 import { ViewAsButton } from './view-as-button.tsx';
@@ -52,7 +52,7 @@ export default async function MemberDossierPage({
       title={member.name}
       subtitle={[
         CLASS_YEAR_LABELS[member.classYear],
-        member.exempt ? 'exempt' : CREW_LABELS[member.rotation].toLowerCase(),
+        member.exempt ? 'exempt' : ROTATION_LABELS[member.rotation].toLowerCase(),
         member.room && `room ${member.room}`,
         !member.active && 'off the roster',
       ]

@@ -31,8 +31,8 @@ export function RosterDefaultsForm({ initial }: { initial: Record<ClassYear, Cre
               value={crews[y]}
               onChange={(e) => setCrews({ ...crews, [y]: e.target.value as CrewDefault })}
             >
-              <option value="lunch">Lunch crew</option>
-              <option value="dinner">Dinner crew</option>
+              <option value="lunch">Lunch rotation</option>
+              <option value="dinner">Dinner rotation</option>
               <option value="exempt">Exempt</option>
             </select>
           </label>

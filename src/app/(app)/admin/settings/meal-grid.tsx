@@ -49,7 +49,7 @@ export function MealGrid({ initial }: { initial: MealDayConfig }) {
             <span className="meal-row-label">
               {meal === 'lunch' ? 'Lunch' : 'Dinner'}
               <span className="meal-row-sub">
-                {meal === 'lunch' ? 'lunch crew' : 'dinner crew'}
+                {meal === 'lunch' ? 'lunch rotation' : 'dinner rotation'}
               </span>
             </span>
             {DAYS.map((d, i) => (

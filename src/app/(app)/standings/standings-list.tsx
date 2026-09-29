@@ -9,8 +9,8 @@ type Pool = 'all' | 'lunch' | 'dinner';
 
 const POOLS: { key: Pool; label: string }[] = [
   { key: 'all', label: 'Everyone' },
-  { key: 'lunch', label: 'Lunch crew' },
-  { key: 'dinner', label: 'Dinner crew' },
+  { key: 'lunch', label: 'Lunch rotation' },
+  { key: 'dinner', label: 'Dinner rotation' },
 ];
 
 /** How many rows to show at each end before collapsing the middle. */
@@ -33,7 +33,7 @@ export function StandingsList({
     [pool, rows],
   );
 
-  // Ranks are always the ones from the full list, so filtering to one crew does
+  // Ranks are always the ones from the full list, so filtering to one rotation does
   // not renumber everybody and quietly change what the page is claiming.
   const myIndex = meId ? filtered.findIndex((r) => r.id === meId) : -1;
 
@@ -64,7 +64,7 @@ export function StandingsList({
     <div key={r.id} className={`st-row${r.id === meId ? ' is-me' : ''}`}>
       <span className="st-rank mono">{r.rank}</span>
       <span className="st-name">{r.id === meId ? 'You' : r.name}</span>
-      <span className="st-year mono" title={r.rotation === 'lunch' ? 'Lunch crew' : 'Dinner crew'}>{r.rotation === 'lunch' ? 'L' : 'D'}</span>
+      <span className="st-year mono" title={r.rotation === 'lunch' ? 'Lunch rotation' : 'Dinner rotation'}>{r.rotation === 'lunch' ? 'L' : 'D'}</span>
       <span className="st-pts mono">{formatPoints(r.points)}</span>
     </div>
   );

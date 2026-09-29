@@ -1,9 +1,9 @@
 /**
  * Core domain types for the Kitchen Portal.
  *
- *   - Every brother on the roster is on a crew: lunch or dinner. The crew
+ *   - Every brother on the roster is on a rotation: lunch or dinner. The rotation
  *     decides which meal he is drawn for. Class year is only a default for
- *     the crew, because it does not always match (a senior living in, a
+ *     the rotation, because it does not always match (a senior living in, a
  *     brother who rushed a year late).
  *   - Exempt brothers are on the roster but never drawn.
  *   - Nobody serves more than once in a Mon-Sun week, EXCEPT to work off a
@@ -23,9 +23,9 @@ export const CLASS_YEAR_LABELS: Record<ClassYear, string> = {
   other: 'Other',
 };
 
-export const CREW_LABELS: Record<Meal, string> = {
-  lunch: 'Lunch crew',
-  dinner: 'Dinner crew',
+export const ROTATION_LABELS: Record<Meal, string> = {
+  lunch: 'Lunch rotation',
+  dinner: 'Dinner rotation',
 };
 
 /** 0 = Monday ... 6 = Sunday. Weeks run Mon-Sun to match the posting cadence. */
@@ -58,8 +58,8 @@ export interface Member {
   exemptNotes?: string;
   /**
    * Day-of-week indices this member can never serve (standing semester
-   * conflicts, e.g. a Tuesday lab). He is on one crew, so a single day index
-   * is enough - a lunch-crew brother blocking Tuesday is blocking Tuesday
+   * conflicts, e.g. a Tuesday lab). He is on one rotation, so a single day index
+   * is enough - a brother on the lunch rotation blocking Tuesday is blocking Tuesday
    * lunch.
    */
   standingConflicts: DayIndex[];

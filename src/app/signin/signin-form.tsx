@@ -298,7 +298,7 @@ function PickedHeader({ member }: { member: PickerMember }) {
       <span className="avatar me">{initials(member.name)}</span>
       <div>
         <div className="picked-name">{member.name}</div>
-        <div className="hint">{member.rotation === 'lunch' ? 'Lunch crew' : 'Dinner crew'}</div>
+        <div className="hint">{member.rotation === 'lunch' ? 'Lunch rotation' : 'Dinner rotation'}</div>
       </div>
     </div>
   );

@@ -203,7 +203,7 @@ export const members = sqliteTable(
 
 /**
  * Standing weekly conflicts - the primary defence against last-minute drama.
- * A brother is on one crew, so one day index per row is sufficient.
+ * A brother is on one rotation, so one day index per row is sufficient.
  */
 export const standingConflicts = sqliteTable(
   'standing_conflicts',

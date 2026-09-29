@@ -13,7 +13,7 @@
  *      reproduces the identical schedule rather than reshuffling people.
  *
  * Hard constraints, never violated:
- *   - Each crew takes its own meal: lunch crew lunch, dinner crew dinner
+ *   - Each rotation takes its own meal: lunch rotation lunch, dinner rotation dinner
  *   - Exempt members are excluded entirely
  *   - Standing weekly conflicts are excluded
  *   - One shift per person per week, with make-up shifts the sole exception

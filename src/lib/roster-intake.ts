@@ -70,8 +70,8 @@ for (const [year, words] of Object.entries({
 }
 
 const CREW_WORDS: Record<string, IntakeCrew> = {
-  lunch: 'lunch', l: 'lunch', 'lunch crew': 'lunch',
-  dinner: 'dinner', d: 'dinner', 'dinner crew': 'dinner',
+  lunch: 'lunch', l: 'lunch', 'lunch crew': 'lunch', 'lunch rotation': 'lunch',
+  dinner: 'dinner', d: 'dinner', 'dinner crew': 'dinner', 'dinner rotation': 'dinner',
   exempt: 'exempt', none: 'exempt', off: 'exempt', 'not on duty': 'exempt', 'n/a': 'exempt',
 };
 

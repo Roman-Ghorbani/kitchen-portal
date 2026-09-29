@@ -14,18 +14,18 @@ manager use it daily.
 |---|---|
 | **Brothers** (phone) | Their next shift and history, the week's board, putting a shift up for grabs or taking one, the day's menu, requesting a late plate with their allergies attached, a points standings list, and a profile they keep up to date themselves |
 | **Chefs** (kitchen tablet) | The live late plate queue with mandatory allergy acknowledgement, cutoff controls, and the menu editor |
-| **Kitchen manager** (desktop) | Drawing and posting weeks, attendance, roster management (import, crews, exemptions, bulk points, setup codes), the kitchen tablet, the full audit log, and an in-app [handbook](docs/HANDBOOK.md) |
+| **Kitchen manager** (desktop) | Drawing and posting weeks, attendance, roster management (import, rotations, exemptions, bulk points, setup codes), the kitchen tablet, the full audit log, and an in-app [handbook](docs/HANDBOOK.md) |
 | **Out-of-house seniors** | A read-only weekly menu behind a shared password |
 
 <p align="center">
   <img src="docs/screenshots/phone-home.png" width="30%" alt="A brother's home screen: his next shift, points and standing">
   <img src="docs/screenshots/phone-board.png" width="30%" alt="The week's duty board on a phone">
-  <img src="docs/screenshots/phone-menu.png" width="30%" alt="The day's menu, where late plates are requested">
+  <img src="docs/screenshots/phone-request-plate.png" width="30%" alt="Requesting a late plate, with his allergy attached automatically">
 </p>
 
 ![The manager's dashboard](docs/screenshots/dashboard.png)
 
-| Roster, with a bulk points change previewed | The chefs' late plate queue on the kitchen tablet |
+| Roster: a point for four brothers who stayed to deep-clean, previewed before it is applied | The chefs' lunch late-plate queue on the kitchen tablet |
 |---|---|
 | ![Roster](docs/screenshots/roster.png) | ![Kitchen tablet](docs/screenshots/kitchen-tablet.png) |
 
@@ -109,7 +109,7 @@ without help from whoever built it:
   every add, update and removal for approval before anything is written, and
   the server re-plans from the same text rather than trusting the preview
   (`src/lib/roster-intake.ts`, `src/lib/roster-plan.ts`).
-- **Bulk actions** on any selection: move crews, exempt with a reason, issue
+- **Bulk actions** on any selection: move rotations, exempt with a reason, issue
   setup codes, take off the roster. Points can be added, subtracted, set or
   rebased for a selection or a whole crew, with a preview and a reason that
   lands on each brother's record (`src/lib/points-ops.ts`).
@@ -178,9 +178,9 @@ Full procedure, including moving an existing install over, is in
 
 ## How the house rules are encoded
 
-- **Who is on duty.** Each brother is on a lunch or a dinner crew, or exempt.
-  The crew is a per-person field; class year is only a profile fact, used to
-  pick the default crew when someone is added or imported (juniors lunch,
+- **Who is on duty.** Each brother is on a lunch or a dinner rotation, or exempt.
+  The rotation is a per-person field; class year is only a profile fact, used to
+  pick the default rotation when someone is added or imported (juniors lunch,
   sophomores dinner, seniors exempt, all configurable in Settings).
 - **Selection order** for an open seat: make-up debt owed, then fewest points,
   then longest since last served, then a random draw seeded by the week - so a

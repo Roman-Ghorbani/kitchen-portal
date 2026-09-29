@@ -4,7 +4,7 @@
  * Organised by what the manager is trying to do, one card each:
  *   Meal service     which days the house serves (drives week generation)
  *   Senior Week menu the shareable menu link and its password
- *   Roster defaults  which crew each class year joins when added or imported
+ *   Roster defaults  which rotation each class year joins when added or imported
  *   Security         how the manager account is protected, and a kill switch
  *   Semester         what term this is, and starting the next one
  *   House rules      how the scheduler decides, for reference
@@ -83,7 +83,7 @@ export default async function SettingsPage() {
       <section className="card card-pad settings-card" id="roster-defaults">
         <h2 className="section-title">Roster defaults</h2>
         <p className="settings-lede">
-          Which crew someone joins when you add or import him, by class year.
+          Which rotation someone joins when you add or import him, by class year.
           Only a starting point: anyone can be moved to either crew, or
           exempted, from the <Link href="/admin/roster">Roster</Link>. Changing
           these never moves anybody already on the roster.
@@ -151,8 +151,8 @@ export default async function SettingsPage() {
         <dl className="rules">
           <dt>Staffing</dt>
           <dd>
-            {slotSizes.lunch} from the lunch crew at each lunch, {slotSizes.dinner} from
-            the dinner crew at each dinner. Each brother is on one crew, set on the
+            {slotSizes.lunch} from the lunch rotation at each lunch, {slotSizes.dinner} from
+            the dinner rotation at each dinner. Each brother is on one rotation, set on the
             Roster; exempt brothers are never drawn.
           </dd>
 

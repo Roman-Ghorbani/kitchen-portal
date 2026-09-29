@@ -12,8 +12,8 @@ Everything you do is written to the **Audit log**, with your name on it. That lo
 
 ## How the draw works {#rules}
 
-- Every brother on duty is on one **crew**, either lunch or dinner. His crew decides which meal he cleans. His class year does not, so you can put a junior on dinner or a live-in senior on lunch.
-- **Exempt** brothers are never drawn. Seniors are usually exempt, and so are some officers. An exempt brother keeps his crew and his points, so lifting the exemption puts him straight back where he was.
+- Every brother on duty is on one **rotation**, either lunch or dinner. His rotation decides which meal he cleans; the two or three people cleaning one meal are that shift's crew. His class year does not, so you can put a junior on dinner or a live-in senior on lunch.
+- **Exempt** brothers are never drawn. Seniors are usually exempt, and so are some officers. An exempt brother keeps his rotation and his points, so lifting the exemption puts him straight back where he was.
 - For each open seat the draw takes, in order: anyone who owes a **make-up** shift, then whoever has the **fewest points**, then whoever has gone longest without serving. Remaining ties are broken by a random draw that is fixed for that week.
 - Nobody is drawn twice in one Monday–Sunday week, except for a make-up shift.
 - **Standing conflicts** are respected. These are the days each brother says he can never do, entered from his Home page.
@@ -24,18 +24,18 @@ Everything you do is written to the **Audit log**, with your name on it. That lo
 - A normal shift is worth 1 point. You can make a shift worth more (1.5×, 2× or 3×) on the Weeks page, for example the night after a party.
 - **Points carry over between semesters and are never reset.** Over a brother's whole time in the house, points are what keep the load fair. Zeroing everyone would reward the people who skipped out last term.
 - To change points by hand, open the brother's page from the Roster. Add or subtract whole or half points, and give a reason; the reason goes on his record.
-- To change many people at once, go to **Roster → Adjust points**. You can add, subtract, set to a value, or **rebase**. Pick who it applies to (the people you selected, a crew, or everyone), press **Preview**, check the list, then **Apply**.
+- To change many people at once, go to **Roster → Adjust points**. You can add, subtract, set to a value, or **rebase**. Pick who it applies to (the people you selected, a rotation, or everyone), press **Preview**, check the list, then **Apply**.
 - **Rebase** subtracts the lowest score from everybody in the group. The numbers get smaller, but the order and the gaps between people stay exactly the same. Use it if the numbers get large, and never simply zero everyone.
-- New brothers start level with the lowest score on their crew, not at zero. Starting at zero would make them first in line for every shift for weeks.
+- New brothers start level with the lowest score on their rotation, not at zero. Starting at zero would make them first in line for every shift for weeks.
 
 ## Start of semester {#semester}
 
 Do these in order. The whole list takes about an hour.
 
 1. **Settings → Semester → Start the next semester.** Check the name and dates. The roster, everyone's points, meal days, crew sizes and late-plate settings carry over. Standing conflicts start fresh, because class schedules change. Last semester's weeks stay in the record.
-2. **Settings → Roster defaults.** Check which crew each class year joins by default. The usual setup is juniors on lunch, freshmen and sophomores on dinner, and seniors exempt. These defaults only apply to people you add or import from now on; they never move anyone already on the roster.
+2. **Settings → Roster defaults.** Check which rotation each class year joins by default. The usual setup is juniors on lunch, freshmen and sophomores on dinner, and seniors exempt. These defaults only apply to people you add or import from now on; they never move anyone already on the roster.
 3. **Roster → Import.** Paste or upload the house roster. The chapter's export works, and so does a spreadsheet saved as CSV, cells copied straight from Google Sheets, or a typed list with headings like *Juniors*. If the file only has pledge classes, you will be asked what year each pledge class is in now; the app remembers your answers for next time. With a room column, tick **only people who live in the house**. To clear out last year's people, tick **take anyone not in this roster off**. Press **Preview changes**, untick anything that looks wrong, then import.
-4. **Roster → Everyone.** Fix anyone the defaults got wrong. Tick the boxes next to their names, then use **→ Lunch crew**, **→ Dinner crew** or **Exempt…** in the bar at the bottom. Typical fixes are a junior who pledged late, a live-in senior who is not exempt, and an officer who is exempt.
+4. **Roster → Everyone.** Fix anyone the defaults got wrong. Tick the boxes next to their names, then use **→ Lunch rotation**, **→ Dinner rotation** or **Exempt…** in the bar at the bottom. Typical fixes are a junior who pledged late, a live-in senior who is not exempt, and an officer who is exempt.
 5. **Roster → Not ready → Issue setup codes.** Every new brother needs a one-time code to claim his account and choose a PIN. Codes are shown once, so copy each one into a Slack DM, or print the sheet and hand it out at chapter. Codes expire after 7 days; issuing a new code cancels the old one.
 6. **Ask everyone to enter their standing conflicts** (Home → Standing availability) before the first draw. Then check **Roster → Day by day**. A thin bar means a day that will be hard to fill.
 7. **Draw the first week** from the Dashboard.
@@ -55,7 +55,7 @@ Do these in order. The whole list takes about an hour.
 | Someone moves in | Roster → **+ Add a brother**, and tick *give me his setup code now* |
 | Someone moves out, graduates or depledges | Select him → **Take off roster**. His history and points are kept, and he can be put back from *Off roster*. |
 | Someone becomes an officer, or is injured | Select him → **Exempt…** and choose the reason |
-| He is on the wrong crew | Select him → **→ Lunch crew** or **→ Dinner crew**. Weeks already posted are not changed; fix those on the Weeks page. |
+| He is on the wrong rotation | Select him → **→ Lunch rotation** or **→ Dinner rotation**. Weeks already posted are not changed; fix those on the Weeks page. |
 | He forgot his PIN, or thinks someone else knows it | His page → Account → **Reset forgotten PIN**. This signs him out everywhere and gives you a new setup code for him. |
 | You added someone by mistake | His page → Account → **Delete**. This is only possible if he has never been scheduled. |
 | He wants to change his room or Slack ID | He can do it himself: tap his name at the top of any page to open **Profile**. |

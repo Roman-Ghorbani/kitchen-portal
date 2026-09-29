@@ -204,11 +204,11 @@ export function WeekGrid({
 
       <div className="wg-head lunch">
         <span className="wg-head-name">Lunch</span>
-        <span className="wg-head-sub">lunch crew</span>
+        <span className="wg-head-sub">lunch rotation</span>
       </div>
       <div className="wg-head dinner">
         <span className="wg-head-name">Dinner</span>
-        <span className="wg-head-sub">dinner crew</span>
+        <span className="wg-head-sub">dinner rotation</span>
       </div>
 
       {days.map((d, i) => (

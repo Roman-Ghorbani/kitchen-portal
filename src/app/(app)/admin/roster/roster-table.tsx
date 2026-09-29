@@ -23,7 +23,7 @@ import { issueSetupCode, issueSetupCodesForAll, type IssuedCode } from '../../..
 import { SetupCodes } from './setup-codes.tsx';
 import {
   CLASS_YEAR_LABELS,
-  CREW_LABELS,
+  ROTATION_LABELS,
   EXEMPT_REASON_LABELS,
   formatPoints,
   type ClassYear,
@@ -55,8 +55,8 @@ type Scope = 'selected' | 'on-duty' | 'lunch' | 'dinner' | 'everyone';
 
 const FILTERS: { key: Filter; label: string; test: (r: RosterRow) => boolean }[] = [
   { key: 'roster', label: 'On the roster', test: (r) => r.active },
-  { key: 'lunch', label: 'Lunch crew', test: (r) => r.active && !r.exempt && r.rotation === 'lunch' },
-  { key: 'dinner', label: 'Dinner crew', test: (r) => r.active && !r.exempt && r.rotation === 'dinner' },
+  { key: 'lunch', label: 'Lunch rotation', test: (r) => r.active && !r.exempt && r.rotation === 'lunch' },
+  { key: 'dinner', label: 'Dinner rotation', test: (r) => r.active && !r.exempt && r.rotation === 'dinner' },
   { key: 'exempt', label: 'Exempt', test: (r) => r.active && r.exempt },
   { key: 'no-pin', label: 'No PIN', test: (r) => r.active && !r.hasPin },
   { key: 'owing', label: 'Owes make-up', test: (r) => r.active && r.makeupDebt > 0 },
@@ -68,8 +68,8 @@ const YEAR_ORDER = Object.keys(CLASS_YEAR_LABELS) as ClassYear[];
 const SCOPE_LABELS: Record<Scope, string> = {
   selected: 'Selected brothers',
   'on-duty': 'Everyone on duty',
-  lunch: 'Lunch crew',
-  dinner: 'Dinner crew',
+  lunch: 'Lunch rotation',
+  dinner: 'Dinner rotation',
   everyone: 'Everyone on the roster, exempt too',
 };
 
@@ -77,7 +77,7 @@ function dutyTag(r: Pick<RosterRow, 'exempt' | 'exemptReason' | 'rotation'>) {
   if (r.exempt) {
     return <span className="tag locked">Exempt · {EXEMPT_REASON_LABELS[r.exemptReason ?? 'other']}</span>;
   }
-  return <span className={`tag ${r.rotation === 'lunch' ? 'jun' : 'soph'}`}>{CREW_LABELS[r.rotation]}</span>;
+  return <span className={`tag ${r.rotation === 'lunch' ? 'jun' : 'soph'}`}>{ROTATION_LABELS[r.rotation]}</span>;
 }
 
 export function RosterTable({
@@ -305,7 +305,7 @@ export function RosterTable({
       </div>
 
       <p className="note">
-        Select people to move them between crews, exempt them, adjust their
+        Select people to move them between rotations, exempt them, adjust their
         points or take them off the roster. Open a name for his profile, sign-in
         and full history. Every change is written to the audit log.
       </p>
@@ -322,10 +322,10 @@ export function RosterTable({
           ) : (
             <>
               <button className="btn sm" disabled={pending} onClick={() => run(() => setDuty(picked, { kind: 'crew', crew: 'lunch' }), clearSelection)}>
-                → Lunch crew
+                → Lunch rotation
               </button>
               <button className="btn sm" disabled={pending} onClick={() => run(() => setDuty(picked, { kind: 'crew', crew: 'dinner' }), clearSelection)}>
-                → Dinner crew
+                → Dinner rotation
               </button>
               <button className="btn sm" disabled={pending} onClick={() => setPanel('exempt')}>
                 Exempt…
@@ -399,7 +399,7 @@ function AddMemberPanel({
   const [wantCode, setWantCode] = useState(true);
 
   const fallback = crewDefaults[classYear];
-  const defaultLabel = fallback === 'exempt' ? 'exempt' : CREW_LABELS[fallback].toLowerCase();
+  const defaultLabel = fallback === 'exempt' ? 'exempt' : ROTATION_LABELS[fallback].toLowerCase();
 
   return (
     <form
@@ -438,8 +438,8 @@ function AddMemberPanel({
           <span>Duty</span>
           <select className="field" value={duty} onChange={(e) => setDutyChoice(e.target.value as '' | CrewDefault)}>
             <option value="">Default for the year ({defaultLabel})</option>
-            <option value="lunch">Lunch crew</option>
-            <option value="dinner">Dinner crew</option>
+            <option value="lunch">Lunch rotation</option>
+            <option value="dinner">Dinner rotation</option>
             <option value="exempt">Exempt</option>
           </select>
         </label>
@@ -457,7 +457,7 @@ function AddMemberPanel({
         Give me his setup code now
       </label>
       <p className="settings-hint">
-        He starts level with the lowest score on his crew, so he is not first in
+        He starts level with the lowest score on his rotation, so he is not first in
         line for every shift. Adding many people? Use the Import tab.
       </p>
       <div className="settings-actions">
@@ -518,7 +518,7 @@ function ExemptPanel({
       </div>
       <p className="settings-hint">
         Exempt brothers are never drawn and keep their points. They keep their
-        crew too, so lifting the exemption puts them straight back where they were.
+        rotation too, so lifting the exemption puts them straight back where they were.
       </p>
       <div className="settings-actions">
         <button className="btn primary sm" type="submit" disabled={pending}>

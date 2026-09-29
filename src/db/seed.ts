@@ -81,7 +81,7 @@ async function seedDemoRoster() {
   }
 
   // Juniors on lunch and sophomores on dinner, which is the house's usual
-  // split - but it is only a default; each member's crew is his own field.
+  // split - but it is only a default; each member's rotation is his own field.
   const rows = [
     ...DEMO_JUNIORS.map((name) => ({ name, classYear: 'junior' as const, rotation: 'lunch' as const })),
     ...DEMO_SOPHOMORES.map((name) => ({ name, classYear: 'sophomore' as const, rotation: 'dinner' as const })),
@@ -96,7 +96,7 @@ async function seedDemoRoster() {
 
   await db.insert(members).values(rows);
   console.log(
-    `seeded ${DEMO_JUNIORS.length} lunch crew, ${DEMO_SOPHOMORES.length} dinner crew ` +
+    `seeded ${DEMO_JUNIORS.length} lunch rotation, ${DEMO_SOPHOMORES.length} dinner rotation ` +
       `and ${DEMO_SENIORS.length} exempt seniors (demo data - delete before going live)`,
   );
 }
@@ -114,7 +114,7 @@ async function main() {
   const onDuty = roster.filter((m) => !m.exempt);
   const lunch = onDuty.filter((m) => m.rotation === 'lunch').length;
   console.log(
-    `roster: ${roster.length} (${lunch} lunch crew, ${onDuty.length - lunch} dinner crew, ` +
+    `roster: ${roster.length} (${lunch} lunch rotation, ${onDuty.length - lunch} dinner rotation, ` +
       `${roster.length - onDuty.length} exempt)`,
   );
 }

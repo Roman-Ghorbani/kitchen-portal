@@ -17,14 +17,14 @@ import { useRouter } from 'next/navigation';
 import { previewRosterImport, applyRosterImport } from '../../../../actions/roster-actions.ts';
 import { readRoster, pledgeClassesIn } from '../../../../../lib/roster-intake.ts';
 import type { ImportOptions, ImportPlan, CrewDefault } from '../../../../../lib/roster-plan.ts';
-import { CLASS_YEAR_LABELS, CREW_LABELS, type ClassYear } from '../../../../../lib/types.ts';
+import { CLASS_YEAR_LABELS, ROTATION_LABELS, type ClassYear } from '../../../../../lib/types.ts';
 
 type Preview = Awaited<ReturnType<typeof previewRosterImport>>;
 
 const YEARS = Object.keys(CLASS_YEAR_LABELS) as ClassYear[];
 
 const TEMPLATE =
-  'Name,Class year,Room,Crew\n' +
+  'Name,Class year,Room,Rotation\n' +
   'Jake Meyerson,Junior,204,\n' +
   'Noah Berger,Sophomore,112,\n' +
   'Ben Cohen,Senior,301,lunch\n';
@@ -38,7 +38,7 @@ Seniors
 Ben Cohen - lunch`;
 
 function placementLabel(p: { rotation: 'lunch' | 'dinner'; exempt: boolean }) {
-  return p.exempt ? 'Exempt' : CREW_LABELS[p.rotation];
+  return p.exempt ? 'Exempt' : ROTATION_LABELS[p.rotation];
 }
 
 export function ImportWizard({
@@ -144,7 +144,7 @@ export function ImportWizard({
           Upload a CSV, paste cells straight from Google Sheets or Excel, or type
           a list - one name per line, with the year after it or under a heading
           like <em>Juniors</em>. Columns are found by their header (name, year,
-          pledge class, room, crew) in any order; anything else, like phone
+          pledge class, room, rotation) in any order; anything else, like phone
           numbers, is ignored and never stored.
         </p>
 
@@ -187,7 +187,7 @@ export function ImportWizard({
             Read as a {intake.format === 'table' ? 'table' : 'list'}: <strong>{intake.rows.length}</strong> name
             {intake.rows.length === 1 ? '' : 's'}
             {intake.format === 'table' &&
-              ` · columns found: name${intake.columns.classYear ? ', year' : ''}${intake.columns.pledgeClass ? ', pledge class' : ''}${intake.columns.room ? ', room' : ''}${intake.columns.crew ? ', crew' : ''}`}
+              ` · columns found: name${intake.columns.classYear ? ', year' : ''}${intake.columns.pledgeClass ? ', pledge class' : ''}${intake.columns.room ? ', room' : ''}${intake.columns.crew ? ', rotation' : ''}`}
             {intake.problems.length > 0 && ` · ${intake.problems.length} line${intake.problems.length === 1 ? '' : 's'} could not be read (listed after the preview)`}
           </p>
         )}
@@ -241,7 +241,7 @@ export function ImportWizard({
             )}
             <label className="check-inline">
               <input type="checkbox" checked={resetCrews} onChange={(e) => { setResetCrews(e.target.checked); invalidate(); }} />
-              Put people already on the roster back on their year’s default crew
+              Put people already on the roster back on their year’s default rotation
             </label>
             <label className="check-inline">
               <input type="checkbox" checked={removeMissing} onChange={(e) => { setRemoveMissing(e.target.checked); invalidate(); }} />
@@ -250,12 +250,12 @@ export function ImportWizard({
           </div>
 
           <p className="settings-hint">
-            New people go on their year’s default crew:{' '}
+            New people go on their year’s default rotation:{' '}
             {YEARS.filter((y) => y !== 'other')
               .map((y) => `${CLASS_YEAR_LABELS[y].toLowerCase()} → ${crewDefaults[y] === 'exempt' ? 'exempt' : crewDefaults[y]}`)
               .join(', ')}{' '}
-            (<Link href="/admin/settings#roster-defaults">change</Link>). A crew column in the file wins.
-            People already on the roster keep their crew unless the file gives one.
+            (<Link href="/admin/settings#roster-defaults">change</Link>). A rotation column in the file (lunch, dinner or exempt) wins.
+            People already on the roster keep their rotation unless the file gives one.
           </p>
 
           <div className="settings-actions">

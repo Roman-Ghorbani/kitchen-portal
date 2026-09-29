@@ -21,7 +21,7 @@ import { issueSetupCode, resetMemberPin, type IssuedCode } from '../../../../act
 import { SetupCodes } from '../../roster/setup-codes.tsx';
 import {
   CLASS_YEAR_LABELS,
-  CREW_LABELS,
+  ROTATION_LABELS,
   EXEMPT_REASON_LABELS,
   formatPoints,
   type ClassYear,
@@ -137,7 +137,7 @@ function ProfileCard({ member }: { member: EditableMember }) {
         </label>
       </div>
       <p className="settings-hint">
-        Class year is for your reference; his crew (next card) decides the meal.
+        Class year is for your reference; his rotation (next card) decides the meal.
         He can edit his own room and Slack ID from his Profile page.
       </p>
       <div className="settings-actions">
@@ -165,7 +165,7 @@ function DutyCard({ member }: { member: EditableMember }) {
         <strong>
           {member.exempt
             ? `Exempt · ${EXEMPT_REASON_LABELS[member.exemptReason ?? 'other']}`
-            : CREW_LABELS[member.rotation]}
+            : ROTATION_LABELS[member.rotation]}
         </strong>
         {member.exempt && member.exemptNotes ? ` - ${member.exemptNotes}` : ''}
       </p>
@@ -177,7 +177,7 @@ function DutyCard({ member }: { member: EditableMember }) {
             disabled={pending || (!member.exempt && member.rotation === crew)}
             onClick={() => run(() => setDuty([member.id], { kind: 'crew', crew }))}
           >
-            {CREW_LABELS[crew]}
+            {ROTATION_LABELS[crew]}
           </button>
         ))}
       </div>
@@ -205,7 +205,7 @@ function DutyCard({ member }: { member: EditableMember }) {
       </div>
       <p className="settings-hint">
         {member.exempt
-          ? `Exempt - never drawn. Choosing a crew puts him back on duty (${CREW_LABELS[member.rotation].toLowerCase()} last).`
+          ? `Exempt - never drawn. Choosing a rotation puts him back on duty (${ROTATION_LABELS[member.rotation].toLowerCase()} last).`
           : 'Changes apply to weeks drawn from now on; posted weeks are not touched.'}
       </p>
       {msg}
