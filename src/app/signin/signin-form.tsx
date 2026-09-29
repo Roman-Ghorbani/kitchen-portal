@@ -100,6 +100,7 @@ export function SignInForm({
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
+            aria-label={showPassword ? 'Hide password' : 'Show password'}
             style={{
               position: 'absolute',
               right: '0.8rem',
@@ -107,7 +108,7 @@ export function SignInForm({
               transform: 'translateY(-50%)',
               background: 'none',
               border: 'none',
-              color: 'var(--dim)',
+              color: 'var(--ink-3)',
               fontSize: '0.85rem',
               fontWeight: 600,
               cursor: 'pointer',

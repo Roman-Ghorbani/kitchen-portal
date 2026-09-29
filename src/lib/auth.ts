@@ -69,24 +69,15 @@ export function verifySecret(secret: string, stored: string | null | undefined):
   const cleanStored = stored.trim().replace(/^["']|["']$/g, '');
   const delim = cleanStored.includes(':') ? ':' : '$';
   const [scheme, saltB64, hashB64] = cleanStored.split(delim);
-  if (scheme !== 'scrypt' || !saltB64 || !hashB64) {
-    console.log('[verifySecret parse failed]', { cleanStored: cleanStored.slice(0, 15), scheme });
-    return false;
-  }
+  if (scheme !== 'scrypt' || !saltB64 || !hashB64) return false;
 
   try {
     const salt = Buffer.from(saltB64, 'base64url');
     const expected = Buffer.from(hashB64, 'base64url');
-    if (expected.length !== SCRYPT_KEYLEN) {
-      console.log('[verifySecret keylen mismatch]', { expLen: expected.length, SCRYPT_KEYLEN });
-      return false;
-    }
+    if (expected.length !== SCRYPT_KEYLEN) return false;
     const actual = scryptSync(secret, salt, expected.length, { N: SCRYPT_COST });
-    const match = timingSafeEqual(actual, expected);
-    console.log('[verifySecret result]', { match, secretLen: secret.length });
-    return match;
-  } catch (err) {
-    console.log('[verifySecret error]', err);
+    return timingSafeEqual(actual, expected);
+  } catch {
     return false;
   }
 }
@@ -302,7 +293,6 @@ export function matchTotp(
     const exp = totpAt(cleanSecret, step);
     if (safeEqual(exp, cleanCode)) return step;
   }
-  console.log(`[matchTotp mismatch] received=${cleanCode}, expectedNow=${totpAt(cleanSecret, now)}, nowStep=${now}`);
   return null;
 }
 

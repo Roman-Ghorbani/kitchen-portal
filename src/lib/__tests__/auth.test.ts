@@ -107,6 +107,27 @@ describe('the manager password', () => {
     }
   });
 
+  test('the hash reads with ":" separators, as admin:credentials now writes it', () => {
+    // A "$"-separated hash in .env is expanded by Next.js down to "scrypt".
+    process.env.ADMIN_PASSWORD_HASH = `"${hashSecret('correct horse battery').replaceAll('$', ':')}"`;
+    try {
+      assert.ok(verifyAdminPassword('correct horse battery'));
+      assert.ok(!verifyAdminPassword('correct horse batter'));
+    } finally {
+      delete process.env.ADMIN_PASSWORD_HASH;
+    }
+  });
+
+  test('a hash mangled to "scrypt" by $-expansion never verifies', () => {
+    process.env.ADMIN_PASSWORD_HASH = 'scrypt';
+    try {
+      assert.ok(!verifyAdminPassword('scrypt'));
+      assert.ok(!verifyAdminPassword('anything'));
+    } finally {
+      delete process.env.ADMIN_PASSWORD_HASH;
+    }
+  });
+
   test('with nothing configured, nothing verifies', () => {
     assert.ok(!verifyAdminPassword(''));
     assert.ok(!verifyAdminPassword('anything'));

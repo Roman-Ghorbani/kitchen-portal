@@ -232,18 +232,19 @@ export async function signInAdmin(password: string, totp: string): Promise<Actio
   if (!gate.allowed) return lockedOut(gate.retryAfter);
 
   let step: number | null = null;
-  let passOk = verifyAdminPassword(password);
+  const passOk = verifyAdminPassword(password);
   let totpOk = true;
 
   if (passOk && adminTotpEnabled()) {
     step = matchTotp(process.env.ADMIN_TOTP_SECRET!, totp.replace(/\s/g, ''));
+    // A code is good once. Anything at or before the last accepted step has
+    // either been used or is older than one that has.
     const lastStep = await getSetting<number>(SETTING.adminTotpLastStep, 0);
     totpOk = step !== null && step > lastStep;
   }
   const ok = passOk && totpOk;
 
   if (!ok) {
-    console.log(`[signInAdmin failed] passOk=${passOk}, passLen=${password.length}, totpOk=${totpOk}, totpLen=${totp.length}, step=${step}`);
     const after = await recordFailure([
       ['admin', POLICIES.admin],
       [ipKey(ctx.ip), POLICIES.ip],

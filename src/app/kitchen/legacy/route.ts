@@ -19,10 +19,14 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   const { ip } = contextFrom(request.headers);
+  // Behind the tunnel request.url is 127.0.0.1:3000, so redirect to the
+  // configured public origin. Forwarded headers are a fallback only: they come
+  // from the client side of the proxy and should not pick the redirect target
+  // when the real one is known.
   const fHost = request.headers.get('x-forwarded-host');
-  const baseOrigin = fHost
-    ? `${request.headers.get('x-forwarded-proto') || 'https'}://${fHost}`
-    : (process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') || request.nextUrl.origin);
+  const baseOrigin =
+    process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') ||
+    (fHost ? `${request.headers.get('x-forwarded-proto') || 'https'}://${fHost}` : request.nextUrl.origin);
   const target = new URL('/kitchen/late-plates', baseOrigin);
   const token = request.nextUrl.searchParams.get('token') ?? '';
 

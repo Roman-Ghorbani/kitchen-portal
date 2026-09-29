@@ -67,7 +67,10 @@ if ((await ask('Type it again: ')) !== password) {
 const salt = randomBytes(16);
 const hash = scryptSync(password, salt, 32, { N: 16384 });
 console.log('\nAdd to .env.production (and delete ADMIN_PASSWORD):\n');
-console.log(`ADMIN_PASSWORD_HASH=scrypt$${salt.toString('base64url')}$${hash.toString('base64url')}`);
+// Written with ':' rather than '$': Next.js expands $VARIABLES in .env files,
+// so a '$'-separated hash is silently cut down to "scrypt" when the app loads
+// it and the right password is then refused. verifySecret() reads both.
+console.log(`ADMIN_PASSWORD_HASH=scrypt:${salt.toString('base64url')}:${hash.toString('base64url')}`);
 
 if (!process.argv.includes('--no-totp')) {
   const secret = base32(randomBytes(20));
