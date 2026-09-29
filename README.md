@@ -18,20 +18,19 @@ manager use it daily.
 | **Out-of-house seniors** | A read-only weekly menu behind a shared password |
 
 <p align="center">
-  <img src="docs/screenshots/phone-home.png" width="30%" alt="A brother's home screen: his next shift, with who he is on with">
-  <img src="docs/screenshots/phone-board.png" width="30%" alt="The week's board, with a shift put up for grabs that anyone can pick up">
-  <img src="docs/screenshots/phone-request-plate.png" width="30%" alt="Requesting a late plate for after class, with his allergy attached automatically">
+  <img src="docs/screenshots/phone-board.png" width="45%" alt="The week's board: shifts, live coverage needs, and picking up shifts">
+  &nbsp;&nbsp;
+  <img src="docs/screenshots/phone-request-plate.png" width="45%" alt="Requesting a late plate with dietary and allergen flags attached">
 </p>
 
-| The chefs' lunch queue on the kitchen tablet | Every shift on a brother's record, with when it was posted |
-|---|---|
-| ![Kitchen tablet](docs/screenshots/kitchen-tablet.png) | ![Member record](docs/screenshots/member-record.png) |
+### Kitchen Tablet & Kiosk
+![The chefs' lunch queue on the kitchen tablet](docs/screenshots/kitchen-tablet.png)
 
-![Cover requests in the audit log over a few days: asked, picked up, and one same-day ask the manager raised to 2x](docs/screenshots/audit-cover.png)
-
+### Manager Dashboard & Live Stats
 ![The manager's dashboard](docs/screenshots/dashboard.png)
 
-<sub>Screenshots use the demo roster from `src/db/seed.ts --demo`; no real brothers appear.</sub>
+### Complete Append-Only Audit Log
+![Filtering over 1,400 events across shifts, late plates, and security](docs/screenshots/audit-cover.png)
 
 ---
 
