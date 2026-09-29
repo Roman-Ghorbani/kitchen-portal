@@ -214,3 +214,7 @@ scripts/            backup, restore, drill, migrate, credentials, test runner, s
 deploy/             systemd units, Cloudflare Tunnel example, Pi setup
 docs/               manager handbook, API reference, operations, late plates
 ```
+
+## License
+
+MIT. See [LICENSE](LICENSE).

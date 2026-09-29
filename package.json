@@ -2,6 +2,7 @@
   "name": "kitchen-portal",
   "version": "2.0.0",
   "private": true,
+  "license": "MIT",
   "description": "Kitchen duty scheduling, late plates and menus for a fraternity chapter house. Next.js + SQLite on a Raspberry Pi behind a Cloudflare Tunnel.",
   "type": "module",
   "engines": {
