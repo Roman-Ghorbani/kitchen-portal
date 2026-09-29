@@ -18,16 +18,18 @@ manager use it daily.
 | **Out-of-house seniors** | A read-only weekly menu behind a shared password |
 
 <p align="center">
-  <img src="docs/screenshots/phone-home.png" width="30%" alt="A brother's home screen: his next shift, points and standing">
-  <img src="docs/screenshots/phone-board.png" width="30%" alt="The week's duty board on a phone">
-  <img src="docs/screenshots/phone-request-plate.png" width="30%" alt="Requesting a late plate, with his allergy attached automatically">
+  <img src="docs/screenshots/phone-home.png" width="30%" alt="A brother's home screen: his next shift, with who he is on with">
+  <img src="docs/screenshots/phone-board.png" width="30%" alt="The week's board, with a shift put up for grabs that anyone can pick up">
+  <img src="docs/screenshots/phone-request-plate.png" width="30%" alt="Requesting a late plate for after class, with his allergy attached automatically">
 </p>
 
-![The manager's dashboard](docs/screenshots/dashboard.png)
-
-| Roster: a point for four brothers who stayed to deep-clean, previewed before it is applied | The chefs' lunch late-plate queue on the kitchen tablet |
+| The chefs' lunch queue on the kitchen tablet | Every shift on a brother's record, with when it was posted |
 |---|---|
-| ![Roster](docs/screenshots/roster.png) | ![Kitchen tablet](docs/screenshots/kitchen-tablet.png) |
+| ![Kitchen tablet](docs/screenshots/kitchen-tablet.png) | ![Member record](docs/screenshots/member-record.png) |
+
+![Cover requests in the audit log: asked, raised to 2x by the manager, picked up](docs/screenshots/audit-cover.png)
+
+![The manager's dashboard](docs/screenshots/dashboard.png)
 
 <sub>Screenshots use the demo roster from `src/db/seed.ts --demo`; no real brothers appear.</sub>
 

@@ -128,12 +128,12 @@ export function AdminAvailabilityEditor({
                 )}
 
                 <button
-                  className={`btn sm ${isBlocked ? 'gold' : 'danger'}`}
+                  className={`btn sm ${isBlocked ? '' : 'alt'}`}
                   style={{ fontSize: 11, padding: '4px 10px' }}
                   disabled={pending}
                   onClick={() => toggleDay(day.index, isBlocked, currentNote ?? '')}
                 >
-                  {isBlocked ? 'Make Available' : 'Block Day'}
+                  {isBlocked ? 'Make available' : 'Block this day'}
                 </button>
               </div>
 
