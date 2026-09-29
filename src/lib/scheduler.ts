@@ -16,7 +16,9 @@
  *   - Each rotation takes its own meal: lunch rotation lunch, dinner rotation dinner
  *   - Exempt members are excluded entirely
  *   - Standing weekly conflicts are excluded
- *   - One shift per person per week, with make-up shifts the sole exception
+ *   - One shift per person per week, plus one more per make-up owed. A make-up
+ *     only moves him to the front of the line: his first pick of the week is
+ *     the make-up, and any further shift he gets is an ordinary pick on points.
  *   - Never twice on the same day
  */
 
@@ -221,14 +223,15 @@ export function generateWeek(input: ScheduleInput): ScheduleResult {
 
     targetCandidates.sort((a, b) => comparePriority(a, b, open));
     const chosen = targetCandidates[0];
-    const isExtraShift = chosen.assignedDates.length >= 1;
-    const viaMakeup = chosen.debt > 0 || isExtraShift;
+    // The pick is the make-up when he got it because he owed one. A later pick
+    // the same week is an ordinary one he won on points.
+    const viaMakeup = chosen.debt > 0;
 
     target.assignments.push({
       memberId: chosen.member.id,
       status: 'assigned',
       multiplier: 1,
-      isMakeup: isExtraShift,
+      isMakeup: viaMakeup,
     });
 
     rationale.push({
@@ -276,6 +279,6 @@ function describeShortfall(working: WorkingMember[], slot: Slot): string {
     blocked.length +
     ' blocked by a standing conflict this weekday, ' +
     usedUp.length +
-    ' already at their one-shift-per-week limit.'
+    ' already at their limit for the week.'
   );
 }

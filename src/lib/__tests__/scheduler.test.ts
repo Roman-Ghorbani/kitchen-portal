@@ -195,25 +195,48 @@ describe('priority ordering', () => {
     );
   });
 
-  test('make-up debt allows a second shift in the same week', () => {
+  test('the make-up is the pick he got for owing it, and a second pick is ordinary', () => {
     // Small junior pool so the debtor has to be reused.
     const members = makeRoster(2, 30);
     members[0].makeupDebt = 1;
 
     const result = generateWeek({ weekStart: WEEK, members });
     const counts = countAssignmentsPerMember(result);
+    assert.equal(counts.get(members[0].id), 2, 'a short pool can draw him twice');
 
-    assert.equal(
-      counts.get(members[0].id),
-      2,
-      'debtor should take a normal shift plus the make-up',
-    );
-
-    const makeups = result.week.slots
+    const mine = result.week.slots
       .flatMap((s) => s.assignments)
-      .filter((a) => a.isMakeup);
-    assert.equal(makeups.length, 1);
-    assert.equal(makeups[0].memberId, members[0].id);
+      .filter((a) => a.memberId === members[0].id);
+    assert.equal(mine.filter((a) => a.isMakeup).length, 1, 'exactly one of them is the make-up');
+    assert.equal(result.debtResolved?.[members[0].id], 1);
+  });
+
+  test('owing a make-up does not force a second shift', () => {
+    const members = makeRoster();
+    for (const m of members) m.points = 0;
+    const debtor = members.find((m) => m.classYear === 'junior')!;
+    debtor.points = 99;
+    debtor.makeupDebt = 1;
+
+    const result = generateWeek({ weekStart: WEEK, members });
+    assert.equal(countAssignmentsPerMember(result).get(debtor.id), 1, 'picked first, once');
+    const pick = result.rationale.find((r) => r.memberId === debtor.id)!;
+    assert.equal(pick.viaMakeupDebt, true);
+  });
+
+  test('after his make-up he can still be drawn again if he is low on points', () => {
+    const members = makeRoster(4, 30);
+    for (const m of members) m.points = 10;
+    const debtor = members.find((m) => m.classYear === 'junior')!;
+    debtor.points = 0;
+    debtor.makeupDebt = 1;
+
+    const result = generateWeek({ weekStart: WEEK, members });
+    const mine = result.week.slots
+      .flatMap((s) => s.assignments)
+      .filter((a) => a.memberId === debtor.id);
+    assert.equal(mine.length, 2, 'lowest points, so the draw picks him again');
+    assert.equal(mine.filter((a) => a.isMakeup).length, 1);
   });
 
   test('longer since last served breaks a points tie', () => {
@@ -344,7 +367,7 @@ describe('shortfall reporting', () => {
     assert.ok(result.unfilled.length > 0);
     const lunchGaps = result.unfilled.filter((u) => u.meal === 'lunch');
     assert.ok(lunchGaps.length > 0);
-    assert.match(lunchGaps[0].reason, /one-shift-per-week limit/);
+    assert.match(lunchGaps[0].reason, /limit for the week/);
   });
 });
 

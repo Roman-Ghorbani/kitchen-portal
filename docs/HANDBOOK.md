@@ -15,9 +15,9 @@ Everything you do is written to the **Audit log**, with your name on it. That lo
 - Every brother on duty is on one **rotation**, either lunch or dinner. His rotation decides which meal he cleans; the two or three people cleaning one meal are that shift's crew. His class year does not, so you can put a junior on dinner or a live-in senior on lunch.
 - **Exempt** brothers are never drawn. Seniors are usually exempt, and so are some officers. An exempt brother keeps his rotation and his points, so lifting the exemption puts him straight back where he was.
 - For each open seat the draw takes, in order: anyone who owes a **make-up** shift, then whoever has the **fewest points**, then whoever has gone longest without serving. Remaining ties are broken by a random draw that is fixed for that week.
-- Nobody is drawn twice in one Monday–Sunday week, except for a make-up shift.
+- Nobody is drawn twice in one Monday–Sunday week, with one exception: a brother who owes a make-up is picked first, and can still be drawn a second time that week if his points are low enough.
 - **Standing conflicts** are respected. These are the days each brother says he can never do, entered from his Home page.
-- Being on the schedule earns the points straight away. If he does not show up, marking a **no-show** takes the points back and adds a make-up shift.
+- Being on the schedule earns the points straight away. If he does not show up, marking a **no-show** takes the points back and puts him first in line at the next draw (a make-up).
 
 ## Points {#points}
 

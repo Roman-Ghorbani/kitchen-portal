@@ -158,8 +158,9 @@ export default async function SettingsPage() {
 
           <dt>Frequency</dt>
           <dd>
-            Nobody is scheduled more than once a Monday–Sunday week, except for a
-            make-up shift owed for a no-show.
+            Normally once per Monday–Sunday week. A brother who owes a make-up
+            is picked first, and can still be drawn a second time that week if
+            his points are low enough.
           </dd>
 
           <dt>Selection</dt>

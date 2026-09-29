@@ -238,8 +238,8 @@ export default async function HomePage() {
             {member!.makeupDebt === 1 ? '' : 's'}
           </span>
           <span className="alert-body">
-            You missed a shift without anyone covering it. You will come up
-            again sooner than normal until it is worked off.
+            You missed a shift without anyone covering it, so you will be
+            picked first in the next draw.
           </span>
         </div>
       )}
